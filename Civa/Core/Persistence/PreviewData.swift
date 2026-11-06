@@ -173,6 +173,52 @@ extension ModelContainer {
     }
 }
 
+/// Sample files for manual checks.
+enum PreviewSamples {
+    static let cvText = """
+    Rina Wijaya
+    Product Designer
+    Bandung | rina@example.com | +62 811 2222 3333 | linkedin.com/in/rinawijaya
+
+    PROFILE
+    Product designer focused on fintech apps.
+
+    PENGALAMAN KERJA
+    Senior Product Designer — Tokopedia
+    Jan 2023 – Present
+    • Led the checkout redesign, lifting conversion by 9%
+    • Built the design system used by 40 designers
+    Product Designer at Gojek
+    Agustus 2020 - Desember 2022
+    - Designed GoPay onboarding
+
+    PENDIDIKAN
+    Institut Teknologi Bandung
+    S1 Desain Komunikasi Visual, 2016 – 2020
+
+    Certifications
+    Google UX Design Certificate (2021)
+
+    Skills
+    Design: Figma, Sketch, Prototyping
+    Research, Usability Testing
+
+    Hobbies
+    Hiking
+    """
+
+    /// A Word copy of `cvText` in the app's temporary folder, which the sandbox can read.
+    static func writeSampleCV() -> URL? {
+        let url = FileManager.default.temporaryDirectory.appending(path: "Sample CV.docx")
+        let text = NSAttributedString(string: cvText)
+        guard let data = try? text.data(
+            from: NSRange(location: 0, length: text.length),
+            documentAttributes: [.documentType: NSAttributedString.DocumentType.officeOpenXML]
+        ), (try? data.write(to: url)) != nil else { return nil }
+        return url
+    }
+}
+
 extension RecordEditor {
     /// Editor on a sample record of this type.
     static func preview(needsReview: Bool = false) -> RecordEditor<Model> {
