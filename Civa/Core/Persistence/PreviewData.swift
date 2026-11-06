@@ -71,6 +71,14 @@ extension ModelContainer {
             JobApplication(company: "Contoso", position: "Mobile Engineer", applicationDate: .now.addingTimeInterval(-86_400 * 5), status: .applied),
             JobApplication(company: "Fabrikam", position: "Senior iOS Engineer"),
         ]
+        var resume = ResumeDocument.blank
+        resume.header = ResumeHeader(fullName: "Alex Morgan", headline: "iOS Engineer", email: "alex@example.com", location: "Jakarta")
+        resume.summary = "iOS engineer building native, offline-first apps in Swift and SwiftUI."
+        resume.sections[0].entries = [
+            ResumeEntry(title: "iOS Engineer", subtitle: "Acme · Jakarta", dates: "Mar 2024 – Present", bullets: ["Cut onboarding drop-off by 18%"]),
+        ]
+        resume.sections[3].entries = [ResumeEntry(title: "Languages", subtitle: "Swift, Kotlin")]
+        context.insert(Resume(title: "iOS Developer Resume", targetPosition: "iOS Developer", document: resume))
         records.forEach { context.insert($0) }
         try! context.save()
         return container

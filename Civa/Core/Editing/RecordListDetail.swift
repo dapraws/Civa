@@ -83,7 +83,9 @@ struct RecordListDetail<Model: EditableRecord, Editor: View>: View {
                 Button(addTitle, action: addRecord)
             }
         } else {
-            HSplitView {
+            // A fixed list width keeps the layout inside the window; HSplitView sizes panes by their
+            // ideal widths and overflowed with the resume editor.
+            HStack(spacing: 0) {
                 List(selection: changes.selection($selection, pending: $pendingSelection, apply: open)) {
                     ForEach(records.sorted(by: order)) { record in
                         RecordRow(
@@ -94,10 +96,12 @@ struct RecordListDetail<Model: EditableRecord, Editor: View>: View {
                         .tag(record.id)
                     }
                 }
-                .frame(minWidth: 220, idealWidth: 280, maxWidth: 420)
+                .frame(width: 260)
+
+                Divider()
 
                 detail
-                    .frame(minWidth: 380, maxWidth: .infinity, maxHeight: .infinity)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
     }
