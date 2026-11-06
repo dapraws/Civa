@@ -10,6 +10,9 @@ import SwiftUI
 /// Privacy and integration settings (NFR-002).
 struct SettingsView: View {
     @AppStorage(Brandfetch.fetchesLogosKey) private var fetchesLogos = true
+    #if DEBUG
+    @AppStorage(DataMode.realDataKey) private var usesRealData = false
+    #endif
 
     var body: some View {
         Form {
@@ -26,6 +29,15 @@ struct SettingsView: View {
                     }
                 }
             }
+            #if DEBUG
+            Section {
+                Toggle("Use My Real Data", isOn: $usesRealData)
+            } header: {
+                Text("Developer")
+            } footer: {
+                Text("Debug builds start with fresh sample data every launch, so testing never touches your real data. Turn this on to use your real data instead. Takes effect after you restart Civa.")
+            }
+            #endif
         }
         .formStyle(.grouped)
         .frame(maxWidth: 640)

@@ -13,8 +13,8 @@ struct CivaApp: App {
     @NSApplicationDelegateAdaptor private var appDelegate: AppDelegate
     private let container = Result {
         #if DEBUG
-        // Sample data in memory for manual checks: -CivaSampleData YES
-        if UserDefaults.standard.bool(forKey: "CivaSampleData") { return ModelContainer.preview }
+        // Debug builds run on fresh sample data unless Settings → Developer says otherwise.
+        if DataMode.usesSampleData { return ModelContainer.preview }
         #endif
         return try ModelContainer.civa()
     }
