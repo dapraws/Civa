@@ -25,6 +25,14 @@ nonisolated final class Achievement: ProfileRecord {
     var project: Project?
     var education: Education?
 
+    var displayTitle: String {
+        title.isBlank ? String(localized: "New Achievement") : title
+    }
+
+    func validationErrors() -> [PartialKeyPath<Achievement>: String] {
+        title.isBlank ? [\.title: String(localized: "Enter a title.")] : [:]
+    }
+
     init(
         title: String,
         issuer: String = "",

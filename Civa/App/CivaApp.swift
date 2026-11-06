@@ -10,6 +10,7 @@ import SwiftData
 
 @main
 struct CivaApp: App {
+    @NSApplicationDelegateAdaptor private var appDelegate: AppDelegate
     private let container = Result { try ModelContainer.civa() }
 
     var body: some Scene {
@@ -19,6 +20,7 @@ struct CivaApp: App {
             case .success(let container):
                 RootView()
                     .modelContainer(container)
+                    .environment(appDelegate.changes)
             case .failure(let error):
                 StoreErrorView(error: error)
             }

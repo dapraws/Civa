@@ -43,6 +43,18 @@ nonisolated final class Experience: ProfileRecord {
         set { kindRaw = newValue.rawValue }
     }
 
+    var displayTitle: String {
+        [role, organization].first { !$0.isBlank } ?? String(localized: "New Experience")
+    }
+
+    func validationErrors() -> [PartialKeyPath<Experience>: String] {
+        var errors: [PartialKeyPath<Experience>: String] = [:]
+        if role.isBlank { errors[\.role] = String(localized: "Enter a role.") }
+        if organization.isBlank { errors[\.organization] = String(localized: "Enter an organization.") }
+        if !isCurrent, YearMonth.isReversed(start: start, end: end) { errors[\.end] = ValidationMessage.endBeforeStart }
+        return errors
+    }
+
     init(
         kind: ExperienceKind,
         organization: String,

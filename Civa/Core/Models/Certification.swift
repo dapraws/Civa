@@ -22,6 +22,19 @@ nonisolated final class Certification: ProfileRecord {
     var createdAt = Date.now
     var updatedAt = Date.now
 
+    var displayTitle: String {
+        name.isBlank ? String(localized: "New Certification") : name
+    }
+
+    func validationErrors() -> [PartialKeyPath<Certification>: String] {
+        var errors: [PartialKeyPath<Certification>: String] = [:]
+        if name.isBlank { errors[\.name] = String(localized: "Enter a certification name.") }
+        if YearMonth.isReversed(start: issued, end: expires) {
+            errors[\.expires] = String(localized: "The expiry date can't be before the issue date.")
+        }
+        return errors
+    }
+
     init(
         name: String,
         issuer: String = "",

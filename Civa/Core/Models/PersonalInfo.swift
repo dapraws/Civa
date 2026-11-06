@@ -22,6 +22,17 @@ nonisolated final class PersonalInfo: ProfileRecord {
     var createdAt = Date.now
     var updatedAt = Date.now
 
+    var displayTitle: String {
+        fullName.isBlank ? String(localized: "Personal Information") : fullName
+    }
+
+    func validationErrors() -> [PartialKeyPath<PersonalInfo>: String] {
+        var errors: [PartialKeyPath<PersonalInfo>: String] = [:]
+        if fullName.isBlank { errors[\.fullName] = String(localized: "Enter your full name.") }
+        if !email.isBlank, !email.contains("@") { errors[\.email] = String(localized: "Enter a valid email address.") }
+        return errors
+    }
+
     init(
         fullName: String,
         headline: String = "",
