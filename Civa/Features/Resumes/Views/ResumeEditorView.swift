@@ -58,6 +58,11 @@ struct ResumeEditorView: View {
             PDFPreview(data: ResumeRenderer.pdf(for: editor.record.document))
                 .frame(minWidth: 240, maxWidth: .infinity)
         }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                ResumeExportButton(resume: editor.record)
+            }
+        }
     }
 
     @ViewBuilder
