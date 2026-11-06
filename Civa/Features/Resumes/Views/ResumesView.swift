@@ -9,7 +9,25 @@ import SwiftUI
 
 /// Resume versions (FR-041): each one is edited independently.
 struct ResumesView: View {
+    @Environment(UnsavedChangesGuard.self) private var changes
+    @State private var isPickingFromProfile = false
+
     var body: some View {
+        list
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("New from Career Profile…", systemImage: "person.text.rectangle") {
+                        changes.perform { isPickingFromProfile = true }
+                    }
+                    .help("New resume from your Career Profile")
+                }
+            }
+            .sheet(isPresented: $isPickingFromProfile) {
+                NewResumeFromProfileSheet()
+            }
+    }
+
+    private var list: some View {
         RecordListDetail(
             addTitle: String(localized: "New Resume"),
             empty: .init(

@@ -32,25 +32,16 @@ struct ResumeEditorView: View {
     var body: some View {
         // A plain stack: a split view nested in the list/detail split overflows under the list.
         HStack(spacing: 0) {
-            VStack(spacing: 0) {
-                Picker("Section", selection: $tab) {
-                    ForEach(Tab.allCases) { Text($0.title).tag($0) }
+            Form {
+                switch tab {
+                case .details: details
+                case .header: header
+                case .summary: summary
+                case .sections: ResumeSectionsForm(document: editor.binding(\.document))
+                case .format: ResumeFormatForm(format: editor.binding(\.document).format)
                 }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .padding(10)
-
-                Form {
-                    switch tab {
-                    case .details: details
-                    case .header: header
-                    case .summary: summary
-                    case .sections: ResumeSectionsForm(document: editor.binding(\.document))
-                    case .format: ResumeFormatForm(format: editor.binding(\.document).format)
-                    }
-                }
-                .formStyle(.grouped)
             }
+            .formStyle(.grouped)
             .frame(minWidth: 340, maxWidth: .infinity)
 
             Divider()
@@ -59,6 +50,13 @@ struct ResumeEditorView: View {
                 .frame(minWidth: 240, maxWidth: .infinity)
         }
         .toolbar {
+            ToolbarItem(placement: .principal) {
+                Picker("Section", selection: $tab) {
+                    ForEach(Tab.allCases) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+            }
             ToolbarItem(placement: .primaryAction) {
                 ResumeExportButton(resume: editor.record)
             }

@@ -62,6 +62,11 @@ struct RecordListDetail<Model: EditableRecord, Editor: View>: View {
                     .help("\(addTitle) (⌘N)")
                 }
             }
+            .onChange(of: navigation.recordToOpen) { _, target in
+                guard let target, let record = records.first(where: { AnyHashable($0.id) == target }) else { return }
+                navigation.recordToOpen = nil
+                open(record.id)
+            }
             .onAppear {
                 if navigation.startsNewRecord {
                     navigation.startsNewRecord = false

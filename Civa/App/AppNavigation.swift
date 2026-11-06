@@ -15,6 +15,8 @@ final class AppNavigation {
     var profileCategory: ProfileCategory = .personal
     /// Set by quick actions: the next record list that appears starts a new record.
     var startsNewRecord = false
+    /// Set after creating a record elsewhere (a sheet); the list showing that record type opens it.
+    var recordToOpen: AnyHashable?
 
     init() {
         #if DEBUG
