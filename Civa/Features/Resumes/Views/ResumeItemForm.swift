@@ -11,6 +11,8 @@ import SwiftUI
 /// them never touches the Career Profile (FR-034).
 struct ResumeItemForm: View {
     let editor: RecordEditor<Resume>
+    @Environment(UnsavedChangesGuard.self) private var changes
+    @Environment(AppNavigation.self) private var navigation
     @Binding var document: ResumeDocument
     @Binding var selection: ResumeOutlineItem?
 
@@ -72,6 +74,29 @@ struct ResumeItemForm: View {
                 )
                 .labelsHidden()
                 .lineLimit(6...20)
+            }
+            if !editor.record.applications.isEmpty {
+                Section {
+                    ForEach(editor.record.applications.sorted { $0.company < $1.company }) { application in
+                        Button {
+                            changes.perform {
+                                navigation.recordToOpen = application.id
+                                navigation.section = .applications
+                            }
+                        } label: {
+                            Label {
+                                Text("\(application.position) · \(application.company)")
+                            } icon: {
+                                OrganizationLogo(name: application.company, size: 18)
+                            }
+                        }
+                        .buttonStyle(.link)
+                    }
+                } header: {
+                    Text("Sent With")
+                } footer: {
+                    Text("Applications that use this resume. Link one from the application.")
+                }
             }
         }
     }

@@ -20,6 +20,10 @@ nonisolated final class Resume: EditableRecord {
     var createdAt = Date.now
     var updatedAt = Date.now
 
+    /// Applications this resume was sent with. Deleting the resume unlinks them.
+    @Relationship(deleteRule: .nullify, inverse: \JobApplication.resume)
+    var applications: [JobApplication] = []
+
     // ponytail: decodes on every read; fine for resume-sized JSON, cache it if editing ever feels slow.
     var document: ResumeDocument {
         get { (try? JSONDecoder().decode(ResumeDocument.self, from: documentData)) ?? .blank }

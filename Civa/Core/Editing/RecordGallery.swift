@@ -64,12 +64,9 @@ struct RecordGallery<Model: EditableRecord, Card: View, Editor: View>: View {
                     .help("\(addTitle) (⌘N)")
                 }
             }
-            .onChange(of: navigation.recordToOpen) { _, target in
-                guard let target, let record = records.first(where: { AnyHashable($0.id) == target }) else { return }
-                navigation.recordToOpen = nil
-                open(record)
-            }
+            .onChange(of: navigation.recordToOpen) { openRequestedRecord() }
             .onAppear {
+                openRequestedRecord()
                 if navigation.startsNewRecord {
                     navigation.startsNewRecord = false
                     addRecord()
@@ -152,6 +149,15 @@ struct RecordGallery<Model: EditableRecord, Card: View, Editor: View>: View {
                 .padding(24)
             }
         }
+    }
+
+    /// Opens a record another page asked for (a new resume from a sheet, a resume linked to an application).
+    private func openRequestedRecord() {
+        guard let target = navigation.recordToOpen,
+              let record = records.first(where: { AnyHashable($0.id) == target })
+        else { return }
+        navigation.recordToOpen = nil
+        open(record)
     }
 
     private func open(_ record: Model) {

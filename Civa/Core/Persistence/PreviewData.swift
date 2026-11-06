@@ -97,7 +97,10 @@ extension ModelContainer {
             Certification(name: "App Development with Swift", issuer: "Apple", issued: YearMonth(year: 2024, month: 5)),
         ] + applications + organizations
         records.forEach { context.insert($0) }
-        sampleResumes().forEach { context.insert($0) }
+        let resumes = sampleResumes()
+        resumes.forEach { context.insert($0) }
+        applications[0].resume = resumes[1]  // Apple gets the tailored resume
+        applications[1...5].forEach { $0.resume = resumes[0] }
         try! context.save()
         return container
     }()
