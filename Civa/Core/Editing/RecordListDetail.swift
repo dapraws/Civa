@@ -8,14 +8,17 @@
 import SwiftData
 import SwiftUI
 
+/// What a record page shows before anything has been added.
+struct RecordEmptyState {
+    let title: String
+    let message: String
+    let systemImage: String
+}
+
 /// Records of one type: a list on the left and an inline editor on the right (FR-010).
 /// Selecting, adding, and leaving all go through the unsaved-changes guard.
 struct RecordListDetail<Model: EditableRecord, Editor: View>: View {
-    struct EmptyState {
-        let title: String
-        let message: String
-        let systemImage: String
-    }
+    typealias EmptyState = RecordEmptyState
 
     @Environment(\.modelContext) private var context
     @Environment(UnsavedChangesGuard.self) private var changes

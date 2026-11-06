@@ -7,28 +7,14 @@
 
 import SwiftUI
 
-/// Resume versions (FR-041): each one is edited independently.
+/// Resume versions as a gallery (FR-041): each one is edited independently.
 struct ResumesView: View {
     @Environment(UnsavedChangesGuard.self) private var changes
     @State private var isPickingFromProfile = false
 
     var body: some View {
-        list
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button("New from Career Profile…", systemImage: "person.text.rectangle") {
-                        changes.perform { isPickingFromProfile = true }
-                    }
-                    .help("New resume from your Career Profile")
-                }
-            }
-            .sheet(isPresented: $isPickingFromProfile) {
-                NewResumeFromProfileSheet()
-            }
-    }
-
-    private var list: some View {
-        RecordListDetail(
+        RecordGallery(
+            title: String(localized: "Resumes"),
             addTitle: String(localized: "New Resume"),
             empty: .init(
                 title: String(localized: "No Resumes Yet"),
@@ -36,14 +22,30 @@ struct ResumesView: View {
                 systemImage: AppSection.resumes.systemImage
             ),
             order: { $0.updatedAt > $1.updatedAt },
-            subtitle: { resume in
-                resume.targetPosition.isBlank
-                    ? resume.updatedAt.formatted(date: .abbreviated, time: .omitted)
-                    : resume.targetPosition
-            },
+            cardWidth: 180,
             makeRecord: { Resume(title: "") },
+            duplicate: { resume in
+                Resume(
+                    title: String(localized: "\(resume.displayTitle) Copy"),
+                    targetPosition: resume.targetPosition,
+                    jobDescription: resume.jobDescription,
+                    document: resume.document
+                )
+            },
+            card: { ResumeCard(resume: $0) },
             editor: { ResumeEditorView(editor: $0) }
         )
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button("New from Career Profile…", systemImage: "person.text.rectangle") {
+                    changes.perform { isPickingFromProfile = true }
+                }
+                .help("New resume from your Career Profile")
+            }
+        }
+        .sheet(isPresented: $isPickingFromProfile) {
+            NewResumeFromProfileSheet()
+        }
     }
 }
 

@@ -37,7 +37,8 @@ struct ApplicationList: View {
     let status: ApplicationStatus?
 
     var body: some View {
-        RecordListDetail(
+        RecordGallery(
+            title: String(localized: "Applications"),
             addTitle: String(localized: "Add Application"),
             empty: status == nil
                 ? .init(
@@ -52,18 +53,73 @@ struct ApplicationList: View {
                 ),
             filter: JobApplication.withStatus(status),
             order: { ($0.applicationDate ?? .distantFuture) > ($1.applicationDate ?? .distantFuture) },
-            subtitle: { application in
-                [
-                    application.company,
-                    application.status.title,
-                    application.applicationDate?.formatted(date: .abbreviated, time: .omitted) ?? "",
-                ]
-                .filter { !$0.isBlank }
-                .joined(separator: " · ")
-            },
+            cardWidth: 220,
             makeRecord: { JobApplication(company: "", position: "", status: status ?? .wishlist) },
+            card: { ApplicationCard(application: $0) },
             editor: { ApplicationForm(editor: $0) }
         )
+    }
+}
+
+/// An application in the gallery: logo, status, position, company, and date.
+struct ApplicationCard: View {
+    let application: JobApplication
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top) {
+                OrganizationLogo(name: application.company, size: 44)
+                Spacer()
+                StatusPill(status: application.status)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(application.position.isBlank ? String(localized: "New Application") : application.position)
+                    .font(.headline)
+                    .lineLimit(1)
+                Text(application.company)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            Text(application.applicationDate.map { String(localized: "Applied \($0.formatted(date: .abbreviated, time: .omitted))") }
+                ?? String(localized: "Not applied yet"))
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.background, in: .rect(cornerRadius: 12))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12).strokeBorder(.separator)
+        }
+        .shadow(color: .black.opacity(0.06), radius: 4, y: 1)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+struct StatusPill: View {
+    let status: ApplicationStatus
+
+    var body: some View {
+        Text(status.title)
+            .font(.caption.weight(.medium))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .foregroundStyle(status.color)
+            .background(status.color.opacity(0.15), in: .capsule)
+    }
+}
+
+extension ApplicationStatus {
+    var color: Color {
+        switch self {
+        case .wishlist: .gray
+        case .applied: .blue
+        case .interview: .purple
+        case .assessment: .orange
+        case .offer: .green
+        case .rejected: .red
+        case .withdrawn: .brown
+        }
     }
 }
 
@@ -73,9 +129,23 @@ struct ApplicationForm: View {
     var body: some View {
         Form {
             Section {
+                HStack(spacing: 14) {
+                    OrganizationLogo(name: editor.record.company, size: 56)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(editor.record.displayTitle)
+                            .font(.title3.weight(.semibold))
+                        Text(editor.record.company)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    StatusPill(status: editor.record.status)
+                }
+                .padding(.vertical, 4)
+            }
+            Section {
                 TextField("Position", text: editor.binding(\.position), prompt: Text("Required"))
                 FieldError(editor.error(for: \.position))
-                TextField("Company", text: editor.binding(\.company), prompt: Text("Required"))
+                OrganizationField(title: "Company", name: editor.binding(\.company), prompt: Text("Required"))
                 FieldError(editor.error(for: \.company))
                 Picker("Status", selection: editor.binding(\.status)) {
                     ForEach(ApplicationStatus.allCases) { status in
@@ -122,6 +192,13 @@ struct ApplicationForm: View {
     }
     .frame(width: 1000, height: 640)
     .previewEnvironment()
+}
+
+#Preview("Card") {
+    ApplicationCard(application: JobApplication(company: "Apple", position: "iOS Engineer", applicationDate: .now, status: .interview))
+        .frame(width: 240)
+        .padding()
+        .previewEnvironment()
 }
 
 #Preview("Form") {

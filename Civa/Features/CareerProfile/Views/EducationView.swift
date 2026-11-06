@@ -39,7 +39,7 @@ struct EducationForm: View {
         Form {
             ReviewBanner(editor: editor)
             Section {
-                TextField("Institution", text: editor.binding(\.institution), prompt: Text("Required"))
+                OrganizationField(title: "Institution", name: editor.binding(\.institution), prompt: Text("Required"))
                 FieldError(editor.error(for: \.institution))
                 TextField("Degree", text: editor.binding(\.degree), prompt: Text("Bachelor of Science"))
                 TextField("Field of Study", text: editor.binding(\.fieldOfStudy), prompt: Text("Computer Science"))
