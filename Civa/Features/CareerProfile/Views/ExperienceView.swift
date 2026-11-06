@@ -111,6 +111,7 @@ struct ExperienceForm: View {
             Section("Skills") {
                 SkillLinksField(editor: editor, skills: \.skills)
             }
+            DocumentsSection(editor: editor)
             CustomFieldsSection(fields: editor.binding(\.customFields))
         }
         .formStyle(.grouped)

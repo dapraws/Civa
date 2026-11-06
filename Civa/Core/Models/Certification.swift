@@ -23,6 +23,10 @@ nonisolated final class Certification: ProfileRecord {
     var sources: [RecordSource] = []
     /// Set when this was added from an import despite matching this record (FR-024).
     var possibleDuplicateOf: UUID?
+
+    /// Supporting documents (FR-022). Deleting this record keeps them, unlinked.
+    @Relationship(deleteRule: .nullify, inverse: \SupportingDocument.certification)
+    var documents: [SupportingDocument] = []
     var createdAt = Date.now
     var updatedAt = Date.now
 
