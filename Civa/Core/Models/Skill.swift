@@ -11,13 +11,15 @@ import SwiftData
 /// No `#Unique` on `name`: SwiftData treats a unique conflict as an upsert and would silently merge records.
 /// Duplicate detection is app logic (FR-024).
 @Model
-nonisolated final class Skill: ReviewTracked {
+nonisolated final class Skill: ProfileRecord {
     var id = UUID()
     var name: String
     var category: String
     /// Optional by design (FR-014).
     var proficiency: String?
     var statusRaw: String
+    var createdAt = Date.now
+    var updatedAt = Date.now
 
     /// Evidence for the skill (PRODUCT §4.4).
     var experiences: [Experience] = []

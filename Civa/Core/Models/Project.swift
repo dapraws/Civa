@@ -9,7 +9,7 @@ import Foundation
 import SwiftData
 
 @Model
-nonisolated final class Project: ReviewTracked {
+nonisolated final class Project: ProfileRecord {
     var id = UUID()
     var name: String
     var role: String
@@ -20,6 +20,8 @@ nonisolated final class Project: ReviewTracked {
     var impacts: [String]
     var customFields: [CustomField]
     var statusRaw: String
+    var createdAt = Date.now
+    var updatedAt = Date.now
 
     @Relationship(inverse: \Skill.projects)
     var skills: [Skill] = []

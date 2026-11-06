@@ -10,7 +10,7 @@ import SwiftData
 
 /// Formal recognition (PRODUCT §4.3), optionally linked to the record it came from.
 @Model
-nonisolated final class Achievement: ReviewTracked {
+nonisolated final class Achievement: ProfileRecord {
     var id = UUID()
     var title: String
     var issuer: String
@@ -18,6 +18,8 @@ nonisolated final class Achievement: ReviewTracked {
     var details: String
     var customFields: [CustomField]
     var statusRaw: String
+    var createdAt = Date.now
+    var updatedAt = Date.now
 
     var experience: Experience?
     var project: Project?

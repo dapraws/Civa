@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftData
 
 // Model types are nonisolated: SwiftData uses them outside the main actor
 // (the @Model conformance itself is nonisolated).
@@ -16,9 +17,40 @@ nonisolated enum ReviewStatus: String, Codable, CaseIterable {
 }
 
 /// Resume dates rarely carry a day. `month` is nil for year-only entries.
-nonisolated struct YearMonth: Codable, Hashable {
+nonisolated struct YearMonth: Codable, Hashable, Comparable {
     var year: Int
     var month: Int?
+
+    /// Sorts above every real date, so current and undated (new) records list first.
+    static let distantFuture = YearMonth(year: .max)
+
+    /// Year-only dates sort before any month of the same year.
+    static func < (lhs: YearMonth, rhs: YearMonth) -> Bool {
+        (lhs.year, lhs.month ?? 0) < (rhs.year, rhs.month ?? 0)
+    }
+
+    /// "Mar 2025", or "2025" when the month is unknown.
+    func formatted(calendar: Calendar = .current) -> String {
+        guard let month, (1...12).contains(month) else { return String(year) }
+        return "\(calendar.shortMonthSymbols[month - 1]) \(year)"
+    }
+
+    /// "Mar 2024 – Present", "2019 – 2023", or whichever side is known.
+    static func rangeText(
+        start: YearMonth?,
+        end: YearMonth?,
+        isCurrent: Bool = false,
+        calendar: Calendar = .current
+    ) -> String {
+        let startText = start?.formatted(calendar: calendar)
+        let endText = isCurrent ? String(localized: "Present") : end?.formatted(calendar: calendar)
+        return [startText, endText].compactMap(\.self).joined(separator: " – ")
+    }
+
+    /// Sort key for newest-first lists.
+    static func recency(start: YearMonth?, end: YearMonth?, isCurrent: Bool = false) -> YearMonth {
+        isCurrent ? .distantFuture : (end ?? start ?? .distantFuture)
+    }
 }
 
 nonisolated struct CustomField: Codable, Hashable, Identifiable {
@@ -33,12 +65,19 @@ nonisolated struct ProfileLink: Codable, Hashable, Identifiable {
     var url: String
 }
 
-/// Records store status as a raw string because enum comparisons in `#Predicate` are unreliable.
-nonisolated protocol ReviewTracked: AnyObject {
+/// A record the user creates and edits by hand.
+nonisolated protocol EditableRecord: PersistentModel {
+    var createdAt: Date { get set }
+    var updatedAt: Date { get set }
+}
+
+/// A Career Profile record. Status is stored as a raw string because enum comparisons
+/// in `#Predicate` are unreliable.
+nonisolated protocol ProfileRecord: EditableRecord {
     var statusRaw: String { get set }
 }
 
-nonisolated extension ReviewTracked {
+nonisolated extension ProfileRecord {
     /// Unknown values read as `.needsReview` so they are never treated as confirmed facts.
     var status: ReviewStatus {
         get { ReviewStatus(rawValue: statusRaw) ?? .needsReview }

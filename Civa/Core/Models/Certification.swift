@@ -9,7 +9,7 @@ import Foundation
 import SwiftData
 
 @Model
-nonisolated final class Certification: ReviewTracked {
+nonisolated final class Certification: ProfileRecord {
     var id = UUID()
     var name: String
     var issuer: String
@@ -19,6 +19,8 @@ nonisolated final class Certification: ReviewTracked {
     var credentialURL: String
     var customFields: [CustomField]
     var statusRaw: String
+    var createdAt = Date.now
+    var updatedAt = Date.now
 
     init(
         name: String,

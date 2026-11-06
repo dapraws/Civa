@@ -9,7 +9,7 @@ import Foundation
 import SwiftData
 
 @Model
-nonisolated final class PersonalInfo: ReviewTracked {
+nonisolated final class PersonalInfo: ProfileRecord {
     var id = UUID()
     var fullName: String
     var headline: String
@@ -19,6 +19,8 @@ nonisolated final class PersonalInfo: ReviewTracked {
     var links: [ProfileLink]
     var customFields: [CustomField]
     var statusRaw: String
+    var createdAt = Date.now
+    var updatedAt = Date.now
 
     init(
         fullName: String,
