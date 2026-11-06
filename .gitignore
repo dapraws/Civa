@@ -6,3 +6,6 @@ build/
 
 # macOS
 .DS_Store
+
+# Local API keys
+Civa/Config/Secrets.plist

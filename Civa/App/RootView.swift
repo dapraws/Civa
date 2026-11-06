@@ -46,11 +46,7 @@ struct RootView: View {
         case .applications:
             ApplicationsView()
         case .settings:
-            ContentUnavailableView(
-                "Nothing to Set Up Yet",
-                systemImage: section.systemImage,
-                description: Text("Privacy and integration settings will appear here.")
-            )
+            SettingsView()
         }
     }
 }

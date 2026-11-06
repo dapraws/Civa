@@ -59,7 +59,7 @@ struct ExperienceForm: View {
             Section {
                 TextField("Role", text: editor.binding(\.role), prompt: Text("Required"))
                 FieldError(editor.error(for: \.role))
-                TextField("Organization", text: editor.binding(\.organization), prompt: Text("Required"))
+                OrganizationField(title: "Organization", name: editor.binding(\.organization), prompt: Text("Required"))
                 FieldError(editor.error(for: \.organization))
                 TextField("Location", text: editor.binding(\.location), prompt: Text("City, Country"))
             }
