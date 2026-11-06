@@ -33,7 +33,7 @@ nonisolated enum ApplicationStatus: String, Codable, CaseIterable, Identifiable 
     }
 }
 
-/// A job the user is tracking (FR-060). Linking a resume arrives with the Resume Builder.
+/// A job the user is tracking (FR-060), optionally linked to the resume sent for it.
 @Model
 nonisolated final class JobApplication: EditableRecord {
     var id = UUID()
@@ -44,6 +44,8 @@ nonisolated final class JobApplication: EditableRecord {
     var applicationDate: Date?
     /// Raw string because enum comparisons in `#Predicate` are unreliable.
     var statusRaw: String
+    /// The resume sent for this job. Cleared if that resume is deleted.
+    var resume: Resume?
     var createdAt = Date.now
     var updatedAt = Date.now
 

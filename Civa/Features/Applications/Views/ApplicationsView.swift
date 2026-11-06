@@ -5,6 +5,7 @@
 //  Created by Muhammad Darrel Prawira on 06/11/26.
 //
 
+import SwiftData
 import SwiftUI
 
 /// Job application tracking (FR-060 to FR-062), filterable by status.
@@ -61,7 +62,7 @@ struct ApplicationList: View {
     }
 }
 
-/// An application in the gallery: logo, status, position, company, and date.
+/// An application in the gallery: logo, status, position, company, date, and the resume sent.
 struct ApplicationCard: View {
     let application: JobApplication
 
@@ -80,10 +81,19 @@ struct ApplicationCard: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
-            Text(application.applicationDate.map { String(localized: "Applied \($0.formatted(date: .abbreviated, time: .omitted))") }
-                ?? String(localized: "Not applied yet"))
-                .font(.caption)
-                .foregroundStyle(.tertiary)
+            HStack(spacing: 8) {
+                Text(application.applicationDate.map { String(localized: "Applied \($0.formatted(date: .abbreviated, time: .omitted))") }
+                    ?? String(localized: "Not applied yet"))
+                    .foregroundStyle(.tertiary)
+                    .fixedSize()
+                Spacer(minLength: 0)
+                if let resume = application.resume {
+                    Label(resume.displayTitle, systemImage: "doc.text")
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+            .font(.caption)
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -126,6 +136,10 @@ extension ApplicationStatus {
 struct ApplicationForm: View {
     let editor: RecordEditor<JobApplication>
 
+    @Environment(UnsavedChangesGuard.self) private var changes
+    @Environment(AppNavigation.self) private var navigation
+    @Query(sort: \Resume.updatedAt, order: .reverse) private var resumes: [Resume]
+
     var body: some View {
         Form {
             Section {
@@ -152,6 +166,25 @@ struct ApplicationForm: View {
                         Text(status.title).tag(status)
                     }
                 }
+            }
+            Section {
+                Picker("Resume", selection: editor.binding(\.resume)) {
+                    Text("None").tag(Resume?.none)
+                    if !resumes.isEmpty { Divider() }
+                    ForEach(resumes) { resume in
+                        Text(resume.displayTitle).tag(Resume?.some(resume))
+                    }
+                }
+                if let resume = editor.record.resume {
+                    Button("Open Resume") {
+                        changes.perform {
+                            navigation.recordToOpen = resume.id
+                            navigation.section = .resumes
+                        }
+                    }
+                }
+            } footer: {
+                Text("The resume you sent for this job.")
             }
             Section {
                 Toggle("Applied on a Date", isOn: hasDate)

@@ -29,4 +29,21 @@ struct JobApplicationTests {
         #expect(Set(applied.map(\.company)) == ["Acme", "Initech"])
         #expect(try context.fetchCount(FetchDescriptor(predicate: JobApplication.withStatus(nil))) == 3)
     }
+
+    @Test func deletingResumeUnlinksApplications() throws {
+        let container = try ModelContainer.civa(inMemory: true)
+        let context = container.mainContext
+        let resume = Resume(title: "iOS Resume")
+        let application = JobApplication(company: "Acme", position: "Intern")
+        context.insert(resume)
+        context.insert(application)
+        application.resume = resume
+        try context.save()
+        #expect(resume.applications.map(\.company) == ["Acme"])
+
+        context.delete(resume)
+        try context.save()
+        #expect(application.resume == nil)
+        #expect(try context.fetchCount(FetchDescriptor<JobApplication>()) == 1)
+    }
 }
