@@ -22,6 +22,7 @@ nonisolated enum SchemaV1: VersionedSchema {
             Certification.self,
             Skill.self,
             JobApplication.self,
+            Resume.self,
         ]
     }
 }
