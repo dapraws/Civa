@@ -119,3 +119,11 @@ nonisolated struct ResumeFormat: Codable, Hashable {
     static let lineSpacings = [1.0, 1.15, 1.3]
     static let sectionSpacings = 6.0...18.0
 }
+
+nonisolated extension Array where Element: Identifiable {
+    /// Moves the element with `id` one place up (-1) or down (+1). Does nothing at the ends.
+    mutating func move(id: Element.ID, by offset: Int) {
+        guard let index = firstIndex(where: { $0.id == id }), indices.contains(index + offset) else { return }
+        swapAt(index, index + offset)
+    }
+}

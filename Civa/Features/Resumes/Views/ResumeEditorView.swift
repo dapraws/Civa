@@ -11,7 +11,7 @@ import SwiftUI
 /// The preview is the rendered PDF itself and can't be edited.
 struct ResumeEditorView: View {
     enum Tab: CaseIterable, Identifiable {
-        case details, header, summary, sections
+        case details, header, summary, sections, format
 
         var id: Self { self }
 
@@ -21,6 +21,7 @@ struct ResumeEditorView: View {
             case .header: String(localized: "Header")
             case .summary: String(localized: "Summary")
             case .sections: String(localized: "Sections")
+            case .format: String(localized: "Format")
             }
         }
     }
@@ -45,6 +46,7 @@ struct ResumeEditorView: View {
                     case .header: header
                     case .summary: summary
                     case .sections: ResumeSectionsForm(document: editor.binding(\.document))
+                    case .format: ResumeFormatForm(format: editor.binding(\.document).format)
                     }
                 }
                 .formStyle(.grouped)
