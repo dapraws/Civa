@@ -16,6 +16,9 @@ nonisolated struct ResumeDocument: Codable, Hashable {
     /// In display order (FR-036 section order).
     var sections: [ResumeSection] = []
     var format = ResumeFormat()
+    /// Personal Information as it was when the header was copied, so later changes can be
+    /// suggested (FR-042). Optional so resumes saved before it existed still decode.
+    var headerSource: ResumeHeader?
 
     /// A blank resume with the usual sections, for "from scratch" (FR-030).
     static var blank: ResumeDocument {
@@ -67,6 +70,22 @@ nonisolated struct ResumeEntry: Codable, Hashable, Identifiable {
     /// "Internship", printed after the subtitle when the resume shows employment types.
     /// Optional so resumes saved before it existed still decode.
     var employmentType: String?
+    /// The profile record as it read when copied here, so later changes to it can be suggested
+    /// (FR-042). Optional so resumes saved before it existed still decode.
+    var sourceCopy: SourceCopy?
+
+    /// The parts of an entry that come from the Career Profile.
+    struct SourceCopy: Codable, Hashable {
+        var title: String
+        var subtitle: String
+        var dates: String
+        var bullets: [String]
+        var employmentType: String?
+    }
+
+    var asSourceCopy: SourceCopy {
+        SourceCopy(title: title, subtitle: subtitle, dates: dates, bullets: bullets, employmentType: employmentType)
+    }
 }
 
 /// Customization limited to what keeps the layout single-column and ATS-safe (FR-036).

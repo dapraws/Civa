@@ -6,6 +6,7 @@
 //
 
 import PDFKit
+import SwiftData
 import SwiftUI
 
 /// Outline, fields, and live preview, with draggable dividers between them (FR-032, FR-033).
@@ -15,6 +16,8 @@ struct ResumeEditorView: View {
     @State private var outlineWidth: CGFloat = 210
     @State private var previewWidth: CGFloat = 540
     @State private var isShowingHistory = false
+    @State private var isShowingSuggestions = false
+    @Environment(\.modelContext) private var context
 
     init(editor: RecordEditor<Resume>) {
         self.editor = editor
@@ -40,6 +43,18 @@ struct ResumeEditorView: View {
         }
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
+                let suggestionCount = SuggestedChanges.suggestions(
+                    for: editor.record.document, from: ProfileSource.current(in: context)
+                ).count
+                if suggestionCount > 0 {
+                    Button {
+                        isShowingSuggestions = true
+                    } label: {
+                        Label("\(suggestionCount) Suggested", systemImage: "sparkles")
+                            .labelStyle(.titleAndIcon)
+                    }
+                    .help("Changes from your Career Profile that this resume doesn't have yet")
+                }
                 Button("History", systemImage: "clock.arrow.circlepath") { isShowingHistory = true }
                     .disabled(editor.isNew)
                     .help(editor.isNew ? "Save the resume to start its history" : "Versions of this resume")
@@ -49,9 +64,16 @@ struct ResumeEditorView: View {
         .sheet(isPresented: $isShowingHistory) {
             ResumeHistorySheet(editor: editor)
         }
+        .sheet(isPresented: $isShowingSuggestions) {
+            SuggestedChangesSheet(document: document, source: ProfileSource.current(in: context))
+        }
         #if DEBUG
         // Manual checks: -CivaShowHistory YES opens History.
-        .onAppear { isShowingHistory = UserDefaults.standard.bool(forKey: "CivaShowHistory") && !editor.isNew }
+        .onAppear {
+            isShowingHistory = UserDefaults.standard.bool(forKey: "CivaShowHistory") && !editor.isNew
+            // -CivaShowSuggestions YES opens Suggested Changes.
+            isShowingSuggestions = UserDefaults.standard.bool(forKey: "CivaShowSuggestions")
+        }
         #endif
     }
 }

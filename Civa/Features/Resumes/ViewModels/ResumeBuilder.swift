@@ -24,10 +24,8 @@ enum ResumeBuilder {
     static func document(from selection: Selection) -> ResumeDocument {
         var document = ResumeDocument()
         if let person = selection.personalInfo, !person.needsReview {
-            document.header = ResumeHeader(
-                fullName: person.fullName, headline: person.headline, email: person.email,
-                phone: person.phone, location: person.location, links: person.links
-            )
+            document.header = header(from: person)
+            document.headerSource = document.header
         }
 
         let experiences = confirmed(selection.experiences).sorted { recency($0) > recency($1) }
@@ -49,7 +47,32 @@ enum ResumeBuilder {
             ResumeSection(kind: .skills, entries: skillLines(confirmed(selection.skills))),
         ]
         document.sections = sections.filter { !$0.entries.isEmpty }
+        // Remember what each entry was copied from, for Suggested Changes (FR-042).
+        for s in document.sections.indices {
+            for e in document.sections[s].entries.indices where document.sections[s].entries[e].sourceID != nil {
+                document.sections[s].entries[e].sourceCopy = document.sections[s].entries[e].asSourceCopy
+            }
+        }
         return document
+    }
+
+    static func header(from person: PersonalInfo) -> ResumeHeader {
+        ResumeHeader(
+            fullName: person.fullName, headline: person.headline, email: person.email,
+            phone: person.phone, location: person.location, links: person.links
+        )
+    }
+
+    /// How a profile record reads in a resume. Skills are grouped into lines, so they have none.
+    static func entry(for record: any ProfileRecord) -> ResumeEntry? {
+        switch record {
+        case let record as Experience: entry(record)
+        case let record as Education: entry(record)
+        case let record as Project: entry(record)
+        case let record as Achievement: entry(record)
+        case let record as Certification: entry(record)
+        default: nil
+        }
     }
 
     private static func confirmed<M: ProfileRecord>(_ records: [M]) -> [M] {
