@@ -88,6 +88,22 @@ nonisolated extension EditableRecord {
 /// in `#Predicate` are unreliable.
 nonisolated protocol ProfileRecord: EditableRecord {
     var statusRaw: String { get set }
+    var sources: [RecordSource] { get set }
+}
+
+/// Where a record's information came from: typed in Civa, or a file (FR-024).
+nonisolated struct RecordSource: Codable, Hashable {
+    /// The file name; empty for information typed in Civa.
+    var name: String
+    var date: Date
+
+    static func manual() -> RecordSource { RecordSource(name: "", date: .now) }
+
+    var title: String {
+        name.isEmpty
+            ? String(localized: "Manual entry")
+            : "\(name), \(date.formatted(date: .abbreviated, time: .omitted))"
+    }
 }
 
 nonisolated extension ProfileRecord {
@@ -98,6 +114,16 @@ nonisolated extension ProfileRecord {
     }
 
     var needsReview: Bool { status == .needsReview }
+
+    /// A record created in Civa is a manual entry; imported ones already carry their file.
+    func willSave(isNew: Bool, in context: ModelContext) {
+        if isNew, sources.isEmpty { sources = [.manual()] }
+    }
+
+    /// Adds a source once.
+    func addSource(_ source: RecordSource) {
+        if !sources.contains(where: { $0.name == source.name }) { sources.append(source) }
+    }
 }
 
 nonisolated extension String {

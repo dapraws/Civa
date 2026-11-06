@@ -91,9 +91,25 @@ extension ModelContainer {
             ("Shopee", "shopee.com"), ("Airbnb", "airbnb.com"), ("Gojek", "gojek.com"), ("Netflix", "netflix.com"),
         ].map { Organization(name: $0.0, domain: $0.1) }
 
+        // An earlier CV import that matched the current job but was added separately (FR-024).
+        let cvSource = RecordSource(name: "alex-cv-2025.pdf", date: .now - 86_400 * 30)
+        current.sources = [.manual(), cvSource]
+        let duplicate = Experience(
+            kind: .professional,
+            organization: "PT Tokopedia",
+            role: "Senior iOS Engineer",
+            location: "Jakarta",
+            start: YearMonth(year: 2024, month: 6),
+            isCurrent: true,
+            impacts: ["Cut onboarding drop-off by 18%", "Mentored two junior engineers"],
+            status: .needsReview
+        )
+        duplicate.sources = [cvSource]
+        duplicate.possibleDuplicateOf = current.id
+
         let records: [any PersistentModel] = [
             PersonalInfo(fullName: "Alex Morgan", headline: "iOS Engineer", email: "alex@example.com", location: "Jakarta"),
-            current, internship, academy, degree, project, award,
+            duplicate, current, internship, academy, degree, project, award,
             Certification(name: "App Development with Swift", issuer: "Apple", issued: YearMonth(year: 2024, month: 5)),
         ] + applications + organizations
         records.forEach { context.insert($0) }

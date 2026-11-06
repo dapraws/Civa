@@ -7,7 +7,8 @@
 
 import SwiftUI
 
-/// Bar under an inline editor: unsaved marker, Delete, Revert, and Save (⌘S).
+/// Bar under an inline editor: unsaved marker, where the record came from, Compare and Merge for a
+/// possible duplicate, Delete, Revert, and Save (⌘S).
 struct RecordEditorBar<Model: EditableRecord>: View {
     let editor: RecordEditor<Model>
     /// Delete is offered only when this is set.
@@ -16,14 +17,31 @@ struct RecordEditorBar<Model: EditableRecord>: View {
     let onClose: () -> Void
 
     @State private var isConfirmingDelete = false
+    @State private var isMerging = false
 
     var body: some View {
         HStack {
             if editor.isDirty {
                 Label("Unsaved Changes", systemImage: "pencil.circle")
                     .foregroundStyle(.secondary)
+            } else if let record = editor.record as? any ProfileRecord, !record.sources.isEmpty {
+                Text("Source: \(record.sources.map(\.title).joined(separator: " · "))")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .help(record.sources.map(\.title).joined(separator: "\n"))
             }
             Spacer()
+            if let duplicate = editor.record as? any ImportableRecord, duplicate.possibleDuplicateOf != nil {
+                Button("Possible Duplicate…", systemImage: "square.on.square") {
+                    // Merging saves straight to the store, so unsaved edits go first.
+                    if !editor.isDirty || editor.save() { isMerging = true }
+                }
+                .help("Compare with the record this may repeat, then merge or keep both")
+                .sheet(isPresented: $isMerging) {
+                    DuplicateMergeSheet(duplicate: duplicate, onMerged: onClose)
+                }
+            }
             if canDelete {
                 Button("Delete…", role: .destructive) { isConfirmingDelete = true }
             }

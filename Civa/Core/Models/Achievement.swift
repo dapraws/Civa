@@ -18,6 +18,10 @@ nonisolated final class Achievement: ProfileRecord {
     var details: String
     var customFields: [CustomField]
     var statusRaw: String
+    /// Where the information came from (FR-024).
+    var sources: [RecordSource] = []
+    /// Set when this was added from an import despite matching this record (FR-024).
+    var possibleDuplicateOf: UUID?
     var createdAt = Date.now
     var updatedAt = Date.now
 
