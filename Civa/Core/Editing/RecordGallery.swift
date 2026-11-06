@@ -35,6 +35,8 @@ struct RecordGallery<Model: EditableRecord, Card: View, Editor: View>: View {
     private let section: ((Model) -> String)?
     private let actions: [GalleryAction<Model>]
     private let showsAddButton: Bool
+    /// Replaces "add a blank record", for records that start from something else (a file).
+    private let onAdd: (() -> Void)?
     private let card: (Model) -> Card
     private let editorView: (RecordEditor<Model>) -> Editor
 
@@ -50,6 +52,7 @@ struct RecordGallery<Model: EditableRecord, Card: View, Editor: View>: View {
         section: ((Model) -> String)? = nil,
         actions: [GalleryAction<Model>] = [],
         showsAddButton: Bool = true,
+        onAdd: (() -> Void)? = nil,
         @ViewBuilder card: @escaping (Model) -> Card,
         @ViewBuilder editor: @escaping (RecordEditor<Model>) -> Editor
     ) {
@@ -64,6 +67,7 @@ struct RecordGallery<Model: EditableRecord, Card: View, Editor: View>: View {
         self.section = section
         self.actions = actions
         self.showsAddButton = showsAddButton
+        self.onAdd = onAdd
         self.card = card
         self.editorView = editor
     }
@@ -226,6 +230,12 @@ struct RecordGallery<Model: EditableRecord, Card: View, Editor: View>: View {
     }
 
     private func addRecord() {
+        if let onAdd {
+            return changes.perform {
+                close()
+                onAdd()
+            }
+        }
         changes.perform {
             let editor = RecordEditor(creating: makeRecord(), in: context)
             self.editor = editor

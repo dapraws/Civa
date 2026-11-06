@@ -41,6 +41,8 @@ struct RootView: View {
             DashboardView()
         case .careerProfile:
             CareerProfileView()
+        case .documents:
+            DocumentsView()
         case .resumes:
             ResumesView()
         case .applications:

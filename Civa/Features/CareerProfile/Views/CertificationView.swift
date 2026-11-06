@@ -48,6 +48,7 @@ struct CertificationForm: View {
                 TextField("Credential ID", text: editor.binding(\.credentialID))
                 TextField("Credential URL", text: editor.binding(\.credentialURL), prompt: Text("https://"))
             }
+            DocumentsSection(editor: editor)
             CustomFieldsSection(fields: editor.binding(\.customFields))
         }
         .formStyle(.grouped)

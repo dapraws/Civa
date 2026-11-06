@@ -73,6 +73,7 @@ extension ModelContainer {
         let award = Achievement(title: "Best Pitching Team", issuer: "Apple Developer Academy", date: YearMonth(year: 2025, month: 8))
         award.experience = academy
 
+        let certificate = Certification(name: "App Development with Swift", issuer: "Apple", issued: YearMonth(year: 2024, month: 5))
         let day = 86_400.0
         let applications = [
             JobApplication(company: "Apple", position: "iOS Engineer", applicationDate: .now - day * 40, status: .offer),
@@ -112,8 +113,8 @@ extension ModelContainer {
         let records: [any PersistentModel] = [
             PersonalInfo(fullName: "Alex Morgan", headline: "iOS Engineer", email: "alex@example.com", location: "Jakarta"),
             duplicate, current, internship, academy, degree, project, award,
-            Certification(name: "App Development with Swift", issuer: "Apple", issued: YearMonth(year: 2024, month: 5)),
-        ] + applications + organizations
+            certificate,
+        ] + applications + organizations + sampleDocuments(certificate: certificate, project: project)
         records.forEach { context.insert($0) }
         let resumes = sampleResumes()
         // The Master's first entry was copied before the profile gained a line and an
@@ -134,6 +135,34 @@ extension ModelContainer {
         try! context.save()
         return container
     }()
+
+    /// A certificate PDF, a portfolio image, and an unlinked file (FR-022).
+    private static func sampleDocuments(certificate: Certification, project: Project) -> [SupportingDocument] {
+        var page = ResumeDocument()
+        page.header = ResumeHeader(fullName: "Certificate of Completion", headline: "App Development with Swift · Alex Morgan")
+        let pdf = SupportingDocument(
+            name: "Swift certificate", fileName: "Swift certificate.pdf",
+            data: ResumeRenderer.pdf(for: page), kind: .certificate
+        )
+        pdf.certification = certificate
+
+        let image = NSImage(size: CGSize(width: 480, height: 320), flipped: false) { rect in
+            NSGradient(colors: [.systemIndigo, .systemTeal])?.draw(in: rect, angle: 35)
+            NSAttributedString(string: "Civa", attributes: [
+                .font: NSFont.systemFont(ofSize: 64, weight: .bold), .foregroundColor: NSColor.white,
+            ]).draw(at: CGPoint(x: 40, y: 40))
+            return true
+        }
+        let png = image.tiffRepresentation.flatMap { NSBitmapImageRep(data: $0)?.representation(using: .png, properties: [:]) } ?? Data()
+        let screens = SupportingDocument(name: "Civa screens", fileName: "Civa screens.png", data: png, kind: .portfolio)
+        screens.project = project
+
+        let notes = SupportingDocument(
+            name: "Reference letter", fileName: "Reference letter.txt",
+            data: Data("To whom it may concern: Alex was a great teammate.".utf8), kind: .other
+        )
+        return [pdf, screens, notes]
+    }
 
     /// A few versions so History has something to compare.
     private static func addSampleHistory(to resume: Resume, in context: ModelContext) {

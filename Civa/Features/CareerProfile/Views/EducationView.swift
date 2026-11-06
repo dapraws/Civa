@@ -61,6 +61,7 @@ struct EducationForm: View {
                 .labelsHidden()
                 .lineLimit(3...10)
             }
+            DocumentsSection(editor: editor)
             CustomFieldsSection(fields: editor.binding(\.customFields))
         }
         .formStyle(.grouped)
