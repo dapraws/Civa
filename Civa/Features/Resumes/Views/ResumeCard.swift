@@ -11,6 +11,8 @@ import SwiftUI
 /// A resume in the gallery: its first page, name, and target position. The Master is outlined.
 struct ResumeCard: View {
     let resume: Resume
+    /// Career Profile changes this resume doesn't have yet (FR-042).
+    var suggestionCount = 0
 
     var body: some View {
         let document = resume.document
@@ -26,6 +28,18 @@ struct ResumeCard: View {
                         .strokeBorder(resume.isMaster ? AnyShapeStyle(.tint) : AnyShapeStyle(.separator), lineWidth: resume.isMaster ? 2 : 1)
                 }
                 .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
+                .overlay(alignment: .topTrailing) {
+                    if suggestionCount > 0 {
+                        Label("\(suggestionCount)", systemImage: "sparkles")
+                            .font(.caption.weight(.semibold))
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .foregroundStyle(.white)
+                            .background(.tint, in: .capsule)
+                            .padding(6)
+                            .help("\(suggestionCount) suggested changes from your Career Profile")
+                    }
+                }
             VStack(alignment: .leading, spacing: 2) {
                 if resume.isMaster {
                     Label("Master Resume", systemImage: "crown")

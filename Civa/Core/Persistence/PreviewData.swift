@@ -116,6 +116,17 @@ extension ModelContainer {
         ] + applications + organizations
         records.forEach { context.insert($0) }
         let resumes = sampleResumes()
+        // The Master's first entry was copied before the profile gained a line and an
+        // employment type, so it has suggestions waiting (FR-042).
+        var master = resumes[0].document
+        master.sections[0].entries[0].bullets = ["Cut onboarding drop-off by 18%"]
+        master.sections[0].entries[0].sourceID = current.id
+        master.sections[0].entries[0].sourceCopy = ResumeEntry.SourceCopy(
+            title: "iOS Engineer", subtitle: "Tokopedia · Jakarta",
+            dates: YearMonth.rangeText(start: current.start, end: nil, isCurrent: true),
+            bullets: ["Cut onboarding drop-off by 18%"]
+        )
+        resumes[0].document = master
         resumes.forEach { context.insert($0) }
         addSampleHistory(to: resumes[0], in: context)
         applications[0].resume = resumes[1]  // Apple gets the tailored resume

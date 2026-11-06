@@ -11,6 +11,7 @@ import SwiftUI
 /// Resume versions as a gallery: the Master Resume first (FR-040), then tailored resumes,
 /// each edited independently (FR-041).
 struct ResumesView: View {
+    @Environment(\.modelContext) private var context
     @Environment(UnsavedChangesGuard.self) private var changes
     @Environment(AppNavigation.self) private var navigation
     @Query(filter: #Predicate<Resume> { $0.isMaster }) private var masters: [Resume]
@@ -18,6 +19,7 @@ struct ResumesView: View {
     @State private var tailoring: Resume?
 
     var body: some View {
+        let source = ProfileSource.current(in: context)
         RecordGallery(
             title: String(localized: "Resumes"),
             addTitle: String(localized: "New Resume"),
@@ -44,7 +46,7 @@ struct ResumesView: View {
                 ),
             ],
             showsAddButton: false,
-            card: { ResumeCard(resume: $0) },
+            card: { ResumeCard(resume: $0, suggestionCount: SuggestedChanges.suggestions(for: $0.document, from: source).count) },
             editor: { ResumeEditorView(editor: $0) }
         )
         .toolbar {
@@ -58,6 +60,24 @@ struct ResumesView: View {
         .sheet(item: $tailoring) { master in
             TailorResumeSheet(master: master)
         }
+        .onAppear(perform: startTracking)
+    }
+
+    /// Resumes made before Suggested Changes start tracking the profile from now (FR-042).
+    /// Runs only when no editor holds unsaved changes, so the save touches nothing else.
+    private func startTracking() {
+        guard changes.active == nil else { return }
+        let source = ProfileSource.current(in: context)
+        let resumes = (try? context.fetch(FetchDescriptor<Resume>())) ?? []
+        var changed = false
+        for resume in resumes {
+            var document = resume.document
+            if SuggestedChanges.startTracking(&document, from: source) {
+                resume.document = document
+                changed = true
+            }
+        }
+        if changed { try? context.save() }
     }
 
     private var newMenu: some View {
