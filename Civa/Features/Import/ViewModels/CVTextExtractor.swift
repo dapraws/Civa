@@ -26,6 +26,20 @@ enum CVTextExtractor {
     static let docx = UTType("org.openxmlformats.wordprocessingml.document") ?? .data
     static let contentTypes: [UTType] = [.pdf, docx]
 
+    /// The text to show and what was found in it. LinkedIn's own PDF is read by its layout;
+    /// anything else goes through the general CV rules.
+    static func read(from url: URL) throws -> (text: String, draft: ImportDraft) {
+        if UTType(filenameExtension: url.pathExtension)?.conforms(to: .pdf) == true,
+           let document = PDFDocument(url: url), !document.isLocked {
+            let lines = LinkedInPDF.lines(of: document)
+            if LinkedInPDF.isLinkedIn(lines) {
+                return (LinkedInPDF.text(of: lines).precomposedStringWithCompatibilityMapping, LinkedInPDF.draft(from: lines))
+            }
+        }
+        let text = try text(from: url)
+        return (text, CVParser.parse(text))
+    }
+
     static func text(from url: URL) throws -> String {
         let type = UTType(filenameExtension: url.pathExtension)
         let text: String

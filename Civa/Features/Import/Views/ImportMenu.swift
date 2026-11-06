@@ -16,14 +16,14 @@ struct ImportMenu: View {
 
     var body: some View {
         Menu {
-            Button("CV (PDF or Word)…", systemImage: "doc.text") { choose(.cv) }
+            Button("CV or LinkedIn PDF…", systemImage: "doc.text") { choose(.cv) }
             Button("LinkedIn Data Export…", systemImage: "archivebox") { choose(.linkedInExport) }
         } label: {
             Label("Import", systemImage: "square.and.arrow.down")
         }
         .labelStyle(.iconOnly)
         .menuIndicator(.hidden)
-        .help("Add your details from a CV or a LinkedIn data export")
+        .help("Add your details from a CV, a LinkedIn PDF, or a LinkedIn data export")
         .fileImporter(
             isPresented: Binding(get: { choosing != nil }, set: { if !$0 { choosing = nil } }),
             allowedContentTypes: choosing == .linkedInExport ? [.zip, .folder] : CVTextExtractor.contentTypes

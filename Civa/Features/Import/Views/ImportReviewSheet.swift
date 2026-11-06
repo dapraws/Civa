@@ -200,8 +200,7 @@ struct ImportReviewSheet: View {
             var draft: ImportDraft
             switch request.kind {
             case .cv:
-                sourceText = try CVTextExtractor.text(from: url)
-                draft = CVParser.parse(sourceText)
+                (sourceText, draft) = try CVTextExtractor.read(from: url)
             case .linkedInExport:
                 let files = try LinkedInExport.files(at: url)
                 sourceText = files.keys.sorted().map { "• \($0)" }.joined(separator: "\n")
