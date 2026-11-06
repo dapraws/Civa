@@ -166,22 +166,25 @@ struct CVParserTests {
         let container = try ModelContainer.civa(inMemory: true)
         let context = container.mainContext
         let person = PersonalInfo(fullName: "Alex M.", email: "")
+        let swift = Skill(name: "Swift")
         context.insert(person)
-        context.insert(Skill(name: "Swift"))
+        context.insert(swift)
         try context.save()
 
         var draft = CVParser.parse(english)
-        draft.markDuplicates(of: [ImportDraft.key(.skills, "swift", "")])
+        draft.match(against: [swift.importItem])
         #expect(draft.items.first { $0.title == "Swift" }?.isIncluded == false)
 
-        draft.add(to: context, existing: person)
+        let source = RecordSource(name: "cv.pdf", date: .now)
+        draft.add(to: context, existing: person, records: [swift.id: swift], source: source)
         try context.save()
         #expect(person.fullName == "Alex M.")  // kept
         #expect(person.email == "alex@example.com")  // filled
         #expect(person.needsReview)
+        #expect(person.sources.map(\.name) == ["cv.pdf"])
         let experiences = try context.fetch(FetchDescriptor<Experience>())
         #expect(experiences.count == 2)
-        #expect(experiences.allSatisfy { $0.needsReview })
+        #expect(experiences.allSatisfy { $0.needsReview && $0.sources == [source] })
         let skillCount = try context.fetchCount(FetchDescriptor<Skill>())
         #expect(skillCount == 4)  // Swift not added twice
     }

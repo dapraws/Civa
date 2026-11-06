@@ -100,7 +100,11 @@ struct ImportCVSheet: View {
                     } else {
                         ForEach(indices, id: \.self) { index in
                             Section {
-                                ImportItemFields(item: $draft.items[index])
+                                ImportItemFields(
+                                    item: $draft.items[index],
+                                    existing: draft.items[index].matchID.flatMap { draft.existing[$0] },
+                                    sourceName: url.lastPathComponent
+                                )
                             } header: {
                                 if index == indices.first { categoryHeader(category, count: indices.count) }
                             }
@@ -180,30 +184,21 @@ struct ImportCVSheet: View {
         do {
             sourceText = try CVTextExtractor.text(from: url)
             var draft = CVParser.parse(sourceText)
-            draft.markDuplicates(of: existingKeys)
+            draft.match(against: existingRecords.map(\.importItem))
             self.draft = draft
         } catch {
             loadError = error.localizedDescription
         }
     }
 
-    /// Records already in the profile, keyed the way imported items are.
-    private var existingKeys: Set<String> {
-        var keys: Set<String> = []
-        for experience in experiences {
-            let category: ImportCategory = experience.kind == .professional ? .experience : .organizational
-            keys.insert(ImportDraft.key(category, experience.role, experience.organization))
-        }
-        education.forEach { keys.insert(ImportDraft.key(.education, $0.degree, $0.institution)) }
-        projects.forEach { keys.insert(ImportDraft.key(.projects, $0.name, $0.role)) }
-        achievements.forEach { keys.insert(ImportDraft.key(.achievements, $0.title, $0.issuer)) }
-        certifications.forEach { keys.insert(ImportDraft.key(.certifications, $0.name, $0.issuer)) }
-        skills.forEach { keys.insert(ImportDraft.key(.skills, $0.name, "")) }
-        return keys
+    /// Profile records an imported item can match.
+    private var existingRecords: [any ImportableRecord] {
+        experiences as [any ImportableRecord] + education + projects + achievements + certifications + skills
     }
 
     private func add() {
-        draft.add(to: context, existing: personalInfo.first)
+        let records = Dictionary(existingRecords.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        draft.add(to: context, existing: personalInfo.first, records: records, source: RecordSource(name: url.lastPathComponent, date: .now))
         do {
             try context.save()
             dismiss()
@@ -215,43 +210,81 @@ struct ImportCVSheet: View {
     }
 }
 
-/// One found entry: checkbox, then its fields while it's checked.
+/// One found entry. New ones have a checkbox; ones matching the profile choose Merge, Add as
+/// Separate, or Skip, and merging shows the differences to choose from (FR-024).
 private struct ImportItemFields: View {
     @Binding var item: ImportItem
+    let existing: ImportItem?
+    let sourceName: String
 
     var body: some View {
-        Toggle(isOn: $item.isIncluded) {
+        if let existing {
             HStack {
                 Text(item.title.isBlank ? String(localized: "Untitled") : item.title)
                     .fontWeight(.medium)
                 ImportTag(item: item)
+                Spacer()
+                Picker("Action", selection: $item.action) {
+                    Text("Merge").tag(ImportAction.merge)
+                    Text("Add as Separate").tag(ImportAction.add)
+                    Text("Skip").tag(ImportAction.skip)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
             }
-        }
-        .toggleStyle(.checkbox)
-        if item.isIncluded {
-            Picker("Category", selection: $item.category) {
-                ForEach(ImportCategory.allCases.filter { $0 != .skills }) { Text($0.title).tag($0) }
+            switch item.action {
+            case .merge:
+                CompareFields(
+                    existing: existing,
+                    incoming: item,
+                    picks: $item.picks,
+                    incomingTitle: String(localized: "From \(sourceName)")
+                )
+            case .add:
+                Text("Added as its own record and marked as a possible duplicate of “\(existing.title)”, so you can compare them later.")
+                    .foregroundStyle(.secondary)
+                editableFields
+            case .skip:
+                EmptyView()
             }
-            TextField(item.category.titleLabel, text: $item.title)
-            TextField(item.category.subtitleLabel, text: $item.subtitle)
-            if [.experience, .organizational, .education].contains(item.category) {
-                TextField("Location", text: $item.location)
-            }
-            if item.category == .achievements || item.category == .certifications {
-                YearMonthField(title: String(localized: "Date"), value: $item.start)
-            } else {
-                YearMonthField(title: String(localized: "Start"), value: $item.start)
-                Toggle("Ongoing", isOn: $item.isCurrent)
-                if !item.isCurrent {
-                    YearMonthField(title: String(localized: "End"), value: $item.end)
+        } else {
+            Toggle(isOn: $item.isIncluded) {
+                HStack {
+                    Text(item.title.isBlank ? String(localized: "Untitled") : item.title)
+                        .fontWeight(.medium)
+                    ImportTag(item: item)
                 }
             }
-            StringListEditor(
-                items: $item.bullets,
-                prompt: String(localized: "Detail or result"),
-                addTitle: String(localized: "Add Line")
-            )
+            .toggleStyle(.checkbox)
+            if item.isIncluded { editableFields }
         }
+    }
+
+    @ViewBuilder
+    private var editableFields: some View {
+        Picker("Category", selection: $item.category) {
+            ForEach(ImportCategory.allCases.filter { $0 != .skills }) { Text($0.title).tag($0) }
+        }
+        TextField(item.category.titleLabel, text: $item.title)
+        TextField(item.category.subtitleLabel, text: $item.subtitle)
+        if [.experience, .organizational, .education].contains(item.category) {
+            TextField("Location", text: $item.location)
+        }
+        if item.category.isSingleDate {
+            YearMonthField(title: String(localized: "Date"), value: $item.start)
+        } else {
+            YearMonthField(title: String(localized: "Start"), value: $item.start)
+            Toggle("Ongoing", isOn: $item.isCurrent)
+            if !item.isCurrent {
+                YearMonthField(title: String(localized: "End"), value: $item.end)
+            }
+        }
+        StringListEditor(
+            items: $item.bullets,
+            prompt: String(localized: "Detail or result"),
+            addTitle: String(localized: "Add Line")
+        )
     }
 }
 
@@ -274,13 +307,15 @@ private struct SkillRow: View {
     }
 }
 
-/// "Already in Profile" or "Check", when either applies.
+/// "Already in Profile", "Matches Your Profile", or "Check", when one applies.
 private struct ImportTag: View {
     let item: ImportItem
 
     var body: some View {
-        if item.isDuplicate {
+        if item.isIdentical {
             tag(String(localized: "Already in Profile"), color: .secondary)
+        } else if item.matchID != nil {
+            tag(String(localized: "Matches Your Profile"), color: .orange)
         } else if item.needsCheck {
             tag(String(localized: "Check"), color: .orange)
         }

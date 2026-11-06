@@ -19,6 +19,8 @@ nonisolated final class PersonalInfo: ProfileRecord {
     var links: [ProfileLink]
     var customFields: [CustomField]
     var statusRaw: String
+    /// Where the information came from (FR-024).
+    var sources: [RecordSource] = []
     var createdAt = Date.now
     var updatedAt = Date.now
 
