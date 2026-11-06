@@ -19,6 +19,7 @@ struct RecordListDetail<Model: EditableRecord, Editor: View>: View {
 
     @Environment(\.modelContext) private var context
     @Environment(UnsavedChangesGuard.self) private var changes
+    @Environment(AppNavigation.self) private var navigation
     @Query private var records: [Model]
     @State private var selection: Model.ID?
     /// The row clicked while the unsaved-changes prompt is up.
@@ -61,6 +62,14 @@ struct RecordListDetail<Model: EditableRecord, Editor: View>: View {
                     .help("\(addTitle) (⌘N)")
                 }
             }
+            .onAppear {
+                if navigation.startsNewRecord {
+                    navigation.startsNewRecord = false
+                    addRecord()
+                } else {
+                    selectFirst()
+                }
+            }
     }
 
     @ViewBuilder
@@ -86,7 +95,6 @@ struct RecordListDetail<Model: EditableRecord, Editor: View>: View {
                     }
                 }
                 .frame(minWidth: 220, idealWidth: 280, maxWidth: 420)
-                .onAppear(perform: selectFirst)
 
                 detail
                     .frame(minWidth: 380, maxWidth: .infinity, maxHeight: .infinity)

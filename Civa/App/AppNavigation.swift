@@ -13,6 +13,8 @@ import Observation
 final class AppNavigation {
     var section: AppSection = .dashboard
     var profileCategory: ProfileCategory = .personal
+    /// Set by quick actions: the next record list that appears starts a new record.
+    var startsNewRecord = false
 
     init() {
         #if DEBUG
