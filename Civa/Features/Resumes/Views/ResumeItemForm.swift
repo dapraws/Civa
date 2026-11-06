@@ -256,7 +256,8 @@ extension ResumeSection.Kind {
 
     var subtitleLabel: String {
         switch self {
-        case .experience, .organizational: String(localized: "Organization")
+        case .experience: String(localized: "Company")
+        case .organizational: String(localized: "Organization")
         case .education: String(localized: "School")
         case .projects: String(localized: "Your Role")
         case .achievements: String(localized: "Given By")

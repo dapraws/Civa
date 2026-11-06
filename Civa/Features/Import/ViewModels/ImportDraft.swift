@@ -40,7 +40,8 @@ nonisolated enum ImportCategory: String, CaseIterable, Identifiable {
 
     var subtitleLabel: String {
         switch self {
-        case .experience, .organizational: String(localized: "Organization")
+        case .experience: String(localized: "Company")
+        case .organizational: String(localized: "Organization")
         case .education: String(localized: "Institution")
         case .projects: String(localized: "Your Role")
         case .achievements, .certifications: String(localized: "Issuer")

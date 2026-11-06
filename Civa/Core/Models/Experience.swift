@@ -50,7 +50,11 @@ nonisolated final class Experience: ProfileRecord {
     func validationErrors() -> [PartialKeyPath<Experience>: String] {
         var errors: [PartialKeyPath<Experience>: String] = [:]
         if role.isBlank { errors[\.role] = String(localized: "Enter a role.") }
-        if organization.isBlank { errors[\.organization] = String(localized: "Enter an organization.") }
+        if organization.isBlank {
+            errors[\.organization] = kind == .professional
+                ? String(localized: "Enter a company.")
+                : String(localized: "Enter an organization.")
+        }
         if !isCurrent, YearMonth.isReversed(start: start, end: end) { errors[\.end] = ValidationMessage.endBeforeStart }
         return errors
     }
