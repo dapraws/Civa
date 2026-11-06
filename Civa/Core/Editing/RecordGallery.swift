@@ -8,6 +8,12 @@
 import SwiftData
 import SwiftUI
 
+/// An extra right-click action on a gallery card. It's saved as soon as it runs.
+struct GalleryAction<Model> {
+    let title: (Model) -> String
+    let run: (Model, ModelContext) throws -> Void
+}
+
 /// Records of one type as a grid of cards. Opening a card fills the page with its editor, and the
 /// back button returns to the grid. Leaving the editor goes through the unsaved-changes guard.
 struct RecordGallery<Model: EditableRecord, Card: View, Editor: View>: View {
@@ -26,6 +32,9 @@ struct RecordGallery<Model: EditableRecord, Card: View, Editor: View>: View {
     private let cardWidth: CGFloat
     private let makeRecord: () -> Model
     private let duplicate: ((Model) -> Model)?
+    private let section: ((Model) -> String)?
+    private let actions: [GalleryAction<Model>]
+    private let showsAddButton: Bool
     private let card: (Model) -> Card
     private let editorView: (RecordEditor<Model>) -> Editor
 
@@ -38,6 +47,9 @@ struct RecordGallery<Model: EditableRecord, Card: View, Editor: View>: View {
         cardWidth: CGFloat,
         makeRecord: @escaping () -> Model,
         duplicate: ((Model) -> Model)? = nil,
+        section: ((Model) -> String)? = nil,
+        actions: [GalleryAction<Model>] = [],
+        showsAddButton: Bool = true,
         @ViewBuilder card: @escaping (Model) -> Card,
         @ViewBuilder editor: @escaping (RecordEditor<Model>) -> Editor
     ) {
@@ -49,6 +61,9 @@ struct RecordGallery<Model: EditableRecord, Card: View, Editor: View>: View {
         self.cardWidth = cardWidth
         self.makeRecord = makeRecord
         self.duplicate = duplicate
+        self.section = section
+        self.actions = actions
+        self.showsAddButton = showsAddButton
         self.card = card
         self.editorView = editor
     }
@@ -56,15 +71,23 @@ struct RecordGallery<Model: EditableRecord, Card: View, Editor: View>: View {
     var body: some View {
         content
             .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button(action: addRecord) {
-                        Label(addTitle, systemImage: "plus")
+                if showsAddButton {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button(action: addRecord) {
+                            Label(addTitle, systemImage: "plus")
+                        }
+                        .keyboardShortcut("n")
+                        .help("\(addTitle) (⌘N)")
                     }
-                    .keyboardShortcut("n")
-                    .help("\(addTitle) (⌘N)")
                 }
             }
             .onChange(of: navigation.recordToOpen) { openRequestedRecord() }
+            // A page's own New menu asks for a blank record this way.
+            .onChange(of: navigation.startsNewRecord) { _, starts in
+                guard starts else { return }
+                navigation.startsNewRecord = false
+                addRecord()
+            }
             .onAppear {
                 openRequestedRecord()
                 if navigation.startsNewRecord {
@@ -131,24 +154,58 @@ struct RecordGallery<Model: EditableRecord, Card: View, Editor: View>: View {
                     columns: [GridItem(.adaptive(minimum: cardWidth, maximum: cardWidth * 1.4), spacing: 20, alignment: .top)],
                     spacing: 24
                 ) {
-                    ForEach(records.sorted(by: order)) { record in
-                        Button { open(record) } label: {
-                            card(record).contentShape(.rect)
-                        }
-                        .buttonStyle(.plain)
-                        .contextMenu {
-                            Button("Open") { open(record) }
-                            if let duplicate {
-                                Button("Duplicate") { write { context.insert(duplicate(record)) } }
+                    ForEach(groups, id: \.title) { group in
+                        Section {
+                            ForEach(group.records) { record in
+                                cardButton(record)
                             }
-                            Divider()
-                            Button("Delete…", role: .destructive) { deleting = record }
+                        } header: {
+                            if let title = group.title {
+                                Text(title)
+                                    .font(.title3.weight(.semibold))
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.top, 4)
+                            }
                         }
                     }
                 }
                 .padding(24)
             }
         }
+    }
+
+    private func cardButton(_ record: Model) -> some View {
+        Button { open(record) } label: {
+            card(record).contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .contextMenu {
+            Button("Open") { open(record) }
+            if let duplicate {
+                Button("Duplicate") { write { context.insert(duplicate(record)) } }
+            }
+            ForEach(actions.indices, id: \.self) { index in
+                Button(actions[index].title(record)) { write { try actions[index].run(record, context) } }
+            }
+            Divider()
+            Button("Delete…", role: .destructive) { deleting = record }
+        }
+    }
+
+    /// Sorted records in runs of the same section. With only one section, no headings show.
+    private var groups: [(title: String?, records: [Model])] {
+        let sorted = records.sorted(by: order)
+        guard let section else { return [(nil, sorted)] }
+        var groups: [(title: String?, records: [Model])] = []
+        for record in sorted {
+            let title = section(record)
+            if groups.last?.title == title {
+                groups[groups.count - 1].records.append(record)
+            } else {
+                groups.append((title, [record]))
+            }
+        }
+        return groups.count > 1 ? groups : [(nil, sorted)]
     }
 
     /// Opens a record another page asked for (a new resume from a sheet, a resume linked to an application).
@@ -182,9 +239,9 @@ struct RecordGallery<Model: EditableRecord, Card: View, Editor: View>: View {
     }
 
     /// Gallery actions save right away; the gallery never holds unsaved edits.
-    private func write(_ change: () -> Void) {
-        change()
+    private func write(_ change: () throws -> Void) {
         do {
+            try change()
             try context.save()
         } catch {
             context.rollback()
