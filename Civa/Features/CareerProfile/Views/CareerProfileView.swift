@@ -33,7 +33,7 @@ struct CareerProfileView: View {
                     .labelsHidden()
                 }
                 ToolbarItem(placement: .primaryAction) {
-                    ImportCVButton()
+                    ImportMenu()
                 }
             }
     }
