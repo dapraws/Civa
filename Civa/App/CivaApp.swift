@@ -31,6 +31,6 @@ struct CivaApp: App {
                 StoreErrorView(error: error)
             }
         }
-        .defaultSize(width: 1100, height: 720)
+        .defaultSize(width: 1280, height: 800)
     }
 }

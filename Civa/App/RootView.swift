@@ -27,7 +27,7 @@ struct RootView: View {
                 .navigationTitle(navigation.section.title)
         }
         .environment(navigation)
-        .frame(minWidth: 900, minHeight: 560)
+        .frame(minWidth: 1000, minHeight: 600)
         .unsavedChangesAlert(changes)
         // Closing the window quits; keep it open until edits are saved or reverted.
         .windowDismissBehavior(changes.hasUnsavedChanges ? .disabled : .automatic)
@@ -42,11 +42,7 @@ struct RootView: View {
         case .careerProfile:
             CareerProfileView()
         case .resumes:
-            ContentUnavailableView(
-                "Resumes Aren't Available Yet",
-                systemImage: section.systemImage,
-                description: Text("You'll build ATS-friendly resumes from your career profile here.")
-            )
+            ResumesView()
         case .applications:
             ApplicationsView()
         case .settings:
