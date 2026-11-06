@@ -99,11 +99,33 @@ extension ModelContainer {
         records.forEach { context.insert($0) }
         let resumes = sampleResumes()
         resumes.forEach { context.insert($0) }
+        addSampleHistory(to: resumes[0], in: context)
         applications[0].resume = resumes[1]  // Apple gets the tailored resume
         applications[1...5].forEach { $0.resume = resumes[0] }
         try! context.save()
         return container
     }()
+
+    /// A few versions so History has something to compare.
+    private static func addSampleHistory(to resume: Resume, in context: ModelContext) {
+        let current = resume.document
+        var first = current
+        first.summary = "iOS engineer who builds native apps."
+        first.sections[0].entries.removeLast()
+        first.format.font = .georgia
+        var second = current
+        second.sections[0].entries[0].bullets.removeLast()
+        let versions: [(SnapshotReason, String, ResumeDocument, Double)] = [
+            (.created, "", first, 3),
+            (.checkpoint, "Before adding the internship", second, 1),
+            (.exported, "", current, 0.1),
+        ]
+        for (reason, name, document, daysAgo) in versions {
+            let snapshot = ResumeSnapshot(reason: reason, name: name, document: document, createdAt: .now - 86_400 * daysAgo)
+            context.insert(snapshot)
+            snapshot.resume = resume
+        }
+    }
 
     private static func sampleResumes() -> [Resume] {
         var base = ResumeDocument.blank

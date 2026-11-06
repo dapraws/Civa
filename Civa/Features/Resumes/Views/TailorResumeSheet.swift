@@ -88,6 +88,7 @@ struct TailorResumeSheet: View {
             jobDescription: jobDescription
         )
         context.insert(resume)
+        resume.recordSnapshot(.created, in: context)
         application?.resume = resume
         do {
             try context.save()

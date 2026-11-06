@@ -26,6 +26,10 @@ nonisolated final class Resume: EditableRecord {
     @Relationship(deleteRule: .nullify, inverse: \JobApplication.resume)
     var applications: [JobApplication] = []
 
+    /// Version history (FR-043). Deleted with the resume.
+    @Relationship(deleteRule: .cascade, inverse: \ResumeSnapshot.resume)
+    var snapshots: [ResumeSnapshot] = []
+
     // ponytail: decodes on every read; fine for resume-sized JSON, cache it if editing ever feels slow.
     var document: ResumeDocument {
         get { (try? JSONDecoder().decode(ResumeDocument.self, from: documentData)) ?? .blank }
@@ -38,6 +42,11 @@ nonisolated final class Resume: EditableRecord {
 
     func validationErrors() -> [PartialKeyPath<Resume>: String] {
         title.isBlank ? [\.title: String(localized: "Enter a name for this resume.")] : [:]
+    }
+
+    /// A new resume's first save records its "Created" version.
+    func willSave(isNew: Bool, in context: ModelContext) {
+        if isNew { recordSnapshot(.created, in: context) }
     }
 
     init(title: String, targetPosition: String = "", jobDescription: String = "", document: ResumeDocument = .blank) {

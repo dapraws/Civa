@@ -14,6 +14,7 @@ struct ResumeEditorView: View {
     @State private var selection: ResumeOutlineItem?
     @State private var outlineWidth: CGFloat = 210
     @State private var previewWidth: CGFloat = 540
+    @State private var isShowingHistory = false
 
     init(editor: RecordEditor<Resume>) {
         self.editor = editor
@@ -38,10 +39,20 @@ struct ResumeEditorView: View {
             }
         }
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                ResumeExportButton(resume: editor.record)
+            ToolbarItemGroup(placement: .primaryAction) {
+                Button("History", systemImage: "clock.arrow.circlepath") { isShowingHistory = true }
+                    .disabled(editor.isNew)
+                    .help(editor.isNew ? "Save the resume to start its history" : "Versions of this resume")
+                ResumeExportButton(editor: editor)
             }
         }
+        .sheet(isPresented: $isShowingHistory) {
+            ResumeHistorySheet(editor: editor)
+        }
+        #if DEBUG
+        // Manual checks: -CivaShowHistory YES opens History.
+        .onAppear { isShowingHistory = UserDefaults.standard.bool(forKey: "CivaShowHistory") && !editor.isNew }
+        #endif
     }
 }
 

@@ -76,6 +76,7 @@ final class RecordEditor<Model: EditableRecord>: EditSession {
         errors = record.validationErrors()
         guard errors.isEmpty else { return false }
         record.updatedAt = .now
+        record.willSave(isNew: isNew, in: context)
         do {
             try context.save()
             isNew = false

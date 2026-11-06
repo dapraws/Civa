@@ -29,9 +29,10 @@ nonisolated struct PDFFile: FileDocument {
     }
 }
 
-/// Export button: checks the resume, then saves the same PDF the preview shows (FR-050).
+/// Export button: saves unsaved changes, checks the resume, then writes the same PDF the preview
+/// shows (FR-050). Each export is recorded in the resume's history (FR-043).
 struct ResumeExportButton: View {
-    let resume: Resume
+    let editor: RecordEditor<Resume>
 
     @Environment(\.modelContext) private var context
     @State private var file: PDFFile?
@@ -54,9 +55,12 @@ struct ResumeExportButton: View {
                 isPresented: $isExporting,
                 document: file,
                 contentType: .pdf,
-                defaultFilename: resume.displayTitle
+                defaultFilename: editor.record.displayTitle
             ) { result in
-                if case .failure(let error) = result { exportError = error.localizedDescription }
+                switch result {
+                case .success: recordExport()
+                case .failure(let error): exportError = error.localizedDescription
+                }
             }
             .alert(
                 "Civa Couldn't Export the PDF",
@@ -69,7 +73,13 @@ struct ResumeExportButton: View {
     }
 
     private func check() {
-        let document = resume.document
+        // The exported version goes into History, which holds saved versions only.
+        if editor.isDirty, !editor.save() {
+            exportError = editor.storeError ?? String(localized: "Fix the highlighted fields, then export again.")
+            editor.storeError = nil
+            return
+        }
+        let document = editor.record.document
         let data = ResumeRenderer.pdf(for: document)
         file = PDFFile(data: data)
         issues = ResumeCheck.issues(
@@ -83,10 +93,20 @@ struct ResumeExportButton: View {
             isReviewingIssues = true
         }
     }
+
+    private func recordExport() {
+        guard editor.record.recordSnapshot(.exported, in: context) != nil, !editor.isDirty else { return }
+        do {
+            try context.save()
+        } catch {
+            context.rollback()
+            exportError = String(localized: "The PDF was exported, but Civa couldn't add it to History.")
+        }
+    }
 }
 
 #Preview {
-    ResumeExportButton(resume: RecordEditor<Resume>.preview().record)
+    ResumeExportButton(editor: RecordEditor<Resume>.preview())
         .padding()
         .previewEnvironment()
 }
