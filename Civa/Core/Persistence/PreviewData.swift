@@ -67,6 +67,9 @@ extension ModelContainer {
             PersonalInfo(fullName: "Alex Morgan", headline: "iOS Engineer", email: "alex@example.com", location: "Jakarta"),
             current, internship, academy, degree, project, award,
             Certification(name: "App Development with Swift", issuer: "Apple", issued: YearMonth(year: 2024, month: 5)),
+            JobApplication(company: "Northwind", position: "iOS Engineer", applicationDate: .now.addingTimeInterval(-86_400 * 12), status: .interview),
+            JobApplication(company: "Contoso", position: "Mobile Engineer", applicationDate: .now.addingTimeInterval(-86_400 * 5), status: .applied),
+            JobApplication(company: "Fabrikam", position: "Senior iOS Engineer"),
         ]
         records.forEach { context.insert($0) }
         try! context.save()

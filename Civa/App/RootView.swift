@@ -52,11 +52,7 @@ struct RootView: View {
                 description: Text("You'll build ATS-friendly resumes from your career profile here.")
             )
         case .applications:
-            ContentUnavailableView(
-                "Your Applications",
-                systemImage: section.systemImage,
-                description: Text("Track the jobs you apply for here.")
-            )
+            ApplicationsView()
         case .settings:
             ContentUnavailableView(
                 "Nothing to Set Up Yet",
