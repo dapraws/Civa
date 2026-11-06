@@ -17,6 +17,8 @@ nonisolated final class Resume: EditableRecord {
     var targetPosition: String
     var jobDescription: String
     var documentData: Data
+    /// The base for tailored resumes (FR-040). At most one resume has this; see `makeMaster`.
+    var isMaster = false
     var createdAt = Date.now
     var updatedAt = Date.now
 
@@ -43,5 +45,19 @@ nonisolated final class Resume: EditableRecord {
         self.targetPosition = targetPosition
         self.jobDescription = jobDescription
         self.documentData = (try? JSONEncoder().encode(document)) ?? Data()
+    }
+}
+
+extension Resume {
+    /// Makes `resume` the only Master Resume, or clears the Master when nil. The caller saves.
+    static func makeMaster(_ resume: Resume?, in context: ModelContext) throws {
+        let masters = try context.fetch(FetchDescriptor<Resume>(predicate: #Predicate { $0.isMaster }))
+        for master in masters where master !== resume { master.isMaster = false }
+        resume?.isMaster = true
+    }
+
+    /// A tailored copy of this resume. It's independent: later edits to either don't touch the other (FR-041).
+    func tailoredCopy(title: String, targetPosition: String, jobDescription: String) -> Resume {
+        Resume(title: title, targetPosition: targetPosition, jobDescription: jobDescription, document: document)
     }
 }

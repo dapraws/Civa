@@ -5,12 +5,17 @@
 //  Created by Muhammad Darrel Prawira on 06/11/26.
 //
 
+import SwiftData
 import SwiftUI
 
-/// Resume versions as a gallery (FR-041): each one is edited independently.
+/// Resume versions as a gallery: the Master Resume first (FR-040), then tailored resumes,
+/// each edited independently (FR-041).
 struct ResumesView: View {
     @Environment(UnsavedChangesGuard.self) private var changes
+    @Environment(AppNavigation.self) private var navigation
+    @Query(filter: #Predicate<Resume> { $0.isMaster }) private var masters: [Resume]
     @State private var isPickingFromProfile = false
+    @State private var tailoring: Resume?
 
     var body: some View {
         RecordGallery(
@@ -21,31 +26,59 @@ struct ResumesView: View {
                 message: String(localized: "Create a resume and see it as an ATS-friendly PDF while you edit."),
                 systemImage: AppSection.resumes.systemImage
             ),
-            order: { $0.updatedAt > $1.updatedAt },
+            order: { ($0.isMaster ? 1 : 0, $0.updatedAt) > ($1.isMaster ? 1 : 0, $1.updatedAt) },
             cardWidth: 180,
             makeRecord: { Resume(title: "") },
             duplicate: { resume in
-                Resume(
+                resume.tailoredCopy(
                     title: String(localized: "\(resume.displayTitle) Copy"),
                     targetPosition: resume.targetPosition,
-                    jobDescription: resume.jobDescription,
-                    document: resume.document
+                    jobDescription: resume.jobDescription
                 )
             },
+            section: { $0.isMaster ? String(localized: "Master Resume") : String(localized: "Tailored Resumes") },
+            actions: [
+                GalleryAction(
+                    title: { $0.isMaster ? String(localized: "Remove as Master Resume") : String(localized: "Set as Master Resume") },
+                    run: { resume, context in try Resume.makeMaster(resume.isMaster ? nil : resume, in: context) }
+                ),
+            ],
+            showsAddButton: false,
             card: { ResumeCard(resume: $0) },
             editor: { ResumeEditorView(editor: $0) }
         )
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button("New from Career Profile…", systemImage: "person.text.rectangle") {
-                    changes.perform { isPickingFromProfile = true }
-                }
-                .help("New resume from your Career Profile")
+                newMenu
             }
         }
         .sheet(isPresented: $isPickingFromProfile) {
             NewResumeFromProfileSheet()
         }
+        .sheet(item: $tailoring) { master in
+            TailorResumeSheet(master: master)
+        }
+    }
+
+    private var newMenu: some View {
+        Menu {
+            if let master = masters.first {
+                Button("Tailor from Master Resume…", systemImage: "crown") {
+                    changes.perform { tailoring = master }
+                }
+                .keyboardShortcut("n")
+            }
+            Button("From Career Profile…", systemImage: "person.text.rectangle") {
+                changes.perform { isPickingFromProfile = true }
+            }
+            Button("Blank", systemImage: "doc") {
+                changes.perform { navigation.startsNewRecord = true }
+            }
+            .keyboardShortcut(masters.isEmpty ? KeyboardShortcut("n") : nil)
+        } label: {
+            Label("New Resume", systemImage: "plus")
+        }
+        .help("New resume")
     }
 }
 

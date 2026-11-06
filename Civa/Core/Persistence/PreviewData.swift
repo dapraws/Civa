@@ -140,7 +140,11 @@ extension ModelContainer {
         product.format = ResumeFormat(font: .arial, fontSize: 10.5, accent: .teal, paper: .letter)
 
         return [
-            Resume(title: "iOS Developer Resume", targetPosition: "iOS Developer", document: base),
+            {
+                let master = Resume(title: "Master Resume", targetPosition: "iOS Developer", document: base)
+                master.isMaster = true
+                return master
+            }(),
             Resume(title: "Apple Application", targetPosition: "iOS Engineer", document: tailored),
             Resume(title: "Product Engineer Resume", targetPosition: "Product Engineer", document: product),
         ]

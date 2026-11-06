@@ -22,10 +22,13 @@ struct NewResumeFromProfileSheet: View {
     @Query private var achievements: [Achievement]
     @Query private var certifications: [Certification]
     @Query(sort: \Skill.name) private var skills: [Skill]
+    @Query(filter: #Predicate<Resume> { $0.isMaster }) private var masters: [Resume]
 
     @State private var title = ""
     @State private var includesPersonalInfo = true
     @State private var selected: Set<UUID> = []
+    /// On by default when there's no Master Resume yet.
+    @State private var makesMaster: Bool?
     @State private var saveError: String?
 
     var body: some View {
@@ -33,6 +36,16 @@ struct NewResumeFromProfileSheet: View {
             Form {
                 Section {
                     TextField("Resume Name", text: $title, prompt: Text("iOS Developer Resume"))
+                    Toggle("Make This My Master Resume", isOn: Binding(
+                        get: { makesMaster ?? masters.isEmpty },
+                        set: { makesMaster = $0 }
+                    ))
+                } footer: {
+                    if (makesMaster ?? masters.isEmpty), let master = masters.first {
+                        Text("“\(master.displayTitle)” will become a tailored resume.")
+                    } else {
+                        Text("Tailored resumes start as a copy of your Master Resume.")
+                    }
                 }
                 if let person = personalInfo.first {
                     Section("Personal Information") {
@@ -145,6 +158,7 @@ struct NewResumeFromProfileSheet: View {
         )
         context.insert(resume)
         do {
+            if makesMaster ?? masters.isEmpty { try Resume.makeMaster(resume, in: context) }
             try context.save()
             navigation.recordToOpen = resume.id
             dismiss()

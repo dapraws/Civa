@@ -8,7 +8,7 @@
 import PDFKit
 import SwiftUI
 
-/// A resume in the gallery: its first page, name, and target position.
+/// A resume in the gallery: its first page, name, and target position. The Master is outlined.
 struct ResumeCard: View {
     let resume: Resume
 
@@ -22,10 +22,16 @@ struct ResumeCard: View {
                 .background(.white)
                 .clipShape(.rect(cornerRadius: 6))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 6).strokeBorder(.separator)
+                    RoundedRectangle(cornerRadius: 6)
+                        .strokeBorder(resume.isMaster ? AnyShapeStyle(.tint) : AnyShapeStyle(.separator), lineWidth: resume.isMaster ? 2 : 1)
                 }
                 .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
             VStack(alignment: .leading, spacing: 2) {
+                if resume.isMaster {
+                    Label("Master Resume", systemImage: "crown")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.tint)
+                }
                 Text(resume.displayTitle)
                     .font(.headline)
                     .lineLimit(1)
