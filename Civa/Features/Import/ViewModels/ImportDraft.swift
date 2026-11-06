@@ -98,6 +98,8 @@ nonisolated struct ImportItem: Identifiable, Hashable {
     var end: YearMonth?
     var isCurrent = false
     var bullets: [String] = []
+    /// Professional experience only.
+    var employmentType: EmploymentType?
     var action = ImportAction.add
     /// The existing record this matches, if any.
     var matchID: UUID?
@@ -164,6 +166,7 @@ nonisolated struct ImportItem: Identifiable, Hashable {
         }
         record.sources = [source]
         record.possibleDuplicateOf = matchID
+        if let experience = record as? Experience { experience.employmentType = employmentType }
         return record
     }
 }

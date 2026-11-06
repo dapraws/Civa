@@ -34,6 +34,7 @@ extension ModelContainer {
             customFields: [CustomField(name: "Team Size", value: "6")]
         )
         current.skills = [swift, swiftUI, swiftData]
+        current.employmentType = .fullTime
         let internship = Experience(
             kind: .professional,
             organization: "Traveloka",
@@ -45,6 +46,7 @@ extension ModelContainer {
             status: .needsReview
         )
         internship.skills = [swift, kotlin]
+        internship.employmentType = .internship
         let academy = Experience(
             kind: .organizational,
             organization: "Apple Developer Academy",

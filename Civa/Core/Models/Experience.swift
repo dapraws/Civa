@@ -13,6 +13,42 @@ nonisolated enum ExperienceKind: String, Codable, CaseIterable {
     case organizational
 }
 
+/// LinkedIn's employment types, so imports and profiles use the same words.
+nonisolated enum EmploymentType: String, Codable, CaseIterable, Identifiable {
+    case fullTime, partTime, selfEmployed, freelance, contract, internship, apprenticeship, seasonal
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .fullTime: String(localized: "Full-time")
+        case .partTime: String(localized: "Part-time")
+        case .selfEmployed: String(localized: "Self-employed")
+        case .freelance: String(localized: "Freelance")
+        case .contract: String(localized: "Contract")
+        case .internship: String(localized: "Internship")
+        case .apprenticeship: String(localized: "Apprenticeship")
+        case .seasonal: String(localized: "Seasonal")
+        }
+    }
+
+    /// Finds a type named in text, in English or Indonesian: "Full-time", "Magang", "Kontrak".
+    static func find(in text: String) -> EmploymentType? {
+        let lower = text.lowercased()
+        let words: [(EmploymentType, [String])] = [
+            (.fullTime, ["full-time", "full time", "fulltime", "penuh waktu"]),
+            (.partTime, ["part-time", "part time", "parttime", "paruh waktu"]),
+            (.selfEmployed, ["self-employed", "self employed", "wiraswasta"]),
+            (.freelance, ["freelance", "freelancer", "lepas", "pekerja lepas"]),
+            (.contract, ["contract", "kontrak"]),
+            (.internship, ["internship", "magang"]),
+            (.apprenticeship, ["apprenticeship"]),
+            (.seasonal, ["seasonal", "musiman"]),
+        ]
+        return words.first { _, names in names.contains { lower == $0 } }?.0
+    }
+}
+
 /// Professional and Organizational Experience share this model; the categories are filtered by `kind`.
 @Model
 nonisolated final class Experience: ProfileRecord {
@@ -24,6 +60,8 @@ nonisolated final class Experience: ProfileRecord {
     var start: YearMonth?
     var end: YearMonth?
     var isCurrent: Bool
+    /// Raw value of `EmploymentType`; empty when not set. Professional experience only.
+    var employmentTypeRaw = ""
     var details: String
     /// Results of the work (PRODUCT §4.3). Formal recognition belongs in `achievements`.
     var impacts: [String]
@@ -41,6 +79,11 @@ nonisolated final class Experience: ProfileRecord {
 
     @Relationship(inverse: \Achievement.experience)
     var achievements: [Achievement] = []
+
+    var employmentType: EmploymentType? {
+        get { EmploymentType(rawValue: employmentTypeRaw) }
+        set { employmentTypeRaw = newValue?.rawValue ?? "" }
+    }
 
     var kind: ExperienceKind {
         get { ExperienceKind(rawValue: kindRaw) ?? .professional }

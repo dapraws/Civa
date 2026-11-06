@@ -65,6 +65,13 @@ struct ExperienceForm: View {
                     prompt: Text("Required")
                 )
                 FieldError(editor.error(for: \.organization))
+                if editor.record.kind == .professional {
+                    Picker("Employment Type", selection: editor.binding(\.employmentTypeRaw)) {
+                        Text("Not Set").tag("")
+                        Divider()
+                        ForEach(EmploymentType.allCases) { Text($0.title).tag($0.rawValue) }
+                    }
+                }
                 TextField("Location", text: editor.binding(\.location), prompt: Text("City, Country"))
             }
             Section("Dates") {

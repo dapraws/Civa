@@ -320,7 +320,24 @@ nonisolated enum CVParser {
         if category == .education, isInstitution(item.title), !isInstitution(item.subtitle) {
             swap(&item.title, &item.subtitle)
         }
+        if category == .experience {
+            item.employmentType = takeEmploymentType(from: &item.title)
+                ?? takeEmploymentType(from: &item.subtitle)
+                ?? takeEmploymentType(from: &item.location)
+        }
         return item
+    }
+
+    /// Removes an employment type named as its own part of `text`: "Tokopedia · Full-time",
+    /// "iOS Engineer (Internship)", or just "Magang".
+    static func takeEmploymentType(from text: inout String) -> EmploymentType? {
+        let parts = text.split(whereSeparator: { "·|•()[]".contains($0) }).map { clean(String($0)) }
+        guard let index = parts.firstIndex(where: { EmploymentType.find(in: $0) != nil }) else { return nil }
+        let type = EmploymentType.find(in: parts[index])
+        var rest = parts
+        rest.remove(at: index)
+        text = rest.filter { !$0.isEmpty }.joined(separator: " · ")
+        return type
     }
 
     /// "iOS Engineer — Tokopedia", "iOS Engineer at Tokopedia", "Tokopedia | iOS Engineer".
