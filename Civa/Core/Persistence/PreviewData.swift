@@ -225,6 +225,25 @@ enum PreviewSamples {
     Hiking
     """
 
+    /// A small LinkedIn data export, unzipped, in the app's temporary folder.
+    static func writeSampleLinkedInExport() -> URL? {
+        let folder = FileManager.default.temporaryDirectory.appending(path: "Basic_LinkedInDataExport_Sample")
+        let files = [
+            "Profile.csv": "First Name,Last Name,Headline,Geo Location,Websites\nRina,Wijaya,Product Designer,\"Bandung, Indonesia\",[PORTFOLIO:https://rina.design]\n",
+            "Email Addresses.csv": "Email Address,Confirmed,Primary,Updated On\nrina@example.com,Yes,Yes,1/1/24\n",
+            "Positions.csv": "Company Name,Title,Description,Location,Started On,Finished On\nTokopedia,Senior Product Designer,\"Led the checkout redesign\nBuilt the design system\",Jakarta,Jan 2023,\nGojek,Product Designer,Designed GoPay onboarding,Jakarta,Aug 2020,Dec 2022\n",
+            "Education.csv": "School Name,Start Date,End Date,Notes,Degree Name,Activities\nInstitut Teknologi Bandung,2016,2020,,S1 Desain Komunikasi Visual,\n",
+            "Skills.csv": "Name\nFigma\nPrototyping\nUsability Testing\nSwift\n",
+        ]
+        do {
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            for (name, text) in files { try text.write(to: folder.appending(path: name), atomically: true, encoding: .utf8) }
+            return folder
+        } catch {
+            return nil
+        }
+    }
+
     /// A Word copy of `cvText` in the app's temporary folder, which the sandbox can read.
     static func writeSampleCV() -> URL? {
         let url = FileManager.default.temporaryDirectory.appending(path: "Sample CV.docx")

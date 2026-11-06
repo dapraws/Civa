@@ -1,5 +1,5 @@
 //
-//  ImportCVSheet.swift
+//  ImportReviewSheet.swift
 //  Civa
 //
 //  Created by Muhammad Darrel Prawira on 06/11/26.
@@ -8,10 +8,25 @@
 import SwiftData
 import SwiftUI
 
-/// Review what Civa found in a CV before it goes into the Career Profile (FR-020). The CV's text
-/// stays on the left for reference; everything found is editable, and is added as Needs Review.
-struct ImportCVSheet: View {
+/// What to import, and how to read it.
+struct ImportRequest: Identifiable {
+    enum Kind {
+        /// A PDF or Word CV (FR-020).
+        case cv
+        /// LinkedIn's data export, as a ZIP or its unzipped folder (FR-021).
+        case linkedInExport
+    }
+
     let url: URL
+    let kind: Kind
+    var id: URL { url }
+}
+
+/// Review what Civa found before it goes into the Career Profile (FR-020, FR-021). What was read
+/// stays on the left for reference; everything found is editable, and is added as Needs Review.
+struct ImportReviewSheet: View {
+    let request: ImportRequest
+    private var url: URL { request.url }
 
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
@@ -35,7 +50,7 @@ struct ImportCVSheet: View {
         VStack(spacing: 0) {
             if let loadError {
                 ContentUnavailableView(
-                    "Civa Couldn't Read This CV",
+                    "Civa Couldn't Read This File",
                     systemImage: "doc.questionmark",
                     description: Text(loadError)
                 )
@@ -72,7 +87,7 @@ struct ImportCVSheet: View {
     private var source: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 8) {
-                Text("Text From \(url.lastPathComponent)")
+                Text(request.kind == .cv ? "Text From \(url.lastPathComponent)" : "Read From \(url.lastPathComponent)")
                     .font(.headline)
                 Text(sourceText)
                     .font(.system(.callout, design: .monospaced))
@@ -182,8 +197,17 @@ struct ImportCVSheet: View {
         let isScoped = url.startAccessingSecurityScopedResource()
         defer { if isScoped { url.stopAccessingSecurityScopedResource() } }
         do {
-            sourceText = try CVTextExtractor.text(from: url)
-            var draft = CVParser.parse(sourceText)
+            var draft: ImportDraft
+            switch request.kind {
+            case .cv:
+                sourceText = try CVTextExtractor.text(from: url)
+                draft = CVParser.parse(sourceText)
+            case .linkedInExport:
+                let files = try LinkedInExport.files(at: url)
+                sourceText = files.keys.sorted().map { "• \($0)" }.joined(separator: "\n")
+                    + "\n\n" + String(localized: "Only these profile files are read. Connections, messages, and the rest of the export are left untouched.")
+                draft = LinkedInExport.draft(from: files)
+            }
             draft.match(against: existingRecords.map(\.importItem))
             self.draft = draft
         } catch {
@@ -338,6 +362,6 @@ private struct ImportTag: View {
 }
 
 #Preview {
-    ImportCVSheet(url: URL(filePath: "/tmp/missing.pdf"))
+    ImportReviewSheet(request: ImportRequest(url: URL(filePath: "/tmp/missing.pdf"), kind: .cv))
         .previewEnvironment()
 }
