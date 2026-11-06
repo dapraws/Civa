@@ -53,16 +53,23 @@ final class UnsavedChangesGuard {
         pending.action()
     }
 
-    /// Binding for a selection control: the control updates at once, `apply` runs once unsaved
-    /// changes are resolved, and Cancel puts the control back.
-    func selection<Value: Equatable>(_ shown: Binding<Value>, apply: @escaping (Value) -> Void) -> Binding<Value> {
+    /// Binding for a selection control (sidebar, tabs, list). `value` changes only once unsaved
+    /// changes are resolved; meanwhile the control shows the clicked choice through `pending`,
+    /// which Cancel clears. `apply` replaces the plain assignment when more needs to happen.
+    func selection<Value: Equatable>(
+        _ value: Binding<Value>,
+        pending: Binding<Value?>,
+        apply: ((Value) -> Void)? = nil
+    ) -> Binding<Value> {
         Binding(
-            get: { shown.wrappedValue },
+            get: { pending.wrappedValue ?? value.wrappedValue },
             set: { newValue in
-                let oldValue = shown.wrappedValue
-                guard newValue != oldValue else { return }
-                shown.wrappedValue = newValue
-                self.perform(onCancel: { shown.wrappedValue = oldValue }) { apply(newValue) }
+                guard newValue != value.wrappedValue else { return pending.wrappedValue = nil }
+                pending.wrappedValue = newValue
+                self.perform(onCancel: { pending.wrappedValue = nil }) {
+                    pending.wrappedValue = nil
+                    if let apply { apply(newValue) } else { value.wrappedValue = newValue }
+                }
             }
         )
     }

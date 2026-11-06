@@ -89,6 +89,7 @@ extension View {
     func previewEnvironment() -> some View {
         modelContainer(.preview)
             .environment(UnsavedChangesGuard())
+            .environment(AppNavigation())
     }
 }
 #endif

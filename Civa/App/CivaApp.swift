@@ -11,7 +11,13 @@ import SwiftData
 @main
 struct CivaApp: App {
     @NSApplicationDelegateAdaptor private var appDelegate: AppDelegate
-    private let container = Result { try ModelContainer.civa() }
+    private let container = Result {
+        #if DEBUG
+        // Sample data in memory for manual checks: -CivaSampleData YES
+        if UserDefaults.standard.bool(forKey: "CivaSampleData") { return ModelContainer.preview }
+        #endif
+        return try ModelContainer.civa()
+    }
 
     var body: some Scene {
         // Single window: Civa is one workspace, and ⌘N is free for new records.

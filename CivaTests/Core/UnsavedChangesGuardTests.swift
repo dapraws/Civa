@@ -103,19 +103,45 @@ struct UnsavedChangesGuardTests {
         #expect(changes.active === session)
     }
 
-    @Test func selectionControlRevertsOnCancel() {
-        let shown = Box("Dashboard")
-        let applied = Box<String?>(nil)
-        let binding = changes.selection(Binding(get: { shown.value }, set: { shown.value = $0 })) {
-            applied.value = $0
-        }
+    private func selectionBinding(_ value: Box<String>, _ pending: Box<String?>) -> Binding<String> {
+        changes.selection(
+            Binding(get: { value.value }, set: { value.value = $0 }),
+            pending: Binding(get: { pending.value }, set: { pending.value = $0 })
+        )
+    }
+
+    @Test func selectionShowsTheClickWhilePromptingAndCancelRestoresIt() {
+        let value = Box("Dashboard")
+        let pending = Box<String?>(nil)
+        let binding = selectionBinding(value, pending)
 
         binding.wrappedValue = "Resumes"
-        #expect(shown.value == "Resumes")
-        #expect(applied.value == nil)
+        #expect(binding.wrappedValue == "Resumes")
+        #expect(value.value == "Dashboard")
 
         changes.resolve(.cancel)
-        #expect(shown.value == "Dashboard")
-        #expect(applied.value == nil)
+        #expect(binding.wrappedValue == "Dashboard")
+        #expect(pending.value == nil)
+    }
+
+    @Test func selectionCommitsOnceResolved() {
+        let value = Box("Dashboard")
+        let pending = Box<String?>(nil)
+        let binding = selectionBinding(value, pending)
+
+        binding.wrappedValue = "Resumes"
+        changes.resolve(.discard)
+        #expect(value.value == "Resumes")
+        #expect(pending.value == nil)
+    }
+
+    @Test func selectionCommitsAtOnceWhenNothingIsUnsaved() {
+        session.isDirty = false
+        let value = Box("Dashboard")
+        let pending = Box<String?>(nil)
+
+        selectionBinding(value, pending).wrappedValue = "Resumes"
+        #expect(value.value == "Resumes")
+        #expect(!changes.isPrompting)
     }
 }
