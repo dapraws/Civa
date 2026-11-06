@@ -157,6 +157,7 @@ struct NewResumeFromProfileSheet: View {
             document: ResumeBuilder.document(from: selection)
         )
         context.insert(resume)
+        resume.recordSnapshot(.created, in: context)
         do {
             if makesMaster ?? masters.isEmpty { try Resume.makeMaster(resume, in: context) }
             try context.save()

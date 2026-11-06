@@ -75,10 +75,13 @@ nonisolated protocol EditableRecord: PersistentModel {
     var needsReview: Bool { get }
     /// Problems that block saving, keyed by the field they belong to. Empty when valid.
     func validationErrors() -> [PartialKeyPath<Self>: String]
+    /// Runs inside a valid save, before the store commits. `isNew` is true on a record's first save.
+    func willSave(isNew: Bool, in context: ModelContext)
 }
 
 nonisolated extension EditableRecord {
     var needsReview: Bool { false }
+    func willSave(isNew: Bool, in context: ModelContext) {}
 }
 
 /// A Career Profile record. Status is stored as a raw string because enum comparisons
