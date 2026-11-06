@@ -38,11 +38,7 @@ struct RootView: View {
         let section = navigation.section
         switch section {
         case .dashboard:
-            ContentUnavailableView(
-                "Your Dashboard",
-                systemImage: section.systemImage,
-                description: Text("A summary of your profile and applications will appear here.")
-            )
+            DashboardView()
         case .careerProfile:
             CareerProfileView()
         case .resumes:
