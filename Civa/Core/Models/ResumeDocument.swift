@@ -64,6 +64,9 @@ nonisolated struct ResumeEntry: Codable, Hashable, Identifiable {
     var subtitle = ""
     var dates = ""
     var bullets: [String] = []
+    /// "Internship", printed after the subtitle when the resume shows employment types.
+    /// Optional so resumes saved before it existed still decode.
+    var employmentType: String?
 }
 
 /// Customization limited to what keeps the layout single-column and ATS-safe (FR-036).
@@ -114,6 +117,8 @@ nonisolated struct ResumeFormat: Codable, Hashable {
     /// Name and section headings only.
     var accent = Accent.black
     var paper = Paper.a4
+    /// Optional so formats saved before it existed still decode; nil reads as off.
+    var showsEmploymentType: Bool?
 
     static let fontSizes = 9.0...12.0
     static let lineSpacings = [1.0, 1.15, 1.3]

@@ -82,6 +82,11 @@ enum ResumeDiff {
             change(String(localized: "Margins"), old.margins.title, new.margins.title),
             change(String(localized: "Accent color"), old.accent.title, new.accent.title),
             change(String(localized: "Paper"), old.paper.title, new.paper.title),
+            change(
+                String(localized: "Employment types"),
+                old.showsEmploymentType == true ? String(localized: "Shown") : String(localized: "Hidden"),
+                new.showsEmploymentType == true ? String(localized: "Shown") : String(localized: "Hidden")
+            ),
         ]
         .compactMap { $0 }
     }

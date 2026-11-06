@@ -268,6 +268,12 @@ private struct ImportItemFields: View {
         }
         TextField(item.category.titleLabel, text: $item.title)
         TextField(item.category.subtitleLabel, text: $item.subtitle)
+        if item.category == .experience {
+            Picker("Employment Type", selection: $item.employmentType) {
+                Text("Not Set").tag(EmploymentType?.none)
+                ForEach(EmploymentType.allCases) { Text($0.title).tag(EmploymentType?.some($0)) }
+            }
+        }
         if [.experience, .organizational, .education].contains(item.category) {
             TextField("Location", text: $item.location)
         }

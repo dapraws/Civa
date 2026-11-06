@@ -36,7 +36,8 @@ nonisolated extension Experience: ImportableRecord {
     var importItem: ImportItem {
         ImportItem(
             id: id, category: kind == .professional ? .experience : .organizational, title: role, subtitle: organization,
-            location: location, start: start, end: end, isCurrent: isCurrent, bullets: impacts
+            location: location, start: start, end: end, isCurrent: isCurrent, bullets: impacts,
+            employmentType: employmentType
         )
     }
 
@@ -46,6 +47,7 @@ nonisolated extension Experience: ImportableRecord {
         if fields.contains(.location) { location = item.location }
         if fields.contains(.start) { start = item.start }
         if fields.contains(.end) { end = item.end; isCurrent = item.isCurrent }
+        if employmentType == nil { employmentType = item.employmentType }
         impacts = ImportItem.union(impacts, item.bullets)
     }
 }

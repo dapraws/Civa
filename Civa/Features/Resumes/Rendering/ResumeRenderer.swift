@@ -106,8 +106,12 @@ enum ResumeRenderer {
         let lines = NSMutableAttributedString()
         let titleLine = entry.dates.isBlank ? entry.title : "\(entry.title)\t\(entry.dates)"
         lines.append(style.text(titleLine, bold: true, before: 4, rightTab: style.width))
-        if !entry.subtitle.isBlank {
-            lines.append(style.text(entry.subtitle, italic: true, after: 1))
+        var subtitle = entry.subtitle
+        if style.format.showsEmploymentType == true, let type = entry.employmentType, !type.isBlank {
+            subtitle = [subtitle, type].filter { !$0.isBlank }.joined(separator: " · ")
+        }
+        if !subtitle.isBlank {
+            lines.append(style.text(subtitle, italic: true, after: 1))
         }
         for bullet in entry.bullets where !bullet.isBlank {
             lines.append(style.text("•\t\(bullet)", after: 1, indent: 12))

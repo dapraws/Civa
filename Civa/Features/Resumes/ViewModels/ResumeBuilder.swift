@@ -76,7 +76,8 @@ enum ResumeBuilder {
             title: experience.role,
             subtitle: joined([experience.organization, experience.location]),
             dates: YearMonth.rangeText(start: experience.start, end: experience.end, isCurrent: experience.isCurrent),
-            bullets: bullets(impacts: experience.impacts, details: experience.details)
+            bullets: bullets(impacts: experience.impacts, details: experience.details),
+            employmentType: experience.employmentType?.title
         )
     }
 

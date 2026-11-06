@@ -48,6 +48,11 @@ struct ResumeFormatBar: View {
                         Picker("Paper", selection: $format.paper) {
                             ForEach(ResumeFormat.Paper.allCases, id: \.self) { Text($0.title).tag($0) }
                         }
+                        Divider()
+                        Toggle("Show Employment Type", isOn: Binding(
+                            get: { format.showsEmploymentType ?? false },
+                            set: { format.showsEmploymentType = $0 }
+                        ))
                     } label: {
                         Label("Layout", systemImage: "rectangle.split.1x2")
                     }

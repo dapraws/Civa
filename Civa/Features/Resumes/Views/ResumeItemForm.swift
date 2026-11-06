@@ -198,6 +198,12 @@ private struct EntryFields: View {
         Section(kind.heading) {
             TextField(kind.titleLabel, text: $entry.title, prompt: Text(kind.titlePrompt))
             TextField(kind.subtitleLabel, text: $entry.subtitle, prompt: Text(kind.subtitlePrompt))
+            if kind == .experience {
+                TextField("Employment Type", text: Binding(
+                    get: { entry.employmentType ?? "" },
+                    set: { entry.employmentType = $0.isBlank ? nil : $0 }
+                ), prompt: Text("Internship"))
+            }
             if kind != .skills {
                 TextField("Dates", text: $entry.dates, prompt: Text("Mar 2024 – Present"))
             }
