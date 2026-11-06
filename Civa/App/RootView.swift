@@ -22,6 +22,18 @@ struct RootView: View {
                 Label(section.title, systemImage: section.systemImage)
             }
             .navigationSplitViewColumnWidth(min: 180, ideal: 200)
+            #if DEBUG
+            .safeAreaInset(edge: .bottom) {
+                if DataMode.usesSampleData {
+                    Label("Sample Data", systemImage: "testtube.2")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(12)
+                        .help("Debug builds start with fresh sample data. Switch in Settings → Developer.")
+                }
+            }
+            #endif
         } detail: {
             detail
                 .navigationTitle(navigation.section.title)
