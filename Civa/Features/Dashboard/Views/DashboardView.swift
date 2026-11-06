@@ -39,6 +39,7 @@ struct DashboardView: View {
             } description: {
                 Text("Add your details once, then reuse them for every resume. Everything stays on this Mac.")
             } actions: {
+                ImportCVButton()
                 Button("Add Personal Information") { open(.personal) }
                 Button("Add Experience", action: addExperience)
             }

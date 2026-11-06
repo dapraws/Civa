@@ -32,6 +32,9 @@ struct CareerProfileView: View {
                     .pickerStyle(.segmented)
                     .labelsHidden()
                 }
+                ToolbarItem(placement: .primaryAction) {
+                    ImportCVButton()
+                }
             }
     }
 
