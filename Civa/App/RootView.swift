@@ -9,23 +9,24 @@ import SwiftUI
 
 struct RootView: View {
     @Environment(UnsavedChangesGuard.self) private var changes
-    @State private var section: AppSection = .dashboard
-    /// What the sidebar highlights; `section` follows once unsaved changes are resolved.
-    @State private var highlightedSection: AppSection = .dashboard
+    @State private var navigation = AppNavigation()
+    /// The section clicked while the unsaved-changes prompt is up.
+    @State private var pendingSection: AppSection?
 
     var body: some View {
         NavigationSplitView {
             List(
                 AppSection.allCases,
-                selection: Binding(changes.selection($highlightedSection) { section = $0 })
+                selection: Binding(changes.selection($navigation.section, pending: $pendingSection))
             ) { section in
                 Label(section.title, systemImage: section.systemImage)
             }
             .navigationSplitViewColumnWidth(min: 180, ideal: 200)
         } detail: {
             detail
-                .navigationTitle(section.title)
+                .navigationTitle(navigation.section.title)
         }
+        .environment(navigation)
         .frame(minWidth: 900, minHeight: 560)
         .unsavedChangesAlert(changes)
         // Closing the window quits; keep it open until edits are saved or reverted.
@@ -34,6 +35,7 @@ struct RootView: View {
 
     @ViewBuilder
     private var detail: some View {
+        let section = navigation.section
         switch section {
         case .dashboard:
             ContentUnavailableView(
@@ -42,11 +44,7 @@ struct RootView: View {
                 description: Text("A summary of your profile and applications will appear here.")
             )
         case .careerProfile:
-            ContentUnavailableView(
-                "Your Career Profile",
-                systemImage: section.systemImage,
-                description: Text("Your experience, education, and projects will appear here.")
-            )
+            CareerProfileView()
         case .resumes:
             ContentUnavailableView(
                 "Resumes Aren't Available Yet",

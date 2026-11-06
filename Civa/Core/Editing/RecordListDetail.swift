@@ -20,7 +20,9 @@ struct RecordListDetail<Model: EditableRecord, Editor: View>: View {
     @Environment(\.modelContext) private var context
     @Environment(UnsavedChangesGuard.self) private var changes
     @Query private var records: [Model]
-    @State private var highlighted: Model.ID?
+    @State private var selection: Model.ID?
+    /// The row clicked while the unsaved-changes prompt is up.
+    @State private var pendingSelection: Model.ID??
     @State private var editor: RecordEditor<Model>?
 
     private let addTitle: String
@@ -73,7 +75,7 @@ struct RecordListDetail<Model: EditableRecord, Editor: View>: View {
             }
         } else {
             HSplitView {
-                List(selection: changes.selection($highlighted, apply: open)) {
+                List(selection: changes.selection($selection, pending: $pendingSelection, apply: open)) {
                     ForEach(records.sorted(by: order)) { record in
                         RecordRow(
                             title: record.displayTitle,
@@ -84,6 +86,7 @@ struct RecordListDetail<Model: EditableRecord, Editor: View>: View {
                     }
                 }
                 .frame(minWidth: 220, idealWidth: 280, maxWidth: 420)
+                .onAppear(perform: selectFirst)
 
                 detail
                     .frame(minWidth: 380, maxWidth: .infinity, maxHeight: .infinity)
@@ -108,7 +111,14 @@ struct RecordListDetail<Model: EditableRecord, Editor: View>: View {
         }
     }
 
+    /// Like Notes and Mail, a list opens with its first record selected.
+    private func selectFirst() {
+        guard editor == nil, let first = records.sorted(by: order).first else { return }
+        open(first.id)
+    }
+
     private func open(_ id: Model.ID?) {
+        selection = id
         editor = records.first { $0.id == id }.map { RecordEditor(record: $0, context: context) }
         changes.active = editor
     }
@@ -117,14 +127,14 @@ struct RecordListDetail<Model: EditableRecord, Editor: View>: View {
         changes.perform {
             let editor = RecordEditor(creating: makeRecord(), in: context)
             self.editor = editor
-            highlighted = editor.record.id
+            selection = editor.record.id
             changes.active = editor
         }
     }
 
     private func close() {
         editor = nil
-        highlighted = nil
+        selection = nil
         changes.active = nil
     }
 }

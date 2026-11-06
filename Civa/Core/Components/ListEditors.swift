@@ -55,7 +55,7 @@ struct PairListEditor<Item: Identifiable & Equatable>: View {
     }
 }
 
-private struct RemoveButton: View {
+struct RemoveButton: View {
     let action: () -> Void
 
     var body: some View {
@@ -67,7 +67,7 @@ private struct RemoveButton: View {
     }
 }
 
-private struct AddButton: View {
+struct AddButton: View {
     let title: String
     let action: () -> Void
 
