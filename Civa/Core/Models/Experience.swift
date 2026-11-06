@@ -15,7 +15,7 @@ nonisolated enum ExperienceKind: String, Codable, CaseIterable {
 
 /// Professional and Organizational Experience share this model; the categories are filtered by `kind`.
 @Model
-nonisolated final class Experience: ReviewTracked {
+nonisolated final class Experience: ProfileRecord {
     var id = UUID()
     var kindRaw: String
     var organization: String
@@ -29,6 +29,8 @@ nonisolated final class Experience: ReviewTracked {
     var impacts: [String]
     var customFields: [CustomField]
     var statusRaw: String
+    var createdAt = Date.now
+    var updatedAt = Date.now
 
     @Relationship(inverse: \Skill.experiences)
     var skills: [Skill] = []

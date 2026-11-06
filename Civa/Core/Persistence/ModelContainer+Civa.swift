@@ -15,7 +15,7 @@ extension ModelContainer {
         let configuration = if let storeURL {
             ModelConfiguration(schema: schema, url: storeURL)
         } else {
-            ModelConfiguration(schema: schema, isStoredInMemoryOnly: inMemory)
+            ModelConfiguration("Civa", schema: schema, isStoredInMemoryOnly: inMemory)
         }
         return try ModelContainer(
             for: schema,

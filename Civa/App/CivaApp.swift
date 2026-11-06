@@ -13,7 +13,8 @@ struct CivaApp: App {
     private let container = Result { try ModelContainer.civa() }
 
     var body: some Scene {
-        WindowGroup {
+        // Single window: Civa is one workspace, and ⌘N is free for new records.
+        Window("Civa", id: "main") {
             switch container {
             case .success(let container):
                 RootView()
@@ -22,5 +23,6 @@ struct CivaApp: App {
                 StoreErrorView(error: error)
             }
         }
+        .defaultSize(width: 1100, height: 720)
     }
 }
