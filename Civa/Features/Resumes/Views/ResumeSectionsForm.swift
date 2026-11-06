@@ -16,8 +16,12 @@ struct ResumeSectionsForm: View {
         ForEach($document.sections) { $section in
             Section {
                 ForEach($section.entries) { $entry in
-                    EntryEditor(entry: $entry, kind: section.kind) {
-                        section.entries.removeAll { $0.id == entry.id }
+                    EntryEditor(entry: $entry, kind: section.kind) { action in
+                        switch action {
+                        case .moveUp: section.entries.move(id: entry.id, by: -1)
+                        case .moveDown: section.entries.move(id: entry.id, by: 1)
+                        case .remove: section.entries.removeAll { $0.id == entry.id }
+                        }
                     }
                 }
                 AddButton(title: String(localized: "Add Entry")) {
@@ -27,12 +31,21 @@ struct ResumeSectionsForm: View {
                 HStack {
                     Text(section.kind.heading)
                     Spacer()
-                    Button("Remove Section", systemImage: "trash", role: .destructive) {
-                        document.sections.removeAll { $0.id == section.id }
+                    Group {
+                        Button("Move Section Up", systemImage: "arrow.up") {
+                            document.sections.move(id: section.id, by: -1)
+                        }
+                        .disabled(document.sections.first?.id == section.id)
+                        Button("Move Section Down", systemImage: "arrow.down") {
+                            document.sections.move(id: section.id, by: 1)
+                        }
+                        .disabled(document.sections.last?.id == section.id)
+                        Button("Remove Section", systemImage: "trash", role: .destructive) {
+                            document.sections.removeAll { $0.id == section.id }
+                        }
                     }
                     .labelStyle(.iconOnly)
                     .buttonStyle(.borderless)
-                    .help("Remove this section from the resume")
                 }
             }
         }
@@ -52,9 +65,13 @@ struct ResumeSectionsForm: View {
 }
 
 private struct EntryEditor: View {
+    enum Action {
+        case moveUp, moveDown, remove
+    }
+
     @Binding var entry: ResumeEntry
     let kind: ResumeSection.Kind
-    let onRemove: () -> Void
+    let perform: (Action) -> Void
 
     var body: some View {
         DisclosureGroup {
@@ -71,8 +88,13 @@ private struct EntryEditor: View {
                     addTitle: String(localized: "Add Bullet")
                 )
             }
-            Button("Remove Entry", role: .destructive, action: onRemove)
-                .buttonStyle(.borderless)
+            HStack {
+                Button("Move Up") { perform(.moveUp) }
+                Button("Move Down") { perform(.moveDown) }
+                Spacer()
+                Button("Remove Entry", role: .destructive) { perform(.remove) }
+            }
+            .buttonStyle(.borderless)
         } label: {
             Text(label)
                 .foregroundStyle(entry.title.isBlank && entry.subtitle.isBlank ? .secondary : .primary)
