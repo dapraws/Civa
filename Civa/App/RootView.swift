@@ -8,11 +8,17 @@
 import SwiftUI
 
 struct RootView: View {
+    @Environment(UnsavedChangesGuard.self) private var changes
     @State private var section: AppSection = .dashboard
+    /// What the sidebar highlights; `section` follows once unsaved changes are resolved.
+    @State private var highlightedSection: AppSection = .dashboard
 
     var body: some View {
         NavigationSplitView {
-            List(AppSection.allCases, selection: Binding($section)) { section in
+            List(
+                AppSection.allCases,
+                selection: Binding(changes.selection($highlightedSection) { section = $0 })
+            ) { section in
                 Label(section.title, systemImage: section.systemImage)
             }
             .navigationSplitViewColumnWidth(min: 180, ideal: 200)
@@ -21,6 +27,9 @@ struct RootView: View {
                 .navigationTitle(section.title)
         }
         .frame(minWidth: 900, minHeight: 560)
+        .unsavedChangesAlert(changes)
+        // Closing the window quits; keep it open until edits are saved or reverted.
+        .windowDismissBehavior(changes.hasUnsavedChanges ? .disabled : .automatic)
     }
 
     @ViewBuilder
@@ -62,4 +71,5 @@ struct RootView: View {
 
 #Preview {
     RootView()
+        .previewEnvironment()
 }

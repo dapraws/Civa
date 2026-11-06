@@ -29,6 +29,17 @@ nonisolated final class Project: ProfileRecord {
     @Relationship(inverse: \Achievement.project)
     var achievements: [Achievement] = []
 
+    var displayTitle: String {
+        name.isBlank ? String(localized: "New Project") : name
+    }
+
+    func validationErrors() -> [PartialKeyPath<Project>: String] {
+        var errors: [PartialKeyPath<Project>: String] = [:]
+        if name.isBlank { errors[\.name] = String(localized: "Enter a project name.") }
+        if YearMonth.isReversed(start: start, end: end) { errors[\.end] = ValidationMessage.endBeforeStart }
+        return errors
+    }
+
     init(
         name: String,
         role: String = "",

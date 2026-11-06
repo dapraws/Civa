@@ -27,6 +27,17 @@ nonisolated final class Education: ProfileRecord {
     @Relationship(inverse: \Achievement.education)
     var achievements: [Achievement] = []
 
+    var displayTitle: String {
+        institution.isBlank ? String(localized: "New Education") : institution
+    }
+
+    func validationErrors() -> [PartialKeyPath<Education>: String] {
+        var errors: [PartialKeyPath<Education>: String] = [:]
+        if institution.isBlank { errors[\.institution] = String(localized: "Enter an institution.") }
+        if YearMonth.isReversed(start: start, end: end) { errors[\.end] = ValidationMessage.endBeforeStart }
+        return errors
+    }
+
     init(
         institution: String,
         degree: String = "",

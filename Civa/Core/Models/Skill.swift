@@ -25,6 +25,14 @@ nonisolated final class Skill: ProfileRecord {
     var experiences: [Experience] = []
     var projects: [Project] = []
 
+    var displayTitle: String {
+        name.isBlank ? String(localized: "New Skill") : name
+    }
+
+    func validationErrors() -> [PartialKeyPath<Skill>: String] {
+        name.isBlank ? [\.name: String(localized: "Enter a skill name.")] : [:]
+    }
+
     init(
         name: String,
         category: String = "",
