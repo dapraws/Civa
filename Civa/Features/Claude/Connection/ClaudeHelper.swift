@@ -43,7 +43,7 @@ nonisolated enum ClaudeHelper {
             let name = params["name"] as? String ?? ""
             let arguments = (params["arguments"] as? [String: Any] ?? [:]).compactMapValues { $0 as? String }
             let reply = ask(ClaudeLink.Request(tool: name, arguments: arguments))
-                ?? ClaudeLink.Reply(ok: false, text: "Civa isn't open. Ask the user to open Civa, then try again.")
+                ?? ClaudeLink.Reply(ok: false, text: "Civa can't be reached. Either Civa isn't open, or the user turned off Claude's connection in Civa's Settings. Ask the user to open Civa and check its Claude Desktop setting.")
             return result(["content": [["type": "text", "text": reply.text]], "isError": !reply.ok])
         case "ping":
             return result([:])
