@@ -27,6 +27,8 @@ nonisolated enum SchemaV1: VersionedSchema {
             ResumeSnapshot.self,
             SupportingDocument.self,
             ClaudeActivity.self,
+            ClaudeRequest.self,
+            ClaudeProposal.self,
         ]
     }
 }

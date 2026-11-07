@@ -38,6 +38,7 @@ struct ProjectForm: View {
     var body: some View {
         Form {
             ReviewBanner(editor: editor)
+            ClaudeRecordProposalsSection(editor: editor)
             Section {
                 TextField("Name", text: editor.binding(\.name), prompt: Text("Required"))
                 FieldError(editor.error(for: \.name))
@@ -73,6 +74,12 @@ struct ProjectForm: View {
                     prompt: String(localized: "Result of your work"),
                     addTitle: String(localized: "Add Impact")
                 )
+                AskClaudeButton(
+                    title: "Improve with Claude",
+                    ask: .init(kind: .improveBullets, category: .projects, targetID: editor.record.id, targetTitle: editor.record.displayTitle),
+                    disabled: editor.isNew || editor.isDirty || editor.record.impacts.allSatisfy(\.isBlank) || editor.record.needsReview
+                )
+                .buttonStyle(.borderless)
             } header: {
                 Text("Impact")
             } footer: {

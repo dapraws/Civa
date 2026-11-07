@@ -10,16 +10,28 @@ import SwiftUI
 
 /// What to import, and how to read it.
 struct ImportRequest: Identifiable {
-    enum Kind {
+    enum Kind: Equatable {
         /// A PDF or Word CV (FR-020).
         case cv
         /// LinkedIn's data export, as a ZIP or its unzipped folder (FR-021).
         case linkedInExport
+        /// Records Claude sent with `suggest_profile_records` (FR-073).
+        case claude(ClaudeProposal.ProfileImport, proposalID: UUID)
     }
 
     let url: URL
     let kind: Kind
     var id: URL { url }
+
+    /// The file, or where Claude found the records.
+    var sourceName: String {
+        if case .claude(let payload, _) = kind { payload.source } else { url.lastPathComponent }
+    }
+
+    static func claude(_ proposal: ClaudeProposal) -> ImportRequest? {
+        guard let payload = proposal.decode(ClaudeProposal.ProfileImport.self) else { return nil }
+        return ImportRequest(url: URL(string: "civa-claude-import:\(proposal.id)")!, kind: .claude(payload, proposalID: proposal.id))
+    }
 }
 
 /// Review what Civa found before it goes into the Career Profile (FR-020, FR-021). What was read
@@ -87,7 +99,7 @@ struct ImportReviewSheet: View {
     private var source: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 8) {
-                Text(request.kind == .cv ? "Text From \(url.lastPathComponent)" : "Read From \(url.lastPathComponent)")
+                Text(request.kind == .cv ? "Text From \(request.sourceName)" : "Read From \(request.sourceName)")
                     .font(.headline)
                 Text(sourceText)
                     .font(.system(.callout, design: .monospaced))
@@ -118,7 +130,7 @@ struct ImportReviewSheet: View {
                                 ImportItemFields(
                                     item: $draft.items[index],
                                     existing: draft.items[index].matchID.flatMap { draft.existing[$0] },
-                                    sourceName: url.lastPathComponent
+                                    sourceName: request.sourceName
                                 )
                             } header: {
                                 if index == indices.first { categoryHeader(category, count: indices.count) }
@@ -206,6 +218,11 @@ struct ImportReviewSheet: View {
                 sourceText = files.keys.sorted().map { "• \($0)" }.joined(separator: "\n")
                     + "\n\n" + String(localized: "Only these profile files are read. Connections, messages, and the rest of the export are left untouched.")
                 draft = LinkedInExport.draft(from: files)
+            case .claude(let payload, _):
+                sourceText = payload.records.map { record in
+                    ([record.title, record.subtitle ?? ""] + (record.bullets ?? []).map { "• \($0)" }).filter { !$0.isBlank }.joined(separator: "\n")
+                }.joined(separator: "\n\n")
+                draft = ClaudeDecisions.draft(from: payload)
             }
             draft.match(against: existingRecords.map(\.importItem))
             self.draft = draft
@@ -221,9 +238,12 @@ struct ImportReviewSheet: View {
 
     private func add() {
         let records = Dictionary(existingRecords.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-        draft.add(to: context, existing: personalInfo.first, records: records, source: RecordSource(name: url.lastPathComponent, date: .now))
+        draft.add(to: context, existing: personalInfo.first, records: records, source: RecordSource(name: request.sourceName, date: .now))
         do {
             try context.save()
+            if case .claude(_, let proposalID) = request.kind {
+                ClaudeDecisions.record(proposalID, .applied, container: context.container)
+            }
             dismiss()
             navigation.section = .careerProfile
         } catch {

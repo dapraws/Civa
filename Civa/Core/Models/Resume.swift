@@ -19,6 +19,8 @@ nonisolated final class Resume: EditableRecord {
     var documentData: Data
     /// The base for tailored resumes (FR-040). At most one resume has this; see `makeMaster`.
     var isMaster = false
+    /// Drafted by Claude and not yet kept by the user (FR-073).
+    var isClaudeDraft = false
     var createdAt = Date.now
     var updatedAt = Date.now
 
