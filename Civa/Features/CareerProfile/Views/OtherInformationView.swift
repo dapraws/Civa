@@ -9,7 +9,7 @@ import SwiftUI
 
 /// Other Information holds three record types, each with its own list.
 struct OtherInformationView: View {
-    enum Kind: CaseIterable, Identifiable {
+    enum Kind: String, CaseIterable, Identifiable {
         case achievements, certifications, skills
 
         var id: Self { self }
@@ -51,6 +51,12 @@ struct OtherInformationView: View {
             }
             .id(kind)
         }
+        #if DEBUG
+        // Manual checks: -CivaOtherKind skills opens Skills.
+        .onAppear {
+            if let raw = UserDefaults.standard.string(forKey: "CivaOtherKind"), let start = Kind(rawValue: raw) { kind = start }
+        }
+        #endif
     }
 }
 

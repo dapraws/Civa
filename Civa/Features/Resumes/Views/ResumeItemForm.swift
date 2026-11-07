@@ -132,21 +132,30 @@ struct ResumeItemForm: View {
                 get: { document.format.showsSummaryHeading == true },
                 set: { document.format.showsSummaryHeading = $0 }
             ))
-            AskClaudeButton(
-                title: "Write with Claude",
-                ask: .init(kind: .writeSummary, category: .resumes, targetID: editor.record.id, targetTitle: editor.record.displayTitle),
-                unavailable: ClaudeAsk.unavailable(isNew: editor.isNew, isDirty: editor.isDirty)
-            )
         } header: {
-            HStack {
+            HStack(alignment: .center) {
                 Text("Summary")
                 if document.claudeTouchedSummary == true { ClaudeTag() }
+                Spacer()
+                AskClaudeButton(
+                    title: "Write with Claude",
+                    ask: .init(kind: .writeSummary, category: .resumes, targetID: editor.record.id, targetTitle: editor.record.displayTitle),
+                    unavailable: summaryUnavailable,
+                    showsReason: false
+                )
             }
         } footer: {
-            Text(document.format.showsSummaryHeading == true
-                 ? "Appears under a “Summary” heading. Turn the heading off to keep it right under your contact details."
-                 : "Appears right under your contact details, with no heading. Leave it empty if you don't need one.")
+            VStack(alignment: .leading, spacing: 4) {
+                ClaudeUnavailableNote(reason: summaryUnavailable)
+                Text(document.format.showsSummaryHeading == true
+                     ? "Appears under a “Summary” heading. Turn the heading off to keep it right under your contact details."
+                     : "Appears right under your contact details, with no heading. Leave it empty if you don't need one.")
+            }
         }
+    }
+
+    private var summaryUnavailable: String? {
+        ClaudeAsk.unavailable(isNew: editor.isNew, isDirty: editor.isDirty)
     }
 
     // Bindings by id, not index: a row removed mid-update must not crash a field still reading it.
