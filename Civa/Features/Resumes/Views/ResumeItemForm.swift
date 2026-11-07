@@ -139,7 +139,9 @@ struct ResumeItemForm: View {
                 if document.claudeTouchedSummary == true { ClaudeTag() }
             }
         } footer: {
-            Text("Appears under your contact details without a heading. Leave it empty if you don't need one.")
+            Text(document.format.showsSummaryHeading == true
+                 ? "Appears under a “Summary” heading. Turn the heading off in Layout to keep it right under your contact details."
+                 : "Appears right under your contact details. Leave it empty if you don't need one.")
         }
     }
 
@@ -220,6 +222,9 @@ private struct EntryFields: View {
             TextField(kind.subtitleLabel, text: $entry.subtitle, prompt: Text(kind.subtitlePrompt))
             if kind == .experience {
                 TitlePicker("Employment Type", selection: $entry.employmentType, options: EmploymentType.allCases.map(\.title))
+            }
+            if kind == .experience || kind == .organizational || kind == .education {
+                TextField("Location", text: location, prompt: Text("Jakarta, Indonesia"))
             }
             if kind == .experience || kind == .organizational {
                 TitlePicker("Work Arrangement", selection: $entry.workArrangement, options: WorkArrangement.allCases.map(\.title))
@@ -304,6 +309,19 @@ private struct EntryFields: View {
     }
 
     /// Empty text is stored as nil.
+    /// The location, kept in step with the end of the subtitle that also shows it.
+    private var location: Binding<String> {
+        Binding(
+            get: { entry.location ?? "" },
+            set: { new in
+                let organization = entry.organization
+                let hadLocation = organization != entry.subtitle
+                entry.location = new.isBlank ? nil : new
+                if hadLocation { entry.subtitle = [organization, new].filter { !$0.isBlank }.joined(separator: " · ") }
+            }
+        )
+    }
+
     private func optional(_ field: WritableKeyPath<ResumeEntry, String?>) -> Binding<String> {
         Binding(get: { entry[keyPath: field] ?? "" }, set: { entry[keyPath: field] = $0.isBlank ? nil : $0 })
     }

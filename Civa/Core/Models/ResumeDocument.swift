@@ -127,6 +127,9 @@ nonisolated struct ResumeEntry: Codable, Hashable, Identifiable {
     var coursework: [String]?
     /// Makes the title a link in the PDF when the resume links proof.
     var proofURL: String?
+    /// "Jakarta, Indonesia". The subtitle also ends with it; templates that print the location
+    /// on the right take it off the subtitle there.
+    var location: String?
     /// The profile record as it read when copied here, so later changes to it can be suggested (FR-042).
     var sourceCopy: SourceCopy?
     /// Claude wrote part of this entry and it hasn't been edited since; the editor tags it.
@@ -149,12 +152,22 @@ nonisolated struct ResumeEntry: Codable, Hashable, Identifiable {
         var proofURL: String?
         /// Skill lines: the skills the line was built from, by record id, with their names then.
         var skills: [UUID: String]?
+        var location: String?
+
+        /// Whether the profile still reads as this copy. Copies made before locations were kept
+        /// separately have none; their subtitle already carries it, so it isn't compared.
+        func matches(_ old: SourceCopy) -> Bool {
+            var new = self
+            if old.location == nil { new.location = nil }
+            return new == old
+        }
     }
 
     var asSourceCopy: SourceCopy {
         SourceCopy(
             title: title, subtitle: subtitle, dates: dates, bullets: bullets, employmentType: employmentType,
-            workArrangement: workArrangement, grade: grade, thesis: thesis, coursework: coursework, proofURL: proofURL
+            workArrangement: workArrangement, grade: grade, thesis: thesis, coursework: coursework, proofURL: proofURL,
+            location: location
         )
     }
 }
@@ -223,6 +236,53 @@ nonisolated struct ResumeFormat: Codable, Hashable {
     var linksProof: Bool?
     /// `.short` when nil.
     var dateStyle: DateStyle?
+    /// `.classic` when nil.
+    var template: Template?
+    /// The rule under section headings and the header. nil follows the template.
+    var showsDividers: Bool?
+    /// Off when nil: the summary sits tight under the contact line, as part of the header.
+    var showsSummaryHeading: Bool?
+
+    /// The layout's look. Every template is single-column and text-based (BR-001).
+    enum Template: String, Codable, CaseIterable {
+        /// Civa's first layout: left-aligned header, accent headings.
+        case classic
+        /// After the MIT CAPD sample resumes: serif, centered header, bold caps headings with a
+        /// rule, organization and location first.
+        case mit
+        /// After the Harvard College template: centered header and centered bold caps headings.
+        case harvard
+        /// After Jake's Resume, common in tech hiring: small caps headings with a rule, compact.
+        case tech
+
+        var defaultFont: Font {
+            switch self {
+            case .classic, .tech: .helveticaNeue
+            case .mit: .timesNewRoman
+            case .harvard: .georgia
+            }
+        }
+
+        var defaultFontSize: Double {
+            switch self {
+            case .classic, .tech: 10
+            case .mit, .harvard: 10.5
+            }
+        }
+
+        var defaultDividers: Bool { self == .mit || self == .tech }
+    }
+
+    var layout: Template { template ?? .classic }
+    var dividers: Bool { showsDividers ?? layout.defaultDividers }
+
+    /// Switches template and takes its font and size; the user can change those after.
+    mutating func apply(_ template: Template) {
+        self.template = template
+        font = template.defaultFont
+        fontSize = template.defaultFontSize
+        showsDividers = nil
+    }
 
     static let fontSizes = 9.0...12.0
     static let lineSpacings = [1.0, 1.15, 1.3]

@@ -18,6 +18,11 @@ struct ResumeFormatBar: View {
             // Scrolls sideways when the preview is narrow; the page count stays put.
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
+                    Picker("Template", selection: Binding(get: { format.layout }, set: { format.apply($0) })) {
+                        ForEach(ResumeFormat.Template.allCases, id: \.self) { Text($0.title).tag($0) }
+                    }
+                    .help("Template: sets the layout, and a font you can still change")
+
                     Picker("Font", selection: $format.font) {
                         ForEach(ResumeFormat.Font.allCases, id: \.self) { font in
                             Text(font.rawValue).font(.custom(font.rawValue, size: 13)).tag(font)
@@ -59,7 +64,12 @@ struct ResumeFormatBar: View {
                         Toggle("Show Work Arrangement", isOn: option(\.showsWorkArrangement, default: false))
                         Toggle("Show GPA or Score", isOn: option(\.showsGrade, default: true))
                         Toggle("Link Proof", isOn: option(\.linksProof, default: true))
-                            .help("Entry titles with a proof link open it from the PDF")
+                            .help("A small check after titles with proof; clicking the title opens it from the PDF")
+                        Divider()
+                        Toggle("Divider Lines", isOn: Binding(get: { format.dividers }, set: { format.showsDividers = $0 }))
+                            .help("A line under each section heading")
+                        Toggle("Summary Heading", isOn: option(\.showsSummaryHeading, default: false))
+                            .help("Give the summary its own heading, or keep it right under your contact details")
                     } label: {
                         Label("Layout", systemImage: "rectangle.split.1x2")
                     }
@@ -117,6 +127,17 @@ extension ResumeFormat.DateStyle {
     var title: String {
         let sample = YearMonth(year: 2024, month: 3)
         return sample.formatted(self)
+    }
+}
+
+extension ResumeFormat.Template {
+    var title: String {
+        switch self {
+        case .classic: String(localized: "Classic")
+        case .mit: String(localized: "MIT")
+        case .harvard: String(localized: "Harvard")
+        case .tech: String(localized: "Tech")
+        }
     }
 }
 

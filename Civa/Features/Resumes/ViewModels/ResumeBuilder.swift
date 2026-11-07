@@ -111,7 +111,8 @@ enum ResumeBuilder {
             end: experience.isCurrent ? nil : experience.end,
             isCurrent: experience.isCurrent,
             workArrangement: experience.workArrangement?.title,
-            proofURL: text(experience.proofLink)
+            proofURL: text(experience.proofLink),
+            location: text(experience.location)
         )
     }
 
@@ -128,7 +129,8 @@ enum ResumeBuilder {
             grade: text(education.numericGrade?.formatted(locale: resumeLocale, separator: "/") ?? education.grade),
             thesis: text(education.thesis),
             coursework: education.coursework.filter { !$0.isBlank }.nilIfEmpty,
-            proofURL: text(education.proofLink)
+            proofURL: text(education.proofLink),
+            location: text(education.location)
         )
     }
 
