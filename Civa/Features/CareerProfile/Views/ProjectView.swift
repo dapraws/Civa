@@ -42,7 +42,15 @@ struct ProjectForm: View {
                 TextField("Name", text: editor.binding(\.name), prompt: Text("Required"))
                 FieldError(editor.error(for: \.name))
                 TextField("Your Role", text: editor.binding(\.role), prompt: Text("Lead Developer"))
-                TextField("Link", text: editor.binding(\.url), prompt: Text("https://"))
+            }
+            Section {
+                ProofField(editor: editor, title: "Live Link", link: \.url)
+                TextField("Repository", text: editor.binding(\.repositoryURL), prompt: Text("https://github.com/…"))
+                FieldError(editor.error(for: \.repositoryURL))
+            } header: {
+                Text("Links")
+            } footer: {
+                Text("With a link or an attached document, this project shows a Verified seal.")
             }
             Section("Dates") {
                 YearMonthField(title: String(localized: "Start"), value: editor.binding(\.start))

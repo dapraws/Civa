@@ -15,6 +15,10 @@ nonisolated final class Achievement: ProfileRecord {
     var title: String
     var issuer: String
     var date: YearMonth?
+    /// Rank or result, like "1st Place" or "Finalist".
+    var placement = ""
+    /// A link that proves the award, like an announcement or certificate.
+    var proofURL = ""
     var details: String
     var customFields: [CustomField]
     var statusRaw: String
@@ -38,7 +42,10 @@ nonisolated final class Achievement: ProfileRecord {
     }
 
     func validationErrors() -> [PartialKeyPath<Achievement>: String] {
-        title.isBlank ? [\.title: String(localized: "Enter a title.")] : [:]
+        var errors: [PartialKeyPath<Achievement>: String] = [:]
+        if title.isBlank { errors[\.title] = String(localized: "Enter a title.") }
+        if !proofURL.isBlank, URL.webLink(proofURL) == nil { errors[\.proofURL] = ValidationMessage.invalidLink }
+        return errors
     }
 
     init(

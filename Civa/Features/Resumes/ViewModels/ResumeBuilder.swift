@@ -26,6 +26,7 @@ enum ResumeBuilder {
         if let person = selection.personalInfo, !person.needsReview {
             document.header = header(from: person)
             document.headerSource = document.header
+            document.summary = person.summary
         }
 
         let experiences = confirmed(selection.experiences).sorted { recency($0) > recency($1) }
@@ -112,7 +113,7 @@ enum ResumeBuilder {
             subtitle: joined([degree.isEmpty ? "" : education.institution, education.location]),
             dates: YearMonth.rangeText(start: education.start, end: education.end),
             bullets: [
-                education.grade.isBlank ? "" : String(localized: "Grade: \(education.grade)"),
+                education.gradeText,
                 education.details,
             ].filter { !$0.isBlank }
         )

@@ -135,10 +135,31 @@ extension SupportingDocument {
 /// A Career Profile record that documents can be attached to.
 nonisolated protocol DocumentOwner: ImportableRecord {
     var documents: [SupportingDocument] { get }
+    /// The record's proof or credential link as typed; empty when there is none.
+    var proofLink: String { get }
 }
 
-extension Experience: DocumentOwner {}
-extension Education: DocumentOwner {}
-extension Project: DocumentOwner {}
-extension Achievement: DocumentOwner {}
-extension Certification: DocumentOwner {}
+nonisolated extension DocumentOwner {
+    /// The link first, since it's what a reader can open; otherwise the oldest attached document.
+    var proof: Proof? {
+        if let url = URL.webLink(proofLink) { return .link(url) }
+        return documents.min { $0.createdAt < $1.createdAt }.map(Proof.document)
+    }
+}
+
+extension Experience: DocumentOwner {
+    var proofLink: String { proofURL }
+}
+extension Education: DocumentOwner {
+    var proofLink: String { proofURL }
+}
+extension Project: DocumentOwner {
+    /// A live project or its code shows it exists.
+    var proofLink: String { url.isBlank ? repositoryURL : url }
+}
+extension Achievement: DocumentOwner {
+    var proofLink: String { proofURL }
+}
+extension Certification: DocumentOwner {
+    var proofLink: String { credentialURL }
+}

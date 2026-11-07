@@ -40,6 +40,7 @@ nonisolated final class Certification: ProfileRecord {
         if YearMonth.isReversed(start: issued, end: expires) {
             errors[\.expires] = String(localized: "The expiry date can't be before the issue date.")
         }
+        if !credentialURL.isBlank, URL.webLink(credentialURL) == nil { errors[\.credentialURL] = ValidationMessage.invalidLink }
         return errors
     }
 

@@ -66,13 +66,15 @@ struct ExperienceForm: View {
                 )
                 FieldError(editor.error(for: \.organization))
                 if editor.record.kind == .professional {
-                    Picker("Employment Type", selection: editor.binding(\.employmentTypeRaw)) {
-                        Text("Not Set").tag("")
-                        Divider()
-                        ForEach(EmploymentType.allCases) { Text($0.title).tag($0.rawValue) }
-                    }
+                    OptionPicker("Employment Type", selection: editor.binding(\.employmentTypeRaw), options: EmploymentType.allCases)
+                } else {
+                    OptionPicker("Type", selection: editor.binding(\.organizationTypeRaw), options: OrganizationType.allCases)
                 }
                 TextField("Location", text: editor.binding(\.location), prompt: Text("City, Country"))
+                OptionPicker("Work Arrangement", selection: editor.binding(\.workArrangementRaw), options: WorkArrangement.allCases)
+                if editor.record.kind == .organizational {
+                    TextField("Recognition", text: editor.binding(\.recognition), prompt: Text("Graduate with Distinction"))
+                }
             }
             Section("Dates") {
                 YearMonthField(title: String(localized: "Start"), value: editor.binding(\.start))
@@ -110,6 +112,13 @@ struct ExperienceForm: View {
             }
             Section("Skills") {
                 SkillLinksField(editor: editor, skills: \.skills)
+            }
+            Section {
+                ProofField(editor: editor, title: "Proof Link", link: \.proofURL)
+            } header: {
+                Text("Proof")
+            } footer: {
+                Text("A certificate, recommendation, or announcement. With a link or an attached document, this record shows a Verified seal.")
             }
             DocumentsSection(editor: editor)
             CustomFieldsSection(fields: editor.binding(\.customFields))

@@ -99,7 +99,8 @@ struct RecordListDetail<Model: EditableRecord, Editor: View>: View {
                         RecordRow(
                             title: record.displayTitle,
                             subtitle: subtitle(record),
-                            needsReview: record.needsReview
+                            needsReview: record.needsReview,
+                            proof: record.proof
                         )
                         .tag(record.id)
                     }

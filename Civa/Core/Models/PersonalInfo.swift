@@ -13,6 +13,8 @@ nonisolated final class PersonalInfo: ProfileRecord {
     var id = UUID()
     var fullName: String
     var headline: String
+    /// A few sentences on who you are; resumes start their header with it.
+    var summary = ""
     var email: String
     var phone: String
     var location: String
