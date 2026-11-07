@@ -30,7 +30,7 @@ struct ClaudeResumeProposalsSheet: View {
                         if let edit = proposal.decode(ClaudeProposal.ResumeEdit.self) {
                             Section {
                                 if !proposal.note.isBlank {
-                                    Label(proposal.note, systemImage: "sparkles").foregroundStyle(.secondary)
+                                    Label(proposal.note, systemImage: "sparkles").foregroundStyle(.claude)
                                 }
                                 if let summary = edit.summary {
                                     ChangeRow(label: String(localized: "Summary"), old: editor.record.document.summary, new: summary)
@@ -51,6 +51,7 @@ struct ClaudeResumeProposalsSheet: View {
                                         decide(proposal, .applied)
                                     }
                                     .buttonStyle(.borderedProminent)
+                                    .tint(.claude)
                                 }
                             } header: {
                                 Text("Suggested \(proposal.createdAt.formatted(.relative(presentation: .named)))")
@@ -124,7 +125,7 @@ struct ClaudeDraftBanner: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: "sparkles").foregroundStyle(.tint).accessibilityHidden(true)
+            Image(systemName: "sparkles").foregroundStyle(.claude).accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text("Claude drafted this resume").font(.headline)
                 Text(proposal?.note.isBlank == false ? proposal!.note : String(localized: "It's built from your confirmed Career Profile. Keep it to make it a regular resume, or discard it."))
@@ -133,10 +134,10 @@ struct ClaudeDraftBanner: View {
             }
             Spacer()
             Button("Discard…") { isConfirmingDiscard = true }
-            Button("Keep Draft", action: keep).buttonStyle(.borderedProminent)
+            Button("Keep Draft", action: keep).buttonStyle(.borderedProminent).tint(.claude)
         }
         .padding(12)
-        .background(.tint.opacity(0.08))
+        .background(.claude.opacity(0.12))
         .confirmationDialog("Discard this draft?", isPresented: $isConfirmingDiscard) {
             Button("Discard Draft", role: .destructive, action: discard)
         } message: {
@@ -193,9 +194,10 @@ struct ClaudeRecordProposalsSection<Model: ClaudeEditable>: View {
                             ClaudeDecisions.record(proposal.id, .applied, container: context.container)
                         }
                         .buttonStyle(.borderedProminent)
+                        .tint(.claude)
                     }
                 } header: {
-                    Label("Suggested by Claude", systemImage: "sparkles")
+                    Label("Suggested by Claude", systemImage: "sparkles").foregroundStyle(.claude)
                 } footer: {
                     Text("Applying changes this record; save it to keep the change.")
                 }
@@ -219,95 +221,23 @@ struct ClaudeRecordProposalsSection<Model: ClaudeEditable>: View {
 
 /// On the Dashboard: requests waiting for Claude and suggestions waiting for the user (FR-072, FR-073).
 struct ClaudeInboxCard: View {
-    @Environment(\.modelContext) private var context
-    @Environment(AppNavigation.self) private var navigation
     @Query(sort: \ClaudeRequest.createdAt, order: .reverse) private var requests: [ClaudeRequest]
     @Query(filter: #Predicate<ClaudeProposal> { $0.statusRaw == "pending" }, sort: \ClaudeProposal.createdAt, order: .reverse)
     private var proposals: [ClaudeProposal]
-    @State private var importRequest: ImportRequest?
 
     var body: some View {
         let waiting = requests.filter { $0.status == .pending || $0.status == .failed }
         if !waiting.isEmpty || !proposals.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
-                Label("Claude", systemImage: "sparkles").font(.headline)
-                ForEach(proposals) { proposal in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(ClaudeDecisions.describe(proposal))
-                            if !proposal.note.isBlank {
-                                Text(proposal.note).font(.callout).foregroundStyle(.secondary).lineLimit(2)
-                            }
-                        }
-                        Spacer()
-                        if proposal.kind == .profileImport {
-                            Button("Dismiss") { ClaudeDecisions.record(proposal.id, .dismissed, container: context.container) }
-                        }
-                        Button("Review") { open(proposal) }.buttonStyle(.borderedProminent)
-                    }
-                }
-                ForEach(waiting) { request in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(request.title)
-                            Text(request.status == .failed
-                                 ? String(localized: "Claude couldn't finish: \(request.note)")
-                                 : String(localized: "Waiting. In Claude Desktop, ask “Run my Civa requests”."))
-                                .font(.callout)
-                                .foregroundStyle(request.status == .failed ? .orange : .secondary)
-                                .lineLimit(2)
-                        }
-                        Spacer()
-                        Button("Cancel") { set(request, .cancelled) }
-                        if request.status == .failed {
-                            Button("Ask Again") {
-                                set(request, .pending)
-                                ClaudeAsk.openClaude()
-                            }
-                        } else {
-                            Button("Open Claude") { ClaudeAsk.openClaude() }
-                        }
-                    }
-                }
+                Label("Claude", systemImage: "sparkles").font(.headline).foregroundStyle(.claude)
+                ForEach(proposals) { ClaudeProposalRow(proposal: $0) }
+                ForEach(waiting) { ClaudeRequestRow(request: $0) }
             }
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(.background, in: .rect(cornerRadius: 12))
-            .overlay { RoundedRectangle(cornerRadius: 12).strokeBorder(.separator) }
-            .sheet(item: $importRequest) { ImportReviewSheet(request: $0) }
+            .overlay { RoundedRectangle(cornerRadius: 12).strokeBorder(.claude.opacity(0.5)) }
         }
-    }
-
-    private func set(_ request: ClaudeRequest, _ status: ClaudeRequest.Status) {
-        let id = request.id
-        let side = ModelContext(context.container)
-        guard let request = try? side.fetch(FetchDescriptor<ClaudeRequest>(predicate: #Predicate { $0.id == id })).first else { return }
-        request.status = status
-        if status == .pending { request.note = "" }
-        try? side.save()
-    }
-
-    private func open(_ proposal: ClaudeProposal) {
-        switch proposal.kind {
-        case .profileImport:
-            importRequest = .claude(proposal)
-        case .resumeEdit, .resumeDraft:
-            navigation.recordToOpen = proposal.targetID
-            navigation.section = .resumes
-        case .recordEdit:
-            navigation.profileCategory = switch proposal.category {
-            case .personal: .personal
-            case .projects: .projects
-            default: profileCategory(forExperience: proposal.targetID)
-            }
-            navigation.recordToOpen = proposal.targetID
-            navigation.section = .careerProfile
-        }
-    }
-
-    private func profileCategory(forExperience id: UUID?) -> ProfileCategory {
-        guard let id, let experience = try? context.fetch(FetchDescriptor<Experience>(predicate: #Predicate { $0.id == id })).first else { return .professional }
-        return experience.kind == .professional ? .professional : .organizational
     }
 }
 

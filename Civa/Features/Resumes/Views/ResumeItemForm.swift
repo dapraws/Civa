@@ -122,14 +122,22 @@ struct ResumeItemForm: View {
         Section {
             TextField(
                 "Summary",
-                text: $document.summary,
+                text: Binding(get: { document.summary }, set: { document.setSummary($0) }),
                 prompt: Text("Two or three sentences about your experience and focus"),
                 axis: .vertical
             )
             .labelsHidden()
             .lineLimit(3...12)
+            AskClaudeButton(
+                title: "Write with Claude",
+                ask: .init(kind: .writeSummary, category: .resumes, targetID: editor.record.id, targetTitle: editor.record.displayTitle),
+                unavailable: ClaudeAsk.unavailable(isNew: editor.isNew, isDirty: editor.isDirty)
+            )
         } header: {
-            Text("Summary")
+            HStack {
+                Text("Summary")
+                if document.claudeTouchedSummary == true { ClaudeTag() }
+            }
         } footer: {
             Text("Appears under your contact details without a heading. Leave it empty if you don't need one.")
         }
@@ -151,9 +159,7 @@ struct ResumeItemForm: View {
         let current = document.sections[position.section].entries[position.entry]
         return Binding(
             get: { document.entryPosition(id).map { document.sections[$0.section].entries[$0.entry] } ?? current },
-            set: { new in
-                if let p = document.entryPosition(id) { document.sections[p.section].entries[p.entry] = new }
-            }
+            set: { document.updateEntry(id, to: $0) }
         )
     }
 }
@@ -209,7 +215,7 @@ private struct EntryFields: View {
     let onDelete: () -> Void
 
     var body: some View {
-        Section(kind.heading) {
+        Section {
             TextField(kind.titleLabel, text: $entry.title, prompt: Text(kind.titlePrompt))
             TextField(kind.subtitleLabel, text: $entry.subtitle, prompt: Text(kind.subtitlePrompt))
             if kind == .experience {
@@ -217,6 +223,11 @@ private struct EntryFields: View {
             }
             if kind == .experience || kind == .organizational {
                 TitlePicker("Work Arrangement", selection: $entry.workArrangement, options: WorkArrangement.allCases.map(\.title))
+            }
+        } header: {
+            HStack {
+                Text(kind.heading)
+                if entry.claudeTouched == true { ClaudeTag() }
             }
         }
         if kind != .skills {

@@ -18,6 +18,10 @@ struct CivaApp: App {
         return try ModelContainer.civa()
     }
 
+    init() {
+        ClaudeTip.configure()
+    }
+
     var body: some Scene {
         // Single window: Civa is one workspace, and ⌘N is free for new records.
         Window("Civa", id: "main") {

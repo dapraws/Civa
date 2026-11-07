@@ -31,7 +31,7 @@ nonisolated enum ClaudeCategory: String, Codable, CaseIterable, Identifiable {
 /// One entry in the audit log (FR-074): a read, a refusal, a suggestion, or a decision on one.
 @Model
 nonisolated final class ClaudeActivity {
-    enum Kind: String, Codable {
+    enum Kind: String, Codable, CaseIterable {
         case read, denied, suggested, approved, rejected
     }
 

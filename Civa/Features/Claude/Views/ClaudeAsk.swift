@@ -8,6 +8,7 @@
 import AppKit
 import SwiftData
 import SwiftUI
+import TipKit
 
 /// Queues a request for Claude (FR-072) and brings up Claude Desktop. MCP can't start Claude
 /// from Civa, so the user sends one short prompt there; it's copied to the clipboard.
@@ -96,6 +97,15 @@ enum ClaudeAsk {
         return .queued(copy: .init(id: copy.id, title: copy.displayTitle))
     }
 
+    /// Why an Ask Claude button can't be used yet, in the order the user would fix it.
+    static func unavailable(isNew: Bool, isDirty: Bool, needsReview: Bool = false, missing: String? = nil) -> String? {
+        if isNew { return String(localized: "Save this first, then ask Claude.") }
+        if needsReview { return String(localized: "Confirm this record first. Claude only sees confirmed records.") }
+        if let missing { return missing }
+        if isDirty { return String(localized: "Save your changes first, then ask Claude.") }
+        return nil
+    }
+
     /// Copies the prompt and opens Claude Desktop.
     @MainActor
     static func openClaude() {
@@ -158,23 +168,50 @@ extension View {
     }
 }
 
-/// A button that queues one request.
+/// An orange button that queues one request. It stays visible when it can't be used yet and
+/// says why underneath, so the feature is never hidden.
 struct AskClaudeButton: View {
     let title: LocalizedStringKey
     let ask: ClaudeAsk.Ask
-    var disabled = false
+    /// Why the button can't be used yet, such as "Save first"; nil when it can.
+    var unavailable: String?
+    /// Points at the button once, after Claude is set up.
+    var tip: ClaudeTip?
 
     @Environment(\.modelContext) private var context
     @State private var outcome: ClaudeAsk.Outcome?
 
     var body: some View {
-        Button {
-            outcome = ClaudeAsk.send(ask, container: context.container)
-        } label: {
-            Label(title, systemImage: "sparkles")
+        VStack(alignment: .leading, spacing: 4) {
+            Button {
+                tip?.invalidate(reason: .actionPerformed)
+                outcome = ClaudeAsk.send(ask, container: context.container)
+            } label: {
+                Label(title, systemImage: "sparkles")
+            }
+            .buttonStyle(.bordered)
+            .tint(.claude)
+            .foregroundStyle(.claude)
+            .disabled(unavailable != nil)
+            .help(unavailable ?? String(localized: "Queue this for Claude Desktop; you review the result in Civa"))
+            // Outside the orange style, so the tip's text keeps its normal color.
+            .popoverTip(tip, arrowEdge: .top)
+            .tipImageStyle(Color.claude)
+            if let unavailable {
+                Text(unavailable)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
-        .disabled(disabled)
-        .help(disabled ? "Save first, then ask Claude" : "Queue this for Claude Desktop; you review the result in Civa")
         .claudeAskAlerts($outcome)
     }
+}
+
+#Preview {
+    VStack(alignment: .leading, spacing: 16) {
+        AskClaudeButton(title: "Improve with Claude", ask: .init(kind: .improveBullets, category: .experience, targetID: UUID(), targetTitle: "iOS Engineer"))
+        AskClaudeButton(title: "Improve with Claude", ask: .init(kind: .improveBullets, category: .experience, targetID: UUID(), targetTitle: "iOS Engineer"), unavailable: "Save your changes first")
+    }
+    .padding()
+    .previewEnvironment()
 }

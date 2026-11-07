@@ -21,10 +21,30 @@ nonisolated struct ResumeDocument: Codable, Hashable {
     /// Personal Information as it was when the header was copied, so later changes can be
     /// suggested (FR-042).
     var headerSource: ResumeHeader?
+    /// Claude wrote the summary and it hasn't been edited since; the editor tags it.
+    var claudeTouchedSummary: Bool?
 
     /// A blank resume with the usual sections, for "from scratch" (FR-030).
     static var blank: ResumeDocument {
         ResumeDocument(sections: [.experience, .education, .projects, .skills].map { ResumeSection(kind: $0) })
+    }
+
+    /// A manual edit to an entry. Changing it clears its Claude tag; writing the same value back,
+    /// as a field can on focus, keeps it.
+    mutating func updateEntry(_ id: UUID, to new: ResumeEntry) {
+        guard let position = entryPosition(id) else { return }
+        let old = sections[position.section].entries[position.entry]
+        guard new != old else { return }
+        var new = new
+        if new.claudeTouched == old.claudeTouched { new.claudeTouched = nil }
+        sections[position.section].entries[position.entry] = new
+    }
+
+    /// A manual edit to the summary; clears its Claude tag when the text changes.
+    mutating func setSummary(_ text: String) {
+        guard text != summary else { return }
+        summary = text
+        claudeTouchedSummary = nil
     }
 }
 
@@ -109,6 +129,8 @@ nonisolated struct ResumeEntry: Codable, Hashable, Identifiable {
     var proofURL: String?
     /// The profile record as it read when copied here, so later changes to it can be suggested (FR-042).
     var sourceCopy: SourceCopy?
+    /// Claude wrote part of this entry and it hasn't been edited since; the editor tags it.
+    var claudeTouched: Bool?
 
     /// Whether the dates come from pickers rather than typed text.
     var hasDateValues: Bool { start != nil || end != nil || isCurrent == true }

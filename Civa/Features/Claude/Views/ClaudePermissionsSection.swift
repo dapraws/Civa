@@ -64,26 +64,7 @@ struct ClaudeRecentActivitySection: View {
     var body: some View {
         if !activity.isEmpty {
             Section("Recent Claude Activity") {
-                ForEach(activity.prefix(5)) { entry in
-                    HStack(alignment: .firstTextBaseline) {
-                        Image(systemName: entry.kind == .denied ? "hand.raised" : "eye")
-                            .foregroundStyle(entry.kind == .denied ? .orange : .secondary)
-                            .accessibilityHidden(true)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(entry.summary)
-                            if !entry.detail.isEmpty {
-                                Text(entry.detail.replacingOccurrences(of: "\n", with: ", "))
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(1)
-                            }
-                        }
-                        Spacer()
-                        Text(entry.date.formatted(.relative(presentation: .named)))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
+                ForEach(activity.prefix(5)) { ClaudeActivityRow(entry: $0) }
             }
         }
     }

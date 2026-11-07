@@ -14,9 +14,15 @@ enum AppSection: String, CaseIterable, Identifiable {
     case documents
     case resumes
     case applications
+    case aiActivity
     case settings
 
     var id: Self { self }
+
+    /// The sidebar's sections. AI Activity appears once Claude Desktop is set up (FR-075).
+    static func visible(claudeEnabled: Bool) -> [AppSection] {
+        allCases.filter { $0 != .aiActivity || claudeEnabled }
+    }
 
     var title: String {
         switch self {
@@ -25,6 +31,7 @@ enum AppSection: String, CaseIterable, Identifiable {
         case .documents: String(localized: "Documents")
         case .resumes: String(localized: "Resumes")
         case .applications: String(localized: "Applications")
+        case .aiActivity: String(localized: "AI Activity")
         case .settings: String(localized: "Settings")
         }
     }
@@ -36,6 +43,7 @@ enum AppSection: String, CaseIterable, Identifiable {
         case .documents: "doc.on.doc"
         case .resumes: "doc.text"
         case .applications: "tray.full"
+        case .aiActivity: "sparkles"
         case .settings: "gearshape"
         }
     }
