@@ -17,14 +17,15 @@ import AppKit
 enum ResumeRenderer {
     /// Red measurements drawn over the preview while spacing is adjusted. Never exported.
     enum Guide: CaseIterable {
-        case margins, sectionSpacing, lineSpacing
+        case margins, sectionSpacing, entrySpacing, lineSpacing
     }
 
     static func pdf(for document: ResumeDocument, guides: Set<Guide> = []) -> Data {
         let format = document.format
         let page = format.paper.size
         let margin = format.margins.size
-        let style = Style(format: format, width: page.width - 2 * margin)
+        let side = format.sideMargin.size
+        let style = Style(format: format, width: page.width - 2 * side)
 
         let data = NSMutableData()
         var mediaBox = CGRect(origin: .zero, size: page)
@@ -35,8 +36,8 @@ enum ResumeRenderer {
         let previous = NSGraphicsContext.current
         defer { NSGraphicsContext.current = previous }
         var y = margin
-        // Where this page's guides go, in page space from the top.
-        var headingTops: [CGFloat] = []
+        // The gaps above sections and entries on this page, in page space from the top, for the guides.
+        var gaps: [Gap] = []
         var firstLine: CGRect?
         var lineShown = false
 
@@ -47,13 +48,13 @@ enum ResumeRenderer {
             context.scaleBy(x: 1, y: -1)
             NSGraphicsContext.current = NSGraphicsContext(cgContext: context, flipped: true)
             y = margin
-            headingTops = []
+            gaps = []
             firstLine = nil
         }
 
         func endPage() {
             if !guides.isEmpty {
-                drawGuides(guides, in: context, style: style, page: page, headingTops: headingTops, firstLine: firstLine)
+                drawGuides(guides, in: context, style: style, page: page, gaps: gaps, firstLine: firstLine)
             }
             context.restoreGState()
             context.endPDFPage()
@@ -62,34 +63,41 @@ enum ResumeRenderer {
         beginPage()
         for block in blocks(for: document, style: style) {
             let height = style.height(of: block.text)
+            // The space above is added here, not as paragraph spacing: text drawing ignores
+            // spacing before the first line it draws. None at the top of a page.
+            var gap = y > margin ? block.spacingBefore : 0
             // ponytail: an entry taller than a whole page overflows; split it by line if that ever happens.
-            if y + height > page.height - margin, y > margin {
+            if y + gap + height > page.height - margin, y > margin {
                 endPage()
                 beginPage()
+                gap = 0
             }
-            if block.startsWithHeading { headingTops.append(y) }
+            if gap > 0 {
+                gaps.append(Gap(guide: block.startsWithHeading ? .sectionSpacing : .entrySpacing, top: y, bottom: y + gap))
+            }
+            y += gap
             if let line = block.firstLine, !lineShown {
-                firstLine = line.offsetBy(dx: margin, dy: y)
+                firstLine = line.offsetBy(dx: side, dy: y)
                 lineShown = true
             }
             block.text.draw(
-                with: CGRect(x: margin, y: y, width: style.width, height: height),
+                with: CGRect(x: side, y: y, width: style.width, height: height),
                 options: [.usesLineFragmentOrigin, .usesFontLeading]
             )
             for rule in block.rules {
                 context.setStrokeColor(style.accent.cgColor)
-                context.setLineWidth(0.5)
-                context.move(to: CGPoint(x: margin, y: y + rule))
-                context.addLine(to: CGPoint(x: margin + style.width, y: y + rule))
+                context.setLineWidth(format.dividerWidth)
+                context.move(to: CGPoint(x: side, y: y + rule))
+                context.addLine(to: CGPoint(x: side + style.width, y: y + rule))
                 context.strokePath()
             }
             if let mark = block.mark {
-                drawCheck(in: context, at: CGPoint(x: margin + mark.x, y: y + mark.y), size: style.format.fontSize * 0.7)
+                drawCheck(in: context, at: CGPoint(x: side + mark.x, y: y + mark.y), size: style.format.fontSize * 0.7)
             }
             if let link = block.link {
                 // The context is flipped, and link rects are in page space, so flip the rect back.
                 let top = y + link.top
-                let rect = CGRect(x: margin, y: page.height - top - link.height, width: style.width, height: link.height)
+                let rect = CGRect(x: side, y: page.height - top - link.height, width: style.width, height: link.height)
                 context.setURL(link.url as CFURL, for: rect)
             }
             y += height
@@ -127,8 +135,16 @@ enum ResumeRenderer {
         var mark: CGPoint?
         /// Whether a section heading opens the block, with the section spacing above it.
         var startsWithHeading = false
+        /// Space above the block, unless it starts a page.
+        var spacingBefore: CGFloat = 0
         /// The entry's first line, for the line spacing guide.
         var firstLine: CGRect?
+    }
+
+    private struct Gap {
+        let guide: Guide
+        let top: CGFloat
+        let bottom: CGFloat
     }
 
     // MARK: - Guides
@@ -136,46 +152,60 @@ enum ResumeRenderer {
     private static let guideColor = NSColor(srgbRed: 0.93, green: 0.22, blue: 0.27, alpha: 1)
 
     private static func drawGuides(
-        _ guides: Set<Guide>, in context: CGContext, style: Style, page: CGSize, headingTops: [CGFloat], firstLine: CGRect?
+        _ guides: Set<Guide>, in context: CGContext, style: Style, page: CGSize, gaps: [Gap], firstLine: CGRect?
     ) {
         let format = style.format
         let margin = format.margins.size
+        let side = format.sideMargin.size
         context.saveGState()
         context.setStrokeColor(guideColor.cgColor)
         if guides.contains(.margins) {
-            let content = CGRect(x: margin, y: margin, width: page.width - 2 * margin, height: page.height - 2 * margin)
+            let content = CGRect(x: side, y: margin, width: page.width - 2 * side, height: page.height - 2 * margin)
             context.setLineWidth(0.6)
             context.setLineDash(phase: 0, lengths: [3, 2])
             context.stroke(content)
             context.setLineDash(phase: 0, lengths: [])
-            let label = format.margins.inches
             verticalBeam(in: context, x: page.width / 2, from: 0, to: margin)
-            pill(label, center: CGPoint(x: page.width / 2 + 18, y: margin / 2))
-            // In the bottom margin, clear of the section labels on the left.
-            horizontalBeam(in: context, y: page.height - margin / 2, from: 0, to: margin)
-            pill(label, leading: CGPoint(x: margin + 4, y: page.height - margin / 2))
+            pill(String(localized: "Top \(format.margins.inches)"), leading: CGPoint(x: page.width / 2 + 6, y: margin / 2))
+            // Low on the page, clear of the section guides near the top.
+            let y = page.height - margin - 24
+            horizontalBeam(in: context, y: y, from: 0, to: side)
+            pill(String(localized: "Side \(format.sideMargin.inches)"), leading: CGPoint(x: side + 4, y: y))
         }
-        if guides.contains(.sectionSpacing) {
-            let gap = CGFloat(format.sectionSpacing)
-            for top in headingTops {
-                context.setStrokeColor(guideColor.withAlphaComponent(0.35).cgColor)
-                context.setLineWidth(0.5)
-                for line in [top, top + gap] {
-                    context.move(to: CGPoint(x: margin, y: line))
-                    context.addLine(to: CGPoint(x: page.width - margin, y: line))
-                }
-                context.strokePath()
-                context.setStrokeColor(guideColor.cgColor)
-                verticalBeam(in: context, x: margin - 5, from: top, to: top + gap)
-                pill("\(Int(gap)) pt", trailing: CGPoint(x: margin - 9, y: top + gap / 2))
+        for gap in gaps where guides.contains(gap.guide) {
+            // Sections on the left, entries on the right, so both can show at once.
+            let isSection = gap.guide == .sectionSpacing
+            context.setStrokeColor(guideColor.withAlphaComponent(0.35).cgColor)
+            context.setLineWidth(0.5)
+            for line in [gap.top, gap.bottom] {
+                context.move(to: CGPoint(x: side, y: line))
+                context.addLine(to: CGPoint(x: page.width - side, y: line))
+            }
+            context.strokePath()
+            context.setStrokeColor(guideColor.cgColor)
+            let x = isSection ? side - 5 : page.width - side + 5
+            verticalBeam(in: context, x: x, from: gap.top, to: gap.bottom)
+            let label = "\(points(gap.bottom - gap.top)) pt"
+            if isSection {
+                pill(label, trailing: CGPoint(x: x - 4, y: (gap.top + gap.bottom) / 2))
+            } else {
+                pill(label, leading: CGPoint(x: x + 4, y: (gap.top + gap.bottom) / 2))
             }
         }
         if guides.contains(.lineSpacing), let line = firstLine {
-            let x = page.width - margin + 5
+            // Left margin, two short lines, so it fits even narrow margins.
+            context.setStrokeColor(guideColor.cgColor)
+            let x = side - 5
             verticalBeam(in: context, x: x, from: line.minY, to: line.maxY)
-            pill("\(format.lineSpacingTitle)×", leading: CGPoint(x: x + 4, y: line.midY))
+            pill("\(format.lineSpacingTitle)×\n\(points(line.height)) pt", trailing: CGPoint(x: x - 4, y: line.midY))
         }
         context.restoreGState()
+    }
+
+    /// "10" or "13.8".
+    private static func points(_ value: CGFloat) -> String {
+        let rounded = (value * 10).rounded() / 10
+        return rounded == rounded.rounded() ? String(Int(rounded)) : String(format: "%.1f", rounded)
     }
 
     /// A red I-beam: a line with a tick at each end.
@@ -217,7 +247,8 @@ enum ResumeRenderer {
         }
         let rect = CGRect(origin: origin, size: box)
         guideColor.setFill()
-        NSBezierPath(roundedRect: rect, xRadius: box.height / 2, yRadius: box.height / 2).fill()
+        let radius = min(box.height, 9) / 2
+        NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius).fill()
         label.draw(at: CGPoint(x: rect.minX + 3, y: rect.minY + 1))
     }
 
@@ -257,7 +288,10 @@ enum ResumeRenderer {
             let text = NSMutableAttributedString()
             let headingRange = style.appendHeading(String(localized: "Summary"), to: text)
             text.append(style.text(document.summary, after: 2))
-            blocks.append(Block(text: text, rules: style.dividerOffsets(headingRange, in: text), startsWithHeading: true))
+            blocks.append(Block(
+                text: text, rules: style.dividerOffsets(headingRange, in: text), startsWithHeading: true,
+                spacingBefore: style.format.sectionSpacing
+            ))
         }
 
         for section in document.sections where !section.entries.isEmpty {
@@ -268,14 +302,16 @@ enum ResumeRenderer {
                     let headingRange = style.appendHeading(section.title, to: text)
                     rules = style.dividerOffsets(headingRange, in: text)
                 }
+                // Skill lines sit tight; entries take the entry spacing.
+                let spacing = index == 0 ? style.format.sectionSpacing : section.kind == .skills ? 0 : style.format.entryGap
                 if section.kind == .skills {
                     text.append(skillLine(entry, style: style))
-                    blocks.append(Block(text: text, rules: rules, startsWithHeading: index == 0))
+                    blocks.append(Block(text: text, rules: rules, startsWithHeading: index == 0, spacingBefore: spacing))
                     continue
                 }
                 let entryStart = text.length
                 let titleRange = appendEntry(entry, kind: section.kind, to: text, style: style)
-                var block = Block(text: text, rules: rules, startsWithHeading: index == 0)
+                var block = Block(text: text, rules: rules, startsWithHeading: index == 0, spacingBefore: spacing)
                 block.firstLine = style.lineRect(of: NSRange(location: entryStart, length: 1), in: text)
                 // Link Proof shows the check and makes the title open the proof.
                 if let url = entry.proofLink(style.format) {
@@ -316,13 +352,13 @@ enum ResumeRenderer {
             // MIT and Harvard: organization … location, then title … dates. Tech: organization …
             // dates, then title … location.
             let (right1, right2) = format.layout == .tech ? (dates, location) : (location, dates)
-            text.append(style.text(tabbed(organization, right1), bold: true, before: 4, rightTab: style.width))
+            text.append(style.text(tabbed(organization, right1), bold: true, rightTab: style.width))
             let start = text.length
             text.append(style.text(tabbed(titleText, right2), italic: true, after: 1, rightTab: style.width))
             titleRange = NSRange(location: start, length: (titleText as NSString).length)
         } else {
             let start = text.length
-            text.append(style.text(tabbed(title, dates), bold: true, before: 4, rightTab: style.width))
+            text.append(style.text(tabbed(title, dates), bold: true, rightTab: style.width))
             titleRange = NSRange(location: start, length: max(1, (title as NSString).length))
             let subtitle = ([entry.subtitle] + details).filter { !$0.isBlank }.joined(separator: " · ")
             if !subtitle.isBlank {
@@ -388,6 +424,11 @@ nonisolated extension ResumeEntry {
 }
 
 extension ResumeFormat {
+    /// "Single" for 1.0, else "1.15".
+    var lineSpacingName: String {
+        lineSpacing == 1 ? String(localized: "Single") : lineSpacingTitle
+    }
+
     /// "1.15", whatever the Mac's language.
     var lineSpacingTitle: String {
         String(format: "%.2f", lineSpacing).replacingOccurrences(of: "(\\.\\d)0$", with: "$1", options: .regularExpression)
@@ -473,8 +514,9 @@ private struct Style {
     /// A section heading in the template's style. Returns its range.
     func appendHeading(_ title: String, to text: NSMutableAttributedString) -> NSRange {
         let start = text.length
-        let before = format.sectionSpacing
-        let after: CGFloat = format.dividers ? 5 : 3
+        // The section spacing above is added by the layout; this is the room below, before the first entry.
+        let before: CGFloat = 0
+        let after: CGFloat = format.dividers ? 6 + format.dividerWidth : 5
         switch format.layout {
         case .classic:
             text.append(self.text(title, scale: 1.1, bold: true, color: accent, before: before, after: after))
@@ -490,7 +532,7 @@ private struct Style {
 
     /// A rule under the heading at `range`, when the resume shows dividers.
     func dividerOffsets(_ range: NSRange, in text: NSAttributedString) -> [CGFloat] {
-        format.dividers ? [lineRect(of: range, in: text).maxY + 2] : []
+        format.dividers ? [lineRect(of: range, in: text).maxY + 2 + format.dividerWidth / 2] : []
     }
 
     func font(scale: CGFloat, bold: Bool, italic: Bool) -> NSFont {

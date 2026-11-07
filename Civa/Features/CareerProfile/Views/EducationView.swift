@@ -64,7 +64,7 @@ struct EducationForm: View {
                     addTitle: String(localized: "Add Course")
                 )
             }
-            Section("Description") {
+            Section {
                 TextField(
                     "Description",
                     text: editor.binding(\.details),
@@ -73,6 +73,10 @@ struct EducationForm: View {
                 )
                 .labelsHidden()
                 .lineLimit(3...10)
+            } header: {
+                Text("Description")
+            } footer: {
+                Text("Shown as a bullet under this entry on new resumes, after any honors. Claude reads it for context.")
             }
             Section {
                 ProofField(editor: editor, title: "Proof Link", link: \.proofURL)

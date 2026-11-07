@@ -66,13 +66,14 @@ nonisolated enum WorkArrangement: String, Codable, TitledOption {
 
 /// What kind of organizational experience this is.
 nonisolated enum OrganizationType: String, Codable, TitledOption {
-    case organization, program, community, volunteer, assistant
+    case organization, leadership, program, community, volunteer, assistant
 
     var id: Self { self }
 
     var title: String {
         switch self {
         case .organization: String(localized: "Organization")
+        case .leadership: String(localized: "Leadership")
         case .program: String(localized: "Program or Bootcamp")
         case .community: String(localized: "Community")
         case .volunteer: String(localized: "Volunteer")

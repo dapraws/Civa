@@ -219,7 +219,9 @@ nonisolated struct ResumeFormat: Codable, Hashable {
     var font = Font.helveticaNeue
     /// Body size in points; headings scale from it.
     var fontSize = 10.0
+    /// Top and bottom; also the sides unless `sideMargins` is set.
     var margins = Margins.normal
+    /// Times the font's own line height.
     var lineSpacing = 1.15
     /// Space above each section heading, in points.
     var sectionSpacing = 10.0
@@ -242,6 +244,16 @@ nonisolated struct ResumeFormat: Codable, Hashable {
     var showsDividers: Bool?
     /// Off when nil: the summary sits tight under the contact line, as part of the header.
     var showsSummaryHeading: Bool?
+    /// Left and right. Same as `margins` when nil.
+    var sideMargins: Margins?
+    /// Points between entries in a section. 4 when nil.
+    var entrySpacing: Double?
+    /// Divider thickness in points. 0.5 when nil.
+    var dividerWeight: Double?
+
+    var sideMargin: Margins { sideMargins ?? margins }
+    var entryGap: Double { entrySpacing ?? 4 }
+    var dividerWidth: Double { dividerWeight ?? 0.5 }
 
     /// The layout's look. Every template is single-column and text-based (BR-001).
     enum Template: String, Codable, CaseIterable {
@@ -286,7 +298,9 @@ nonisolated struct ResumeFormat: Codable, Hashable {
 
     static let fontSizes = 9.0...12.0
     static let lineSpacings = [1.0, 1.15, 1.3]
-    static let sectionSpacings = 6.0...18.0
+    static let sectionSpacings = 4.0...24.0
+    static let entrySpacings = 0.0...12.0
+    static let dividerWeights = [0.5, 1.0, 1.5]
 }
 
 nonisolated extension YearMonth {

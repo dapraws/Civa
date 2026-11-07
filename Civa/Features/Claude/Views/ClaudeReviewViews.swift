@@ -82,7 +82,8 @@ struct ClaudeResumeProposalsSheet: View {
             }
             .padding()
         }
-        .frame(width: 640, height: 560)
+        // Short when there's only a message, so it doesn't sit in a mostly empty sheet.
+        .frame(width: 640, height: open.isEmpty ? 280 : 560)
     }
 
     private func pick(_ proposal: ClaudeProposal, _ change: ClaudeProposal.ResumeEdit.Change) -> Binding<Int?> {

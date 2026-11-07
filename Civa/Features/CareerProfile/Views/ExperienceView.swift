@@ -76,6 +76,10 @@ struct ExperienceForm: View {
                 if editor.record.kind == .organizational {
                     TextField("Recognition", text: editor.binding(\.recognition), prompt: Text("Graduate with Distinction"))
                 }
+            } footer: {
+                if editor.record.kind == .organizational {
+                    Text("Leadership and Volunteer roles get their own sections on new resumes.")
+                }
             }
             Section("Dates") {
                 YearMonthField(title: String(localized: "Start"), value: editor.binding(\.start))
@@ -90,7 +94,7 @@ struct ExperienceForm: View {
                     FieldError(editor.error(for: \.end))
                 }
             }
-            Section("Description") {
+            Section {
                 TextField(
                     "Description",
                     text: editor.binding(\.details),
@@ -99,6 +103,10 @@ struct ExperienceForm: View {
                 )
                 .labelsHidden()
                 .lineLimit(4...12)
+            } header: {
+                Text("Description")
+            } footer: {
+                Text("Background on the role. Claude reads it for context. On a resume it becomes the bullet only when there are no Impact lines.")
             }
             Section {
                 StringListEditor(
@@ -107,20 +115,19 @@ struct ExperienceForm: View {
                     addTitle: String(localized: "Add Impact")
                 )
             } header: {
-                HStack(alignment: .top) {
+                HStack(alignment: .center) {
                     Text("Impact")
                     Spacer()
                     AskClaudeButton(
                         title: "Improve with Claude",
                         ask: .init(kind: .improveBullets, category: .experience, targetID: editor.record.id, targetTitle: editor.record.displayTitle),
-                        unavailable: ClaudeAsk.unavailable(
-                            isNew: editor.isNew, isDirty: editor.isDirty, needsReview: editor.record.needsReview,
-                            missing: editor.record.impacts.allSatisfy(\.isBlank) ? String(localized: "Add an impact first, then Claude can improve it.") : nil
-                        ),
-                        tip: .improve
+                        unavailable: improveUnavailable,
+                        tip: .improve,
+                        showsReason: false
                     )
                 }
             } footer: {
+                ClaudeUnavailableNote(reason: improveUnavailable)
                 Text("Results of your work, like “Cut onboarding time by 30%”. Awards and other formal recognition go in Achievements.")
             }
             Section("Skills") {
@@ -137,6 +144,13 @@ struct ExperienceForm: View {
             CustomFieldsSection(fields: editor.binding(\.customFields))
         }
         .formStyle(.grouped)
+    }
+
+    private var improveUnavailable: String? {
+        ClaudeAsk.unavailable(
+            isNew: editor.isNew, isDirty: editor.isDirty, needsReview: editor.record.needsReview,
+            missing: editor.record.impacts.allSatisfy(\.isBlank) ? String(localized: "Add an impact first, then Claude can improve it.") : nil
+        )
     }
 
     /// Turning "current" on clears the end date.

@@ -38,7 +38,9 @@ enum ResumeDiff {
         }
 
         for section in new.sections {
-            guard let oldSection = old.sections.first(where: { $0.kind == section.kind }) else { continue }
+            guard let oldSection = old.sections.first(where: { $0.id == section.id })
+                ?? old.sections.first(where: { $0.kind == section.kind })
+            else { continue }
             changes += entryChanges(from: oldSection, to: section)
         }
 
@@ -79,7 +81,10 @@ enum ResumeDiff {
             change(String(localized: "Font size"), "\(old.fontSize.formatted()) pt", "\(new.fontSize.formatted()) pt"),
             change(String(localized: "Line spacing"), old.lineSpacing.formatted(), new.lineSpacing.formatted()),
             change(String(localized: "Space between sections"), "\(old.sectionSpacing.formatted()) pt", "\(new.sectionSpacing.formatted()) pt"),
+            change(String(localized: "Space between entries"), "\(old.entryGap.formatted()) pt", "\(new.entryGap.formatted()) pt"),
             change(String(localized: "Margins"), old.margins.title, new.margins.title),
+            change(String(localized: "Side margins"), old.sideMargin.title, new.sideMargin.title),
+            change(String(localized: "Divider thickness"), "\(old.dividerWidth.formatted()) pt", "\(new.dividerWidth.formatted()) pt"),
             change(String(localized: "Accent color"), old.accent.title, new.accent.title),
             change(String(localized: "Paper"), old.paper.title, new.paper.title),
             change(

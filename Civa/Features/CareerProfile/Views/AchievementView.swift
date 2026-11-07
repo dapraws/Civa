@@ -76,7 +76,7 @@ struct AchievementForm: View {
             } footer: {
                 Text("Achievements are formal recognition. Results of your work go in an experience's Impact.")
             }
-            Section("Description") {
+            Section {
                 TextField(
                     "Description",
                     text: editor.binding(\.details),
@@ -85,6 +85,10 @@ struct AchievementForm: View {
                 )
                 .labelsHidden()
                 .lineLimit(3...10)
+            } header: {
+                Text("Description")
+            } footer: {
+                Text("Shown as a bullet under this entry on new resumes. Claude reads it for context.")
             }
             Section {
                 ProofField(editor: editor, title: "Proof Link", link: \.proofURL)

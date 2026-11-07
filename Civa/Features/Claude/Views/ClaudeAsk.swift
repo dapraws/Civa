@@ -177,6 +177,9 @@ struct AskClaudeButton: View {
     var unavailable: String?
     /// Points at the button once, after Claude is set up.
     var tip: ClaudeTip?
+    /// Shows `unavailable` under the button. Off when the button sits in a section header and
+    /// the reason goes in the footer instead (`ClaudeUnavailableNote`).
+    var showsReason = true
 
     @Environment(\.modelContext) private var context
     @State private var outcome: ClaudeAsk.Outcome?
@@ -187,23 +190,42 @@ struct AskClaudeButton: View {
                 tip?.invalidate(reason: .actionPerformed)
                 outcome = ClaudeAsk.send(ask, container: context.container)
             } label: {
-                Label(title, systemImage: "sparkles")
+                Label {
+                    Text(title)
+                } icon: {
+                    // The sparkle stays orange, so it still reads as Claude while it waits.
+                    Image(systemName: "sparkles").foregroundStyle(.claude)
+                }
             }
             .buttonStyle(.bordered)
-            .tint(.claude)
-            .foregroundStyle(.claude)
+            .tint(unavailable == nil ? .claude : .gray)
+            .foregroundStyle(unavailable == nil ? AnyShapeStyle(.claude) : AnyShapeStyle(.secondary))
             .disabled(unavailable != nil)
             .help(unavailable ?? String(localized: "Queue this for Claude Desktop; you review the result in Civa"))
             // Outside the orange style, so the tip's text keeps its normal color.
             .popoverTip(tip, arrowEdge: .top)
             .tipImageStyle(Color.claude)
-            if let unavailable {
+            if showsReason, let unavailable {
                 Text(unavailable)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
         }
         .claudeAskAlerts($outcome)
+    }
+}
+
+/// Why a Claude button in the section header can't be used yet, shown in the section footer.
+struct ClaudeUnavailableNote: View {
+    let reason: String?
+
+    var body: some View {
+        if let reason {
+            HStack(spacing: 4) {
+                Image(systemName: "sparkles").foregroundStyle(.claude)
+                Text(reason)
+            }
+        }
     }
 }
 

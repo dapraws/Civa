@@ -84,7 +84,8 @@ struct ImportReviewSheet: View {
                 actions
             }
         }
-        .frame(width: 1000, height: 600)
+        // Short when there's only a message, so it doesn't sit in a mostly empty sheet.
+        .frame(width: loadError == nil ? 1000 : 560, height: loadError == nil ? 600 : 280)
         .onAppear(perform: load)
         .alert(
             "Civa Couldn't Add These Records",

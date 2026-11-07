@@ -56,7 +56,8 @@ struct DuplicateMergeSheet: View {
             }
             .padding()
         }
-        .frame(width: 620, height: 440)
+        // Short when there's only a message, so it doesn't sit in a mostly empty sheet.
+        .frame(width: 620, height: original == nil ? 220 : 440)
         .onAppear {
             original = findOriginal(of: duplicate)
             if let original {

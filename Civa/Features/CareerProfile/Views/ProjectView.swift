@@ -58,7 +58,7 @@ struct ProjectForm: View {
                 YearMonthField(title: String(localized: "End"), value: editor.binding(\.end))
                 FieldError(editor.error(for: \.end))
             }
-            Section("Description") {
+            Section {
                 TextField(
                     "Description",
                     text: editor.binding(\.details),
@@ -67,6 +67,10 @@ struct ProjectForm: View {
                 )
                 .labelsHidden()
                 .lineLimit(4...12)
+            } header: {
+                Text("Description")
+            } footer: {
+                Text("Background on the project. Claude reads it for context. On a resume it becomes the bullet only when there are no Impact lines.")
             }
             Section {
                 StringListEditor(
@@ -75,20 +79,19 @@ struct ProjectForm: View {
                     addTitle: String(localized: "Add Impact")
                 )
             } header: {
-                HStack(alignment: .top) {
+                HStack(alignment: .center) {
                     Text("Impact")
                     Spacer()
                     AskClaudeButton(
                         title: "Improve with Claude",
                         ask: .init(kind: .improveBullets, category: .projects, targetID: editor.record.id, targetTitle: editor.record.displayTitle),
-                        unavailable: ClaudeAsk.unavailable(
-                            isNew: editor.isNew, isDirty: editor.isDirty, needsReview: editor.record.needsReview,
-                            missing: editor.record.impacts.allSatisfy(\.isBlank) ? String(localized: "Add an impact first, then Claude can improve it.") : nil
-                        ),
-                        tip: .improve
+                        unavailable: improveUnavailable,
+                        tip: .improve,
+                        showsReason: false
                     )
                 }
             } footer: {
+                ClaudeUnavailableNote(reason: improveUnavailable)
                 Text("Results of the project, like users reached or time saved.")
             }
             Section("Skills") {
@@ -98,6 +101,13 @@ struct ProjectForm: View {
             CustomFieldsSection(fields: editor.binding(\.customFields))
         }
         .formStyle(.grouped)
+    }
+
+    private var improveUnavailable: String? {
+        ClaudeAsk.unavailable(
+            isNew: editor.isNew, isDirty: editor.isDirty, needsReview: editor.record.needsReview,
+            missing: editor.record.impacts.allSatisfy(\.isBlank) ? String(localized: "Add an impact first, then Claude can improve it.") : nil
+        )
     }
 }
 
