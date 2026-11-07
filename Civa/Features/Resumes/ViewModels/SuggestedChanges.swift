@@ -106,7 +106,7 @@ enum SuggestedChanges {
                         title: name,
                         changes: [.init(label: String(localized: "Removed from your profile"), old: entry.title, new: "", replacesEdit: false)]
                     ))
-                } else if let new = profile.entries[id]?.asSourceCopy, new != old {
+                } else if let new = profile.entries[id]?.asSourceCopy, !new.matches(old) {
                     let changes = entryChanges(old: old, new: new, current: entry, kind: section.kind)
                     if !changes.isEmpty {
                         suggestions.append(ResumeSuggestion(target: .entry(entry.id), title: name, changes: changes))
@@ -141,6 +141,7 @@ enum SuggestedChanges {
             let new = profileEntry.asSourceCopy
             if old.title != new.title { entry.title = new.title }
             if old.subtitle != new.subtitle { entry.subtitle = new.subtitle }
+            if old.subtitle != new.subtitle || (old.location != nil && old.location != new.location) { entry.location = new.location }
             if old.dates != new.dates {
                 entry.dates = new.dates
                 entry.start = profileEntry.start
