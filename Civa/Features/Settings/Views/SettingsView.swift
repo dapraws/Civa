@@ -16,6 +16,7 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
+            ClaudeSettingsSection()
             Section {
                 Toggle("Fetch Logos Online", isOn: $fetchesLogos)
                     .disabled(Brandfetch.clientID == nil)

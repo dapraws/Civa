@@ -8,7 +8,6 @@
 import SwiftUI
 import SwiftData
 
-@main
 struct CivaApp: App {
     @NSApplicationDelegateAdaptor private var appDelegate: AppDelegate
     private let container = Result {
@@ -27,6 +26,7 @@ struct CivaApp: App {
                 RootView()
                     .modelContainer(container)
                     .environment(appDelegate.changes)
+                    .onAppear { ClaudeBridge.shared.startIfEnabled() }
             case .failure(let error):
                 StoreErrorView(error: error)
             }
