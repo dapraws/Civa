@@ -8,8 +8,8 @@
 import PDFKit
 import SwiftUI
 
-/// Read-only view of a PDF. Keeps the visible page when the PDF is replaced, so a live
-/// preview doesn't jump back to page 1 on every edit.
+/// Read-only view of a PDF. Keeps the scroll position when the PDF is replaced, so a live
+/// preview doesn't jump on every edit.
 struct PDFPreview: NSViewRepresentable {
     let data: Data
 
@@ -29,10 +29,16 @@ struct PDFPreview: NSViewRepresentable {
 
     func updateNSView(_ view: PDFView, context: Context) {
         guard view.document?.dataRepresentation() != data, let document = PDFDocument(data: data) else { return }
-        let pageIndex = view.currentPage.flatMap { view.document?.index(for: $0) } ?? 0
+        // Keep the exact scroll position, so typing or showing guides doesn't move the page.
+        let clip = view.documentView?.enclosingScrollView?.contentView
+        let origin = clip?.bounds.origin
+        let hadDocument = view.document != nil
         view.document = document
-        if let page = document.page(at: min(pageIndex, document.pageCount - 1)) {
-            view.go(to: page)
+        if hadDocument, let clip, let origin {
+            view.layoutDocumentView()
+            // Clamped, for a PDF that got shorter.
+            clip.scroll(to: clip.constrainBoundsRect(NSRect(origin: origin, size: clip.bounds.size)).origin)
+            clip.enclosingScrollView?.reflectScrolledClipView(clip)
         }
     }
 }

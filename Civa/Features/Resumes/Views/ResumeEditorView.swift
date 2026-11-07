@@ -149,16 +149,45 @@ extension ResumeEditorView {
     }
 }
 
-/// The PDF preview with the format bar on top.
+/// The PDF preview with the format ribbon on top. Adjusting spacing shows red distance guides
+/// on the preview for a moment; the ruler button keeps them on. The export never has them.
 private struct ResumePreviewPane: View {
     @Binding var document: ResumeDocument
+    @AppStorage("ResumeShowsGuides") private var showsGuides = false
+    @State private var hovered: ResumeRenderer.Guide?
+    @State private var flashed: ResumeRenderer.Guide?
+    @State private var flashCount = 0
 
     var body: some View {
-        let data = ResumeRenderer.pdf(for: document)
+        let guides: Set<ResumeRenderer.Guide> = showsGuides ? Set(ResumeRenderer.Guide.allCases) : Set([hovered, flashed].compactMap(\.self))
+        let data = ResumeRenderer.pdf(for: document, guides: guides)
         VStack(spacing: 0) {
-            ResumeFormatBar(format: $document.format, pageCount: PDFDocument(data: data)?.pageCount ?? 0)
+            ResumeFormatBar(
+                format: $document.format, pageCount: PDFDocument(data: data)?.pageCount ?? 0, showsGuides: $showsGuides
+            ) { guide, inside in
+                if inside {
+                    hovered = guide
+                } else {
+                    hovered = nil
+                    flash(guide)
+                }
+            }
             Divider()
             PDFPreview(data: data)
+        }
+        .onChange(of: document.format.margins) { flash(.margins) }
+        .onChange(of: document.format.sectionSpacing) { flash(.sectionSpacing) }
+        .onChange(of: document.format.lineSpacing) { flash(.lineSpacing) }
+    }
+
+    /// Shows a guide, then hides it 1.5 seconds after the last change.
+    private func flash(_ guide: ResumeRenderer.Guide) {
+        flashed = guide
+        flashCount += 1
+        let count = flashCount
+        Task {
+            try? await Task.sleep(for: .seconds(1.5))
+            if flashCount == count { flashed = nil }
         }
     }
 }

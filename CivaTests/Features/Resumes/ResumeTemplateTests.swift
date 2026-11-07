@@ -90,4 +90,16 @@ struct ResumeTemplateTests {
         old.location = "Bandung"
         #expect(!new.matches(old))
     }
+
+    @Test func guidesAppearOnlyInThePreview() throws {
+        let document = document(.classic)
+        let exported = try #require(PDFDocument(data: ResumeRenderer.pdf(for: document)))
+        let preview = try #require(PDFDocument(data: ResumeRenderer.pdf(for: document, guides: Set(ResumeRenderer.Guide.allCases))))
+        #expect(exported.pageCount == preview.pageCount)
+        #expect(!(exported.string ?? "").contains("0.75 in"))
+        let text = try #require(preview.string)
+        #expect(text.contains("0.75 in"))
+        #expect(text.contains("10 pt"))
+        #expect(text.contains("1.15×"))
+    }
 }
