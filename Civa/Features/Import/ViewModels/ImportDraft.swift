@@ -322,3 +322,15 @@ nonisolated struct ImportDraft {
         return count
     }
 }
+
+extension ImportCategory {
+    /// Why an imported item was matched to a profile record, as `ImportMatcher` decides.
+    var matchReason: String {
+        switch self {
+        case .experience, .organizational, .education:
+            String(localized: "Same organization, with the same title or overlapping dates. It may be the same role, or a promotion.")
+        case .projects, .achievements, .certifications, .skills:
+            String(localized: "Same name as one in your profile.")
+        }
+    }
+}

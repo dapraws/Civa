@@ -20,7 +20,7 @@ struct ApplicationsView: View {
         ApplicationList(status: status)
             .id(status)
             .toolbar {
-                ToolbarItem(placement: .navigation) {
+                ToolbarItem(placement: .primaryAction) {
                     Picker("Status", selection: changes.selection($status, pending: $pendingStatus)) {
                         Text("All Statuses").tag(ApplicationStatus?.none)
                         Divider()
@@ -159,7 +159,16 @@ struct ApplicationForm: View {
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
-                    StatusPill(status: editor.record.status)
+                    // The status lives here, in its color, instead of repeating as a row below.
+                    Picker("Status", selection: editor.binding(\.status)) {
+                        ForEach(ApplicationStatus.allCases) { status in
+                            Text(status.title).tag(status)
+                        }
+                    }
+                    .labelsHidden()
+                    .fixedSize()
+                    .tint(editor.record.status.color)
+                    .help("Status")
                 }
                 .padding(.vertical, 4)
             }
@@ -168,11 +177,6 @@ struct ApplicationForm: View {
                 FieldError(editor.error(for: \.position))
                 OrganizationField(title: "Company", name: editor.binding(\.company), prompt: Text("Required"))
                 FieldError(editor.error(for: \.company))
-                Picker("Status", selection: editor.binding(\.status)) {
-                    ForEach(ApplicationStatus.allCases) { status in
-                        Text(status.title).tag(status)
-                    }
-                }
             }
             Section {
                 Picker("Resume", selection: editor.binding(\.resume)) {
@@ -203,7 +207,7 @@ struct ApplicationForm: View {
                 Text("The resume you sent for this job. Claude can draft one from your Career Profile for this job description; you keep or discard it.")
             }
             Section {
-                Toggle("Applied on a Date", isOn: hasDate)
+                Toggle("Date Applied", isOn: hasDate)
                 if let date = editor.record.applicationDate {
                     DatePicker(
                         "Application Date",

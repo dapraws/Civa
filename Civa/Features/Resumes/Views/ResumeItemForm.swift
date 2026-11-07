@@ -103,7 +103,12 @@ struct ResumeItemForm: View {
     private var headerFields: some View {
         Section("Header") {
             TextField("Full Name", text: $document.header.fullName)
-            TextField("Headline", text: $document.header.headline, prompt: Text("iOS Engineer"))
+            // Label above, so a long headline isn't cut off in the narrow fields column.
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Headline")
+                TextField("Headline", text: $document.header.headline, prompt: Text("iOS Engineer"), axis: .vertical)
+                    .labelsHidden()
+            }
             TextField("Email", text: $document.header.email, prompt: Text("name@example.com"))
             TextField("Phone", text: $document.header.phone)
             TextField("Location", text: $document.header.location, prompt: Text("City, Country"))

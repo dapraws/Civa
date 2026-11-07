@@ -36,6 +36,9 @@ struct SkillList: View {
                 if navigation.startsNewRecord {
                     navigation.startsNewRecord = false
                     addSkill()
+                } else if let target = navigation.recordToOpen, let skill = skills.first(where: { AnyHashable($0.id) == target }) {
+                    navigation.recordToOpen = nil
+                    open(skill)
                 } else if group == nil {
                     // Like the other lists, open on the first item.
                     select(groups.first)
@@ -160,6 +163,7 @@ struct SkillList: View {
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     RecordEditorBar(editor: editor, onClose: close)
                 }
+                .startsWithoutFocus(!editor.isNew)
                 .id(editor.record.id)
         } else {
             ContentUnavailableView("No Skill Selected", systemImage: "star", description: Text("Select a skill to see its details."))

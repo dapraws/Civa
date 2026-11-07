@@ -10,6 +10,8 @@ import UniformTypeIdentifiers
 
 /// "Import": a CV (FR-020) or LinkedIn's data export (FR-021), then review what was found.
 struct ImportMenu: View {
+    /// Icon only in toolbars; with its title on the Dashboard.
+    var showsTitle = false
     @Environment(UnsavedChangesGuard.self) private var changes
     @State private var isChoosing = false
     /// Kept apart from `isChoosing`: the panel closes, clearing that, before the chosen file arrives.
@@ -23,8 +25,8 @@ struct ImportMenu: View {
         } label: {
             Label("Import", systemImage: "square.and.arrow.down")
         }
-        .labelStyle(.iconOnly)
-        .menuIndicator(.hidden)
+        .labelStyle(TitleOrIconLabelStyle(showsTitle: showsTitle))
+        .menuIndicator(showsTitle ? .visible : .hidden)
         .help("Add your details from a CV, a LinkedIn PDF, or a LinkedIn data export")
         .fileImporter(
             isPresented: $isChoosing,
@@ -51,6 +53,18 @@ struct ImportMenu: View {
         changes.perform {
             self.kind = kind
             isChoosing = true
+        }
+    }
+}
+
+private struct TitleOrIconLabelStyle: LabelStyle {
+    let showsTitle: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        if showsTitle {
+            Label(configuration)
+        } else {
+            configuration.icon
         }
     }
 }

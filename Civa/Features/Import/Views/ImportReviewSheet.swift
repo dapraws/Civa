@@ -154,6 +154,7 @@ struct ImportReviewSheet: View {
             }
         }
         .formStyle(.grouped)
+        .startsWithoutFocus()
     }
 
     @ViewBuilder
@@ -357,7 +358,7 @@ private struct SkillRow: View {
     }
 }
 
-/// "Already in Profile", "Matches Your Profile", or "Check", when one applies.
+/// "Already in Profile", "Possible Match", or "Check", when one applies.
 private struct ImportTag: View {
     let item: ImportItem
 
@@ -365,7 +366,8 @@ private struct ImportTag: View {
         if item.isIdentical {
             tag(String(localized: "Already in Profile"), color: .secondary)
         } else if item.matchID != nil {
-            tag(String(localized: "Matches Your Profile"), color: .orange)
+            tag(String(localized: "Possible Match"), color: .orange)
+                .help(item.category.matchReason)
         } else if item.needsCheck {
             tag(String(localized: "Check"), color: .orange)
         }

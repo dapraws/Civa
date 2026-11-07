@@ -17,6 +17,8 @@ final class AppNavigation {
     var startsNewRecord = false
     /// Set after creating a record elsewhere (a sheet); the list showing that record type opens it.
     var recordToOpen: AnyHashable?
+    /// Which list Other Information shows next ("achievements", "certifications", "skills").
+    var otherKind: String?
 
     init() {
         #if DEBUG

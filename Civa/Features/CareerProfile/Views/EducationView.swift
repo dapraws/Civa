@@ -101,12 +101,12 @@ private struct GradeSection: View {
     var body: some View {
         let education = editor.record
         Section {
-            Picker("Grade Name", selection: editor.binding(\.gradeLabelRaw)) {
+            Picker("Grade Type", selection: editor.binding(\.gradeLabelRaw)) {
                 ForEach(GradeLabel.allCases) { Text($0.title).tag($0.rawValue) }
             }
             TextField("Grade", value: editor.binding(\.gradeValue), format: .number, prompt: Text("3.86"))
             FieldError(editor.error(for: \.gradeValue))
-            Picker("Out Of", selection: scaleChoice) {
+            Picker("Out of", selection: scaleChoice) {
                 ForEach(Grade.commonScales, id: \.self) { Text(Grade(value: 0, scale: $0).scaleText()).tag(Double?.some($0)) }
                 Divider()
                 Text("Other…").tag(Double?.none)

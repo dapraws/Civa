@@ -82,8 +82,14 @@ struct ClaudeResumeProposalsSheet: View {
             }
             .padding()
         }
-        // Short when there's only a message, so it doesn't sit in a mostly empty sheet.
-        .frame(width: 640, height: open.isEmpty ? 280 : 560)
+        // Short for a message or a single summary change, so it doesn't sit mostly empty.
+        .frame(width: 640, height: open.isEmpty ? 280 : isSmall(open) ? 380 : 560)
+    }
+
+    /// One suggestion that only changes the summary, in one version.
+    private func isSmall(_ open: [ClaudeProposal]) -> Bool {
+        guard open.count == 1, let edit = open[0].decode(ClaudeProposal.ResumeEdit.self) else { return false }
+        return edit.entries.isEmpty && edit.summaryVersions.count <= 1
     }
 
     private func pick(_ proposal: ClaudeProposal, _ change: ClaudeProposal.ResumeEdit.Change) -> Binding<Int?> {

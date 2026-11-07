@@ -24,6 +24,7 @@ struct OtherInformationView: View {
     }
 
     @Environment(UnsavedChangesGuard.self) private var changes
+    @Environment(AppNavigation.self) private var navigation
     @State private var kind: Kind = .achievements
     /// The type clicked while the unsaved-changes prompt is up.
     @State private var pendingKind: Kind?
@@ -50,6 +51,13 @@ struct OtherInformationView: View {
                 }
             }
             .id(kind)
+        }
+        // Another page asked for a particular list, such as the Dashboard's Review link.
+        .onAppear {
+            if let raw = navigation.otherKind, let start = Kind(rawValue: raw) {
+                kind = start
+                navigation.otherKind = nil
+            }
         }
         #if DEBUG
         // Manual checks: -CivaOtherKind skills opens Skills.

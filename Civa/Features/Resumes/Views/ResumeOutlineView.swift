@@ -46,6 +46,8 @@ struct ResumeOutlineView: View {
 
     private func sectionRow(_ section: ResumeSection) -> some View {
         Label(section.title, systemImage: section.kind.systemImage)
+            .lineLimit(1)
+            .help(section.title)
             .fontWeight(.medium)
             .tag(ResumeOutlineItem.section(section.id))
             .contextMenu {
