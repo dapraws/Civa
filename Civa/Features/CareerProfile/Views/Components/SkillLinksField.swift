@@ -20,15 +20,13 @@ struct SkillLinksField<Model: EditableRecord>: View {
 
     var body: some View {
         let linked = editor.record[keyPath: skills].sorted { $0.name < $1.name }
-        ForEach(linked) { skill in
-            HStack {
-                Text(skill.displayTitle)
-                if skill.needsReview {
-                    ReviewBadge()
+        if !linked.isEmpty {
+            FlowLayout(spacing: 6, rowSpacing: 6) {
+                ForEach(linked) { skill in
+                    SkillChip(skill: skill) { unlink(skill) }
                 }
-                Spacer()
-                RemoveButton { unlink(skill) }
             }
+            .padding(.vertical, 2)
         }
         TextField("Add Skill", text: $newName, prompt: Text("Type a skill and press Return"))
             .onSubmit(link)
@@ -67,6 +65,41 @@ struct SkillLinksField<Model: EditableRecord>: View {
         editor.update { record in
             record[keyPath: skills].removeAll { $0 == skill }
         }
+    }
+}
+
+/// A skill as a rounded tag. Orange outline while it needs review; × removes it when given.
+struct SkillChip: View {
+    let skill: Skill
+    var isSelected = false
+    var onRemove: (() -> Void)?
+
+    var body: some View {
+        HStack(spacing: 4) {
+            if skill.needsReview {
+                Image(systemName: "exclamationmark.triangle")
+                    .foregroundStyle(.orange)
+                    .help("Needs review")
+            }
+            Text(skill.displayTitle)
+            if let onRemove {
+                Button(action: onRemove) {
+                    Image(systemName: "xmark")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Remove \(skill.displayTitle)")
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 4)
+        .foregroundStyle(isSelected ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
+        .background(isSelected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.quaternary.opacity(0.5)), in: Capsule())
+        .overlay {
+            Capsule().strokeBorder(skill.needsReview ? Color.orange : Color.secondary.opacity(0.35), lineWidth: 0.5)
+        }
+        .fixedSize()
     }
 }
 

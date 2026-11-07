@@ -103,3 +103,17 @@ struct OrganizationalSectionTests {
         #expect(document.sections.map(\.title) == ["Volunteer Experience"])
     }
 }
+
+/// The Skills page sidebar: hard, then soft, then untyped; categories match loosely.
+@MainActor
+struct SkillGroupTests {
+    @Test func groupsSortAndMatch() {
+        let groups: [SkillGroup] = [
+            .init(type: nil, category: "Misc"), .init(type: .soft, category: "Soft Skills"),
+            .init(type: .hard, category: ""), .init(type: .hard, category: "Tools"), .init(type: .hard, category: "AI/ML"),
+        ]
+        #expect(groups.sorted().map(\.title) == ["AI/ML", "Tools", "No Category", "Soft Skills", "Misc"])
+        #expect(SkillGroup(type: .hard, category: " tools ") == SkillGroup(type: .hard, category: "Tools"))
+        #expect(SkillGroup(type: .soft, category: "Tools") != SkillGroup(type: .hard, category: "Tools"))
+    }
+}
