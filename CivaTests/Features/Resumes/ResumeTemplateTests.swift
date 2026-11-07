@@ -98,7 +98,7 @@ struct ResumeTemplateTests {
         #expect(exported.pageCount == preview.pageCount)
         #expect(!(exported.string ?? "").contains("0.75 in"))
         let text = try #require(preview.string)
-        #expect(text.contains("0.75 in"))
+        #expect(text.contains("Top 0.75 in"))
         #expect(text.contains("10 pt"))
         #expect(text.contains("1.15×"))
     }

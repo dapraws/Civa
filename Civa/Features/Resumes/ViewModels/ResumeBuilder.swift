@@ -32,7 +32,22 @@ enum ResumeBuilder {
         let experiences = confirmed(selection.experiences).sorted { recency($0) > recency($1) }
         let sections: [ResumeSection] = [
             ResumeSection(kind: .experience, entries: experiences.filter { $0.kind == .professional }.map(entry)),
-            ResumeSection(kind: .organizational, entries: experiences.filter { $0.kind == .organizational }.map(entry)),
+        ]
+        // Leadership and volunteer roles get their own sections; the rest stay Organizational Experience.
+        let organizational = experiences.filter { $0.kind == .organizational }
+        let groups: [(OrganizationType?, String?)] = [
+            (.leadership, String(localized: "Leadership Experience")),
+            (nil, nil),
+            (.volunteer, String(localized: "Volunteer Experience")),
+        ]
+        let organizationalSections = groups.map { type, heading in
+            ResumeSection(
+                kind: .organizational,
+                entries: organizational.filter { $0.organizationType.resumeGroup == type }.map(entry),
+                heading: heading
+            )
+        }
+        let rest: [ResumeSection] = [
             ResumeSection(kind: .education, entries: confirmed(selection.education)
                 .sorted { YearMonth.recency(start: $0.start, end: $0.end) > YearMonth.recency(start: $1.start, end: $1.end) }
                 .map(entry)),
@@ -47,7 +62,7 @@ enum ResumeBuilder {
                 .map(entry)),
             ResumeSection(kind: .skills, entries: skillLines(confirmed(selection.skills))),
         ]
-        document.sections = sections.filter { !$0.entries.isEmpty }
+        document.sections = (sections.prefix(1) + organizationalSections + rest).filter { !$0.entries.isEmpty }
         // Remember what each entry was copied from, for Suggested Changes (FR-042).
         for s in document.sections.indices {
             for e in document.sections[s].entries.indices where document.sections[s].entries[e].sourceID != nil {
@@ -202,4 +217,11 @@ enum ResumeBuilder {
 
 private nonisolated extension Array {
     var nilIfEmpty: Self? { isEmpty ? nil : self }
+}
+
+private extension Optional where Wrapped == OrganizationType {
+    /// The organizational section a record goes in: leadership, volunteer, or nil for the rest.
+    var resumeGroup: OrganizationType? {
+        self == .leadership || self == .volunteer ? self : nil
+    }
 }

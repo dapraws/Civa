@@ -62,7 +62,8 @@ struct SuggestedChangesSheet: View {
             }
             .padding()
         }
-        .frame(width: 640, height: 520)
+        // Short when there's only a message, so it doesn't sit in a mostly empty sheet.
+        .frame(width: 640, height: suggestions.isEmpty ? 280 : 520)
     }
 
     private func changeRow(_ change: ResumeSuggestion.Change) -> some View {

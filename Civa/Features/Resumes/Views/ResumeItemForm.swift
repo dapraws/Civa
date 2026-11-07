@@ -40,7 +40,7 @@ struct ResumeItemForm: View {
             case .entry(let id):
                 if let position = document.entryPosition(id), let entry = entryBinding(id) {
                     let section = document.sections[position.section]
-                    EntryFields(entry: entry, kind: section.kind) {
+                    EntryFields(entry: entry, format: $document.format, kind: section.kind) {
                         selection = .section(section.id)
                         document.sections[position.section].entries.removeAll { $0.id == id }
                     }
@@ -128,6 +128,10 @@ struct ResumeItemForm: View {
             )
             .labelsHidden()
             .lineLimit(3...12)
+            Toggle("Summary Heading", isOn: Binding(
+                get: { document.format.showsSummaryHeading == true },
+                set: { document.format.showsSummaryHeading = $0 }
+            ))
             AskClaudeButton(
                 title: "Write with Claude",
                 ask: .init(kind: .writeSummary, category: .resumes, targetID: editor.record.id, targetTitle: editor.record.displayTitle),
@@ -140,8 +144,8 @@ struct ResumeItemForm: View {
             }
         } footer: {
             Text(document.format.showsSummaryHeading == true
-                 ? "Appears under a “Summary” heading. Turn the heading off in Layout to keep it right under your contact details."
-                 : "Appears right under your contact details. Leave it empty if you don't need one.")
+                 ? "Appears under a “Summary” heading. Turn the heading off to keep it right under your contact details."
+                 : "Appears right under your contact details, with no heading. Leave it empty if you don't need one.")
         }
     }
 
@@ -213,13 +217,18 @@ private struct SectionFields: View {
 
 private struct EntryFields: View {
     @Binding var entry: ResumeEntry
+    @Binding var format: ResumeFormat
     let kind: ResumeSection.Kind
     let onDelete: () -> Void
 
     var body: some View {
         Section {
             TextField(kind.titleLabel, text: $entry.title, prompt: Text(kind.titlePrompt))
-            TextField(kind.subtitleLabel, text: $entry.subtitle, prompt: Text(kind.subtitlePrompt))
+            if kind.hasOrganization {
+                OrganizationField(title: LocalizedStringKey(kind.subtitleLabel), name: organization, prompt: Text(kind.organizationPrompt))
+            } else {
+                TextField(kind.subtitleLabel, text: $entry.subtitle, prompt: Text(kind.subtitlePrompt))
+            }
             if kind == .experience {
                 TitlePicker("Employment Type", selection: $entry.employmentType, options: EmploymentType.allCases.map(\.title))
             }
@@ -233,6 +242,22 @@ private struct EntryFields: View {
             HStack {
                 Text(kind.heading)
                 if entry.claudeTouched == true { ClaudeTag() }
+            }
+        }
+        if kind == .experience || kind == .organizational || kind == .education {
+            Section {
+                if kind == .experience {
+                    Toggle("Employment Types", isOn: option(\.showsEmploymentType, default: false))
+                }
+                if kind != .education {
+                    Toggle("Work Arrangements", isOn: option(\.showsWorkArrangement, default: false))
+                } else {
+                    Toggle("GPA or Score", isOn: option(\.showsGrade, default: true))
+                }
+            } header: {
+                Text("Show on Resume")
+            } footer: {
+                Text("For every entry in this resume.")
             }
         }
         if kind != .skills {
@@ -262,7 +287,7 @@ private struct EntryFields: View {
             Section {
                 TextField("Proof Link", text: optional(\.proofURL), prompt: Text("https://"))
             } footer: {
-                Text("When Layout → Link Proof is on, the title opens this link in the PDF.")
+                Text("With Proof Check on in the ribbon, the title gets a small check and opens this link in the PDF.")
             }
         }
         Section {
@@ -320,6 +345,23 @@ private struct EntryFields: View {
                 if hadLocation { entry.subtitle = [organization, new].filter { !$0.isBlank }.joined(separator: " · ") }
             }
         )
+    }
+
+    /// The organization without the location the subtitle also carries.
+    private var organization: Binding<String> {
+        Binding(
+            get: { entry.organization },
+            set: { new in
+                let location = entry.location ?? ""
+                let hadLocation = entry.organization != entry.subtitle
+                entry.subtitle = hadLocation ? [new, location].filter { !$0.isBlank }.joined(separator: " · ") : new
+            }
+        )
+    }
+
+    /// A format option stored as an optional, where nil means its default.
+    private func option(_ field: WritableKeyPath<ResumeFormat, Bool?>, default value: Bool) -> Binding<Bool> {
+        Binding(get: { format[keyPath: field] ?? value }, set: { format[keyPath: field] = $0 })
     }
 
     private func optional(_ field: WritableKeyPath<ResumeEntry, String?>) -> Binding<String> {
@@ -399,6 +441,18 @@ extension ResumeSection.Kind {
         case .achievements: String(localized: "Given By")
         case .certifications: String(localized: "Issuer")
         case .skills: String(localized: "Skills")
+        }
+    }
+
+    /// Experience, organizations, and schools: the name gets brand suggestions, and the location has its own field.
+    var hasOrganization: Bool {
+        self == .experience || self == .organizational || self == .education
+    }
+
+    var organizationPrompt: String {
+        switch self {
+        case .education: String(localized: "Universitas Indonesia")
+        default: String(localized: "Acme")
         }
     }
 

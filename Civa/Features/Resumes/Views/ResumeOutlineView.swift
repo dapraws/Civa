@@ -73,17 +73,29 @@ struct ResumeOutlineView: View {
             }
     }
 
+    private func add(_ section: ResumeSection) {
+        document.sections.append(section)
+        selection = .section(section.id)
+    }
+
     @ViewBuilder
     private var addSectionBar: some View {
         let missing = ResumeSection.Kind.allCases.filter { kind in !document.sections.contains { $0.kind == kind } }
-        if !missing.isEmpty {
+        // Organizational experience can be split: Leadership, Volunteer, and so on, each its own section.
+        let usedHeadings = Set(document.sections.filter { $0.kind == .organizational }.map(\.title))
+        let organizationalHeadings = missing.contains(.organizational)
+            ? []
+            : ResumeSection.Kind.organizational.headingOptions.filter { !usedHeadings.contains($0) }
+        if !missing.isEmpty || !organizationalHeadings.isEmpty {
             HStack {
                 Menu {
                     ForEach(missing, id: \.self) { kind in
-                        Button(kind.heading) {
-                            let section = ResumeSection(kind: kind)
-                            document.sections.append(section)
-                            selection = .section(section.id)
+                        Button(kind.heading) { add(ResumeSection(kind: kind)) }
+                    }
+                    if !organizationalHeadings.isEmpty {
+                        Divider()
+                        ForEach(organizationalHeadings, id: \.self) { heading in
+                            Button(heading) { add(ResumeSection(kind: .organizational, heading: heading)) }
                         }
                     }
                 } label: {

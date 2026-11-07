@@ -7,9 +7,10 @@
 
 import SwiftUI
 
-/// A Word-style ribbon above the preview: grouped controls, each group captioned, all visible.
-/// When the preview is narrow the groups wrap onto more rows instead of folding into a menu.
-/// Options are limited so the resume stays single-column and ATS-friendly (FR-036).
+/// A Word-style ribbon across the top of the resume editor: grouped controls with a caption
+/// under each group and a line between groups. Everything stays visible; when the window is
+/// narrow the groups wrap onto a second row. Hovering a spacing control shows its distance on
+/// the preview. Options are limited so the resume stays single-column and ATS-friendly (FR-036).
 struct ResumeFormatBar: View {
     @Binding var format: ResumeFormat
     let pageCount: Int
@@ -19,150 +20,215 @@ struct ResumeFormatBar: View {
     var onHoverGuide: (ResumeRenderer.Guide, Bool) -> Void = { _, _ in }
 
     var body: some View {
-        FlowLayout(spacing: 0, rowSpacing: 6) {
-            RibbonGroup("Template") {
-                Picker("Template", selection: Binding(get: { format.layout }, set: { format.apply($0) })) {
-                    ForEach(ResumeFormat.Template.allCases, id: \.self) { Text($0.title).tag($0) }
-                }
-                .help("Template: sets the layout, and a font you can still change")
-            }
-            RibbonGroup("Font") {
-                Picker("Font", selection: $format.font) {
-                    ForEach(ResumeFormat.Font.allCases, id: \.self) { font in
-                        Text(font.rawValue).font(.custom(font.rawValue, size: 13)).tag(font)
+        HStack(alignment: .top, spacing: 0) {
+            FlowLayout(spacing: 0, rowSpacing: 4) {
+                RibbonGroup("Template") {
+                    Picker("Template", selection: Binding(get: { format.layout }, set: { format.apply($0) })) {
+                        ForEach(ResumeFormat.Template.allCases, id: \.self) { Text($0.title).tag($0) }
                     }
+                    .labelsHidden()
+                    .help("Template: sets the layout, and a font you can still change")
                 }
-                .help("Font")
-                Picker("Font Size", selection: $format.fontSize) {
-                    ForEach(Array(stride(from: ResumeFormat.fontSizes.lowerBound, through: ResumeFormat.fontSizes.upperBound, by: 0.5)), id: \.self) {
-                        Text("\($0.formatted()) pt").tag($0)
-                    }
-                }
-                .help("Font size")
-                Picker("Accent Color", selection: $format.accent) {
-                    ForEach(ResumeFormat.Accent.allCases, id: \.self) { accent in
-                        Label {
-                            Text(accent.title)
-                        } icon: {
-                            Image(systemName: "circle.fill").foregroundStyle(accent.color)
+                RibbonGroup("Font") {
+                    Picker("Font", selection: $format.font) {
+                        ForEach(ResumeFormat.Font.allCases, id: \.self) { font in
+                            Text(font.rawValue).font(.custom(font.rawValue, size: 13)).tag(font)
                         }
-                        .tag(accent)
+                    }
+                    .labelsHidden()
+                    .help("Font")
+                    Picker("Font Size", selection: $format.fontSize) {
+                        ForEach(Array(stride(from: ResumeFormat.fontSizes.lowerBound, through: ResumeFormat.fontSizes.upperBound, by: 0.5)), id: \.self) {
+                            Text("\($0.formatted()) pt").tag($0)
+                        }
+                    }
+                    .labelsHidden()
+                    .help("Font size")
+                    Picker("Color", selection: $format.accent) {
+                        ForEach(ResumeFormat.Accent.allCases, id: \.self) { accent in
+                            Label {
+                                Text(accent.title)
+                            } icon: {
+                                Image(systemName: "circle.fill").foregroundStyle(accent.color)
+                            }
+                            .tag(accent)
+                        }
+                    }
+                    .labelsHidden()
+                    .help("Color of your name and section headings")
+                }
+                RibbonGroup("Spacing") {
+                    RibbonItem("Lines", guide: .lineSpacing, help: "Space between lines, as a multiple of the font's height", onHover: onHoverGuide) {
+                        Picker("Line Spacing", selection: $format.lineSpacing) {
+                            ForEach(ResumeFormat.lineSpacings, id: \.self) { value in
+                                Text(lineSpacingName(value)).tag(value)
+                            }
+                        }
+                        .labelsHidden()
+                    }
+                    RibbonItem("Sections", guide: .sectionSpacing, help: "Space above each section heading", onHover: onHoverGuide) {
+                        ValueStepper(value: $format.sectionSpacing, range: ResumeFormat.sectionSpacings, step: 2)
+                    }
+                    RibbonItem("Entries", guide: .entrySpacing, help: "Space between entries in a section", onHover: onHoverGuide) {
+                        ValueStepper(
+                            value: Binding(get: { format.entryGap }, set: { format.entrySpacing = $0 }),
+                            range: ResumeFormat.entrySpacings, step: 1
+                        )
+                    }
+                    RibbonItem("Margins", guide: .margins, help: "Page margins: top and bottom, then the sides", onHover: onHoverGuide) {
+                        Menu(marginsTitle) {
+                            Picker("Top and Bottom", selection: $format.margins) {
+                                ForEach(ResumeFormat.Margins.allCases, id: \.self) { Text($0.title).tag($0) }
+                            }
+                            .pickerStyle(.inline)
+                            Picker("Left and Right", selection: Binding(get: { format.sideMargin }, set: { format.sideMargins = $0 })) {
+                                ForEach(ResumeFormat.Margins.allCases, id: \.self) { Text($0.title).tag($0) }
+                            }
+                            .pickerStyle(.inline)
+                        }
+                        .fixedSize()
                     }
                 }
-                .help("Accent color for your name and section headings")
-            }
-            RibbonGroup("Spacing") {
-                Picker("Line Spacing", selection: $format.lineSpacing) {
-                    ForEach(ResumeFormat.lineSpacings, id: \.self) { Text(spacingTitle($0)).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                .help("Line spacing")
-                .onHover { onHoverGuide(.lineSpacing, $0) }
-                HStack(spacing: 2) {
-                    Text("\(Int(format.sectionSpacing)) pt").monospacedDigit()
-                    Stepper("Space Above Headings", value: $format.sectionSpacing, in: ResumeFormat.sectionSpacings, step: 2)
-                }
-                .help("Space above each section heading")
-                .onHover { onHoverGuide(.sectionSpacing, $0) }
-                Picker("Margins", selection: $format.margins) {
-                    ForEach(ResumeFormat.Margins.allCases, id: \.self) { Text($0.title).tag($0) }
-                }
-                .help("Page margins")
-                .onHover { onHoverGuide(.margins, $0) }
-                Toggle(isOn: $showsGuides) {
-                    Image(systemName: "ruler")
-                }
-                .toggleStyle(.button)
-                .help(showsGuides ? "Hide distance guides" : "Keep distance guides on the preview")
-            }
-            RibbonGroup("Page") {
-                Picker("Paper", selection: $format.paper) {
-                    ForEach(ResumeFormat.Paper.allCases, id: \.self) { Text($0.title).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                .help("Paper size")
-                Picker("Dates", selection: Binding(get: { format.dateStyle ?? .short }, set: { format.dateStyle = $0 })) {
-                    ForEach(ResumeFormat.DateStyle.allCases, id: \.self) { Text($0.title).tag($0) }
-                }
-                .help("How dates print")
-                Text(summary)
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
-            }
-            RibbonGroup("Show", showsDivider: false, hidesLabels: false) {
-                Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 2) {
-                    // Two columns, so the group fits a narrow preview.
-                    GridRow {
-                        Toggle("Employment Type", isOn: option(\.showsEmploymentType, default: false))
-                        Toggle("Divider Lines", isOn: Binding(get: { format.dividers }, set: { format.showsDividers = $0 }))
-                            .help("A line under each section heading")
+                RibbonGroup("Lines") {
+                    Toggle("Dividers", isOn: Binding(get: { format.dividers }, set: { format.showsDividers = $0 }))
+                        .toggleStyle(.checkbox)
+                        .help("A line under each section heading")
+                    Picker("Thickness", selection: Binding(get: { format.dividerWidth }, set: { format.dividerWeight = $0 })) {
+                        ForEach(ResumeFormat.dividerWeights, id: \.self) { Text("\($0.formatted()) pt").tag($0) }
                     }
-                    GridRow {
-                        Toggle("Work Arrangement", isOn: option(\.showsWorkArrangement, default: false))
-                        Toggle("Summary Heading", isOn: option(\.showsSummaryHeading, default: false))
-                            .help("Give the summary its own heading, or keep it right under your contact details")
-                    }
-                    GridRow {
-                        Toggle("GPA or Score", isOn: option(\.showsGrade, default: true))
-                        Toggle("Proof Check", isOn: option(\.linksProof, default: true))
-                            .help("A small check after titles with proof; clicking the title opens it from the PDF")
-                    }
+                    .disabled(!format.dividers)
+                    .labelsHidden()
+                    .help("Divider thickness")
                 }
-                .toggleStyle(.checkbox)
+                RibbonGroup("Proof") {
+                    Toggle("Proof Check", isOn: Binding(get: { format.linksProof != false }, set: { format.linksProof = $0 }))
+                        .toggleStyle(.checkbox)
+                        .help("A small gray check after titles with a proof link; clicking the title opens it from the PDF")
+                }
+                RibbonGroup("Page", showsDivider: false) {
+                    Picker("Paper", selection: $format.paper) {
+                        ForEach(ResumeFormat.Paper.allCases, id: \.self) { Text($0.title).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .help("Paper size")
+                    Picker("Dates", selection: Binding(get: { format.dateStyle ?? .short }, set: { format.dateStyle = $0 })) {
+                        ForEach(ResumeFormat.DateStyle.allCases, id: \.self) { Text($0.title).tag($0) }
+                    }
+                    .labelsHidden()
+                    .help("How dates print")
+                    Text(pageSummary)
+                        .monospacedDigit()
+                        .foregroundStyle(pageCount > 1 ? .orange : .secondary)
+                        .help(pageCount > 1 ? "Most recruiters prefer one page" : "Fits on one page")
+                }
             }
+            Toggle(isOn: $showsGuides) {
+                Label("Guides", systemImage: "ruler")
+            }
+            .toggleStyle(.button)
+            .help(showsGuides ? "Hide the distance guides" : "Keep the distance guides on the preview")
+            .padding(.top, 6)
+            .padding(.trailing, 10)
         }
         .pickerStyle(.menu)
         .controlSize(.small)
-        .padding(.horizontal, 6)
-        .padding(.vertical, 6)
+        .padding(.vertical, 5)
+        .background(.bar)
     }
 
-    /// An option stored as an optional, where nil means its default.
-    private func option(_ field: WritableKeyPath<ResumeFormat, Bool?>, default value: Bool) -> Binding<Bool> {
-        Binding(get: { format[keyPath: field] ?? value }, set: { format[keyPath: field] = $0 })
+    private var marginsTitle: String {
+        format.sideMargin == format.margins ? format.margins.inches : "\(format.margins.inches) · \(format.sideMargin.inches)"
     }
 
-    private func spacingTitle(_ value: Double) -> String {
+    private func lineSpacingName(_ value: Double) -> String {
         var copy = format
         copy.lineSpacing = value
-        return copy.lineSpacingTitle
+        return copy.lineSpacingName
     }
 
-    private var summary: String {
+    private var pageSummary: String {
         String(AttributedString(localized: "^[\(pageCount) page](inflect: true)").characters)
     }
 }
 
-/// Controls with a small caption underneath and a separator after, like a Word ribbon group.
+/// Controls with a small caption underneath and a line after, like a Word ribbon group.
 private struct RibbonGroup<Content: View>: View {
     let title: LocalizedStringKey
     var showsDivider = true
-    /// Pickers show their choice, not their name; checkboxes need theirs.
-    var hidesLabels = true
     @ViewBuilder let content: Content
 
-    init(_ title: LocalizedStringKey, showsDivider: Bool = true, hidesLabels: Bool = true, @ViewBuilder content: () -> Content) {
+    init(_ title: LocalizedStringKey, showsDivider: Bool = true, @ViewBuilder content: () -> Content) {
         self.title = title
         self.showsDivider = showsDivider
-        self.hidesLabels = hidesLabels
         self.content = content()
     }
 
     var body: some View {
         HStack(spacing: 0) {
             VStack(spacing: 3) {
-                HStack(spacing: 6) { content }
-                    .labelsVisibility(hidesLabels ? .hidden : .automatic)
+                HStack(alignment: .bottom, spacing: 8) { content }
                     .fixedSize()
-                    .frame(maxHeight: .infinity)
+                    // Same height for every group, so the captions line up.
+                    .frame(height: 34, alignment: .bottom)
                 Text(title)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(.tertiary)
+                    .textCase(.uppercase)
             }
-            .padding(.horizontal, 8)
-            if showsDivider { Divider().padding(.vertical, 2) }
+            .padding(.horizontal, 10)
+            if showsDivider { Divider().padding(.vertical, 4) }
         }
         .fixedSize()
+    }
+}
+
+/// A spacing control with its own small label above it. Hovering shows its guide on the preview.
+private struct RibbonItem<Content: View>: View {
+    let title: LocalizedStringKey
+    let guide: ResumeRenderer.Guide
+    let help: LocalizedStringKey
+    let onHover: (ResumeRenderer.Guide, Bool) -> Void
+    @ViewBuilder let content: Content
+
+    init(
+        _ title: LocalizedStringKey, guide: ResumeRenderer.Guide, help: LocalizedStringKey,
+        onHover: @escaping (ResumeRenderer.Guide, Bool) -> Void, @ViewBuilder content: () -> Content
+    ) {
+        self.title = title
+        self.guide = guide
+        self.help = help
+        self.onHover = onHover
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            content
+        }
+        .contentShape(Rectangle())
+        .help(help)
+        .onHover { onHover(guide, $0) }
+    }
+}
+
+/// "10 pt" with − and + beside it.
+private struct ValueStepper: View {
+    @Binding var value: Double
+    let range: ClosedRange<Double>
+    let step: Double
+
+    var body: some View {
+        HStack(spacing: 2) {
+            Text("\(value.formatted()) pt")
+                .monospacedDigit()
+                .frame(minWidth: 32, alignment: .trailing)
+            Stepper("Value", value: $value, in: range, step: step)
+                .labelsHidden()
+        }
     }
 }
 
@@ -269,5 +335,5 @@ extension ResumeFormat.Accent {
     @Previewable @State var format = ResumeFormat()
     @Previewable @State var showsGuides = false
     ResumeFormatBar(format: $format, pageCount: 1, showsGuides: $showsGuides)
-        .frame(width: 560)
+        .frame(width: 1000)
 }

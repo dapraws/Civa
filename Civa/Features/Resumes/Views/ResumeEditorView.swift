@@ -20,6 +20,10 @@ struct ResumeEditorView: View {
     @State private var isShowingSuggestions = false
     @State private var isShowingClaude = false
     @State private var askOutcome: ClaudeAsk.Outcome?
+    @AppStorage("ResumeShowsGuides") private var showsGuides = false
+    @State private var hoveredGuide: ResumeRenderer.Guide?
+    @State private var flashedGuide: ResumeRenderer.Guide?
+    @State private var flashCount = 0
     @Environment(\.modelContext) private var context
     @Query(filter: #Predicate<ClaudeProposal> { $0.kindRaw == "resumeEdit" && $0.statusRaw == "pending" }) private var claudeProposals: [ClaudeProposal]
     @Query(sort: \JobApplication.updatedAt, order: .reverse) private var applications: [JobApplication]
@@ -32,6 +36,10 @@ struct ResumeEditorView: View {
 
     var body: some View {
         let document = editor.binding(\.document)
+        let guides: Set<ResumeRenderer.Guide> = showsGuides
+            ? Set(ResumeRenderer.Guide.allCases)
+            : Set([hoveredGuide, flashedGuide].compactMap(\.self))
+        let data = ResumeRenderer.pdf(for: document.wrappedValue, guides: guides)
         GeometryReader { proxy in
             // The fields column takes what's left and keeps at least 320 pt, so labels and values don't overlap.
             let previewRange = 280...max(280, proxy.size.width - outlineWidth - 322)
@@ -42,15 +50,33 @@ struct ResumeEditorView: View {
                 ResumeItemForm(editor: editor, document: document, selection: $selection)
                     .frame(maxWidth: .infinity)
                 ColumnDivider(width: $previewWidth, range: previewRange, direction: -1)
-                ResumePreviewPane(document: document)
+                PDFPreview(data: data)
                     .frame(width: min(max(previewWidth, previewRange.lowerBound), previewRange.upperBound))
             }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
-            if editor.record.isClaudeDraft {
-                ClaudeDraftBanner(editor: editor)
+            VStack(spacing: 0) {
+                if editor.record.isClaudeDraft {
+                    ClaudeDraftBanner(editor: editor)
+                }
+                ResumeFormatBar(
+                    format: document.format, pageCount: PDFDocument(data: data)?.pageCount ?? 0, showsGuides: $showsGuides
+                ) { guide, inside in
+                    if inside {
+                        hoveredGuide = guide
+                    } else if hoveredGuide == guide {
+                        hoveredGuide = nil
+                    }
+                }
+                Divider()
             }
         }
+        // Changing a value shows its guide for a moment, wherever the change came from.
+        .onChange(of: editor.record.document.format.margins) { flash(.margins) }
+        .onChange(of: editor.record.document.format.sideMargins) { flash(.margins) }
+        .onChange(of: editor.record.document.format.sectionSpacing) { flash(.sectionSpacing) }
+        .onChange(of: editor.record.document.format.entrySpacing) { flash(.entrySpacing) }
+        .onChange(of: editor.record.document.format.lineSpacing) { flash(.lineSpacing) }
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 let claudeCount = pendingClaude.count
@@ -149,45 +175,15 @@ extension ResumeEditorView {
     }
 }
 
-/// The PDF preview with the format ribbon on top. Adjusting spacing shows red distance guides
-/// on the preview for a moment; the ruler button keeps them on. The export never has them.
-private struct ResumePreviewPane: View {
-    @Binding var document: ResumeDocument
-    @AppStorage("ResumeShowsGuides") private var showsGuides = false
-    @State private var hovered: ResumeRenderer.Guide?
-    @State private var flashed: ResumeRenderer.Guide?
-    @State private var flashCount = 0
-
-    var body: some View {
-        let guides: Set<ResumeRenderer.Guide> = showsGuides ? Set(ResumeRenderer.Guide.allCases) : Set([hovered, flashed].compactMap(\.self))
-        let data = ResumeRenderer.pdf(for: document, guides: guides)
-        VStack(spacing: 0) {
-            ResumeFormatBar(
-                format: $document.format, pageCount: PDFDocument(data: data)?.pageCount ?? 0, showsGuides: $showsGuides
-            ) { guide, inside in
-                if inside {
-                    hovered = guide
-                } else {
-                    hovered = nil
-                    flash(guide)
-                }
-            }
-            Divider()
-            PDFPreview(data: data)
-        }
-        .onChange(of: document.format.margins) { flash(.margins) }
-        .onChange(of: document.format.sectionSpacing) { flash(.sectionSpacing) }
-        .onChange(of: document.format.lineSpacing) { flash(.lineSpacing) }
-    }
-
+extension ResumeEditorView {
     /// Shows a guide, then hides it 1.5 seconds after the last change.
     private func flash(_ guide: ResumeRenderer.Guide) {
-        flashed = guide
+        flashedGuide = guide
         flashCount += 1
         let count = flashCount
         Task {
             try? await Task.sleep(for: .seconds(1.5))
-            if flashCount == count { flashed = nil }
+            if flashCount == count { flashedGuide = nil }
         }
     }
 }
