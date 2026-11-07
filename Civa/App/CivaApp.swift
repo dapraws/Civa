@@ -26,7 +26,10 @@ struct CivaApp: App {
                 RootView()
                     .modelContainer(container)
                     .environment(appDelegate.changes)
-                    .onAppear { ClaudeBridge.shared.startIfEnabled() }
+                    .onAppear {
+                        ClaudeBridge.shared.handler = { ClaudeTools.answer($0, container: container) }
+                        ClaudeBridge.shared.startIfEnabled()
+                    }
             case .failure(let error):
                 StoreErrorView(error: error)
             }

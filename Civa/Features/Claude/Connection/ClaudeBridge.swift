@@ -116,12 +116,8 @@ final class ClaudeBridge {
         return handler(request)
     }
 
+    /// Until the app hands over its store, Claude only learns that Civa is open.
     static func defaultReply(_ request: ClaudeLink.Request) -> ClaudeLink.Reply {
-        switch request.tool {
-        case "check_connection":
-            ClaudeLink.Reply(ok: true, text: "Civa is open and connected. It isn't sharing any Career Profile data yet; the user chooses what Claude may read in Civa's Settings.")
-        default:
-            ClaudeLink.Reply(ok: false, text: "Civa doesn't offer the tool \(request.tool).")
-        }
+        ClaudeLink.Reply(ok: false, text: "Civa is still starting. Try again in a moment.")
     }
 }
