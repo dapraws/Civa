@@ -15,7 +15,12 @@ import AppKit
 /// is never split across pages. Dividers and the proof check are drawn as shapes, never as
 /// text, so applicant tracking systems read only the words.
 enum ResumeRenderer {
-    static func pdf(for document: ResumeDocument) -> Data {
+    /// Red measurements drawn over the preview while spacing is adjusted. Never exported.
+    enum Guide: CaseIterable {
+        case margins, sectionSpacing, lineSpacing
+    }
+
+    static func pdf(for document: ResumeDocument, guides: Set<Guide> = []) -> Data {
         let format = document.format
         let page = format.paper.size
         let margin = format.margins.size
@@ -30,6 +35,10 @@ enum ResumeRenderer {
         let previous = NSGraphicsContext.current
         defer { NSGraphicsContext.current = previous }
         var y = margin
+        // Where this page's guides go, in page space from the top.
+        var headingTops: [CGFloat] = []
+        var firstLine: CGRect?
+        var lineShown = false
 
         func beginPage() {
             context.beginPDFPage(nil)
@@ -38,9 +47,14 @@ enum ResumeRenderer {
             context.scaleBy(x: 1, y: -1)
             NSGraphicsContext.current = NSGraphicsContext(cgContext: context, flipped: true)
             y = margin
+            headingTops = []
+            firstLine = nil
         }
 
         func endPage() {
+            if !guides.isEmpty {
+                drawGuides(guides, in: context, style: style, page: page, headingTops: headingTops, firstLine: firstLine)
+            }
             context.restoreGState()
             context.endPDFPage()
         }
@@ -52,6 +66,11 @@ enum ResumeRenderer {
             if y + height > page.height - margin, y > margin {
                 endPage()
                 beginPage()
+            }
+            if block.startsWithHeading { headingTops.append(y) }
+            if let line = block.firstLine, !lineShown {
+                firstLine = line.offsetBy(dx: margin, dy: y)
+                lineShown = true
             }
             block.text.draw(
                 with: CGRect(x: margin, y: y, width: style.width, height: height),
@@ -106,6 +125,100 @@ enum ResumeRenderer {
         var rules: [CGFloat] = []
         /// The center of the proof check.
         var mark: CGPoint?
+        /// Whether a section heading opens the block, with the section spacing above it.
+        var startsWithHeading = false
+        /// The entry's first line, for the line spacing guide.
+        var firstLine: CGRect?
+    }
+
+    // MARK: - Guides
+
+    private static let guideColor = NSColor(srgbRed: 0.93, green: 0.22, blue: 0.27, alpha: 1)
+
+    private static func drawGuides(
+        _ guides: Set<Guide>, in context: CGContext, style: Style, page: CGSize, headingTops: [CGFloat], firstLine: CGRect?
+    ) {
+        let format = style.format
+        let margin = format.margins.size
+        context.saveGState()
+        context.setStrokeColor(guideColor.cgColor)
+        if guides.contains(.margins) {
+            let content = CGRect(x: margin, y: margin, width: page.width - 2 * margin, height: page.height - 2 * margin)
+            context.setLineWidth(0.6)
+            context.setLineDash(phase: 0, lengths: [3, 2])
+            context.stroke(content)
+            context.setLineDash(phase: 0, lengths: [])
+            let label = format.margins.inches
+            verticalBeam(in: context, x: page.width / 2, from: 0, to: margin)
+            pill(label, center: CGPoint(x: page.width / 2 + 18, y: margin / 2))
+            // In the bottom margin, clear of the section labels on the left.
+            horizontalBeam(in: context, y: page.height - margin / 2, from: 0, to: margin)
+            pill(label, leading: CGPoint(x: margin + 4, y: page.height - margin / 2))
+        }
+        if guides.contains(.sectionSpacing) {
+            let gap = CGFloat(format.sectionSpacing)
+            for top in headingTops {
+                context.setStrokeColor(guideColor.withAlphaComponent(0.35).cgColor)
+                context.setLineWidth(0.5)
+                for line in [top, top + gap] {
+                    context.move(to: CGPoint(x: margin, y: line))
+                    context.addLine(to: CGPoint(x: page.width - margin, y: line))
+                }
+                context.strokePath()
+                context.setStrokeColor(guideColor.cgColor)
+                verticalBeam(in: context, x: margin - 5, from: top, to: top + gap)
+                pill("\(Int(gap)) pt", trailing: CGPoint(x: margin - 9, y: top + gap / 2))
+            }
+        }
+        if guides.contains(.lineSpacing), let line = firstLine {
+            let x = page.width - margin + 5
+            verticalBeam(in: context, x: x, from: line.minY, to: line.maxY)
+            pill("\(format.lineSpacingTitle)×", leading: CGPoint(x: x + 4, y: line.midY))
+        }
+        context.restoreGState()
+    }
+
+    /// A red I-beam: a line with a tick at each end.
+    private static func verticalBeam(in context: CGContext, x: CGFloat, from top: CGFloat, to bottom: CGFloat) {
+        context.setLineWidth(0.8)
+        context.move(to: CGPoint(x: x, y: top))
+        context.addLine(to: CGPoint(x: x, y: bottom))
+        for end in [top, bottom] {
+            context.move(to: CGPoint(x: x - 2.5, y: end))
+            context.addLine(to: CGPoint(x: x + 2.5, y: end))
+        }
+        context.strokePath()
+    }
+
+    private static func horizontalBeam(in context: CGContext, y: CGFloat, from left: CGFloat, to right: CGFloat) {
+        context.setLineWidth(0.8)
+        context.move(to: CGPoint(x: left, y: y))
+        context.addLine(to: CGPoint(x: right, y: y))
+        for end in [left, right] {
+            context.move(to: CGPoint(x: end, y: y - 2.5))
+            context.addLine(to: CGPoint(x: end, y: y + 2.5))
+        }
+        context.strokePath()
+    }
+
+    /// A red label like "10 pt", placed by its center, its trailing edge, or its leading edge.
+    private static func pill(_ text: String, center: CGPoint? = nil, trailing: CGPoint? = nil, leading: CGPoint? = nil) {
+        let label = NSAttributedString(string: text, attributes: [
+            .font: NSFont.systemFont(ofSize: 6.5, weight: .bold), .foregroundColor: NSColor.white,
+        ])
+        let size = label.size()
+        let box = CGSize(width: size.width + 6, height: size.height + 2)
+        let origin: CGPoint = if let center {
+            CGPoint(x: center.x - box.width / 2, y: center.y - box.height / 2)
+        } else if let trailing {
+            CGPoint(x: trailing.x - box.width, y: trailing.y - box.height / 2)
+        } else {
+            CGPoint(x: leading?.x ?? 0, y: (leading?.y ?? 0) - box.height / 2)
+        }
+        let rect = CGRect(origin: origin, size: box)
+        guideColor.setFill()
+        NSBezierPath(roundedRect: rect, xRadius: box.height / 2, yRadius: box.height / 2).fill()
+        label.draw(at: CGPoint(x: rect.minX + 3, y: rect.minY + 1))
     }
 
     private static func blocks(for document: ResumeDocument, style: Style) -> [Block] {
@@ -144,7 +257,7 @@ enum ResumeRenderer {
             let text = NSMutableAttributedString()
             let headingRange = style.appendHeading(String(localized: "Summary"), to: text)
             text.append(style.text(document.summary, after: 2))
-            blocks.append(Block(text: text, rules: style.dividerOffsets(headingRange, in: text)))
+            blocks.append(Block(text: text, rules: style.dividerOffsets(headingRange, in: text), startsWithHeading: true))
         }
 
         for section in document.sections where !section.entries.isEmpty {
@@ -157,11 +270,13 @@ enum ResumeRenderer {
                 }
                 if section.kind == .skills {
                     text.append(skillLine(entry, style: style))
-                    blocks.append(Block(text: text, rules: rules))
+                    blocks.append(Block(text: text, rules: rules, startsWithHeading: index == 0))
                     continue
                 }
+                let entryStart = text.length
                 let titleRange = appendEntry(entry, kind: section.kind, to: text, style: style)
-                var block = Block(text: text, rules: rules)
+                var block = Block(text: text, rules: rules, startsWithHeading: index == 0)
+                block.firstLine = style.lineRect(of: NSRange(location: entryStart, length: 1), in: text)
                 // Link Proof shows the check and makes the title open the proof.
                 if let url = entry.proofLink(style.format) {
                     let line = style.lineRect(of: titleRange, in: text)
@@ -269,6 +384,24 @@ nonisolated extension ResumeEntry {
             return String(subtitle.dropLast((separator + location).count))
         }
         return subtitle == location ? "" : subtitle
+    }
+}
+
+extension ResumeFormat {
+    /// "1.15", whatever the Mac's language.
+    var lineSpacingTitle: String {
+        String(format: "%.2f", lineSpacing).replacingOccurrences(of: "(\\.\\d)0$", with: "$1", options: .regularExpression)
+    }
+}
+
+extension ResumeFormat.Margins {
+    /// "0.75 in".
+    var inches: String {
+        switch self {
+        case .narrow: "0.5 in"
+        case .normal: "0.75 in"
+        case .wide: "1 in"
+        }
     }
 }
 
