@@ -68,4 +68,15 @@ struct SupportingDocumentTests {
         #expect(result.loaded.map(\.data) == [Data("pdf".utf8)])
         #expect(result.failed == [missing.lastPathComponent])
     }
+
+    @Test func galleryGroupsByKindNewestFirst() {
+        let oldCert = SupportingDocument(name: "Old", fileName: "a.pdf", data: Data(), kind: .certificate)
+        oldCert.createdAt = .distantPast
+        let newCert = SupportingDocument(name: "New", fileName: "b.pdf", data: Data(), kind: .certificate)
+        let project = SupportingDocument(name: "Spec", fileName: "c.pdf", data: Data(), kind: .projectDocument)
+        let other = SupportingDocument(name: "Misc", fileName: "d.pdf", data: Data(), kind: .other)
+        let sorted = [other, project, oldCert, newCert].sorted(by: SupportingDocument.galleryOrder)
+        #expect(sorted.map(\.name) == ["New", "Old", "Spec", "Misc"])
+        #expect(DocumentKind.certificate.groupTitle == "Certificates")
+    }
 }
