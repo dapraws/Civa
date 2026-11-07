@@ -10,7 +10,7 @@ import SwiftData
 import UniformTypeIdentifiers
 
 nonisolated enum DocumentKind: String, Codable, CaseIterable, Identifiable {
-    case certificate, projectDocument, portfolio, other
+    case certificate, projectDocument, portfolio, jobPosting, coverLetter, offerLetter, other
 
     var id: Self { self }
 
@@ -19,6 +19,9 @@ nonisolated enum DocumentKind: String, Codable, CaseIterable, Identifiable {
         case .certificate: String(localized: "Certificate")
         case .projectDocument: String(localized: "Project Document")
         case .portfolio: String(localized: "Portfolio")
+        case .jobPosting: String(localized: "Job Posting")
+        case .coverLetter: String(localized: "Cover Letter")
+        case .offerLetter: String(localized: "Offer Letter")
         case .other: String(localized: "Other")
         }
     }
@@ -28,12 +31,16 @@ nonisolated enum DocumentKind: String, Codable, CaseIterable, Identifiable {
         case .certificate: "rosette"
         case .projectDocument: "doc.text"
         case .portfolio: "photo.on.rectangle"
+        case .jobPosting: "doc.text.magnifyingglass"
+        case .coverLetter: "envelope"
+        case .offerLetter: "signature"
         case .other: "doc"
         }
     }
 }
 
-/// A certificate, project document, or portfolio file kept with the Career Profile (FR-022).
+/// A certificate, project document, or portfolio file kept with the Career Profile (FR-022),
+/// or a job posting, cover letter, or offer letter kept with an application.
 /// Civa keeps its own copy, stored outside the database, so it works even if the original moves.
 /// Documents never change profile records by themselves.
 @Model
@@ -54,6 +61,7 @@ nonisolated final class SupportingDocument: EditableRecord {
     var project: Project?
     var achievement: Achievement?
     var certification: Certification?
+    var application: JobApplication?
 
     var kind: DocumentKind {
         get { DocumentKind(rawValue: kindRaw) ?? .other }
@@ -83,23 +91,25 @@ extension SupportingDocument {
     /// Files above this size ask before they're added.
     static let largeFileSize = 50 * 1_024 * 1_024
 
-    var linkedRecord: (any DocumentOwner)? {
-        experience ?? education ?? project ?? achievement ?? certification
+    var linkedRecord: (any DocumentHolder)? {
+        experience ?? education ?? project ?? achievement ?? certification ?? application
     }
 
     /// Links to `record` alone, or to nothing.
-    func link(to record: (any DocumentOwner)?) {
+    func link(to record: (any DocumentHolder)?) {
         experience = nil
         education = nil
         project = nil
         achievement = nil
         certification = nil
+        application = nil
         switch record {
         case let record as Experience: experience = record
         case let record as Education: education = record
         case let record as Project: project = record
         case let record as Achievement: achievement = record
         case let record as Certification: certification = record
+        case let record as JobApplication: application = record
         default: break
         }
     }
@@ -119,22 +129,33 @@ extension SupportingDocument {
     }
 
     /// A first guess at the kind, from the file and where it's attached.
-    static func guessKind(fileName: String, for record: (any DocumentOwner)?) -> DocumentKind {
+    static func guessKind(fileName: String, for record: (any DocumentHolder)?) -> DocumentKind {
+        let lower = fileName.lowercased()
         switch record {
         case is Certification: return .certificate
         case is Project: return .projectDocument
+        case is JobApplication:
+            if ["offer", "penawaran"].contains(where: lower.contains) { return .offerLetter }
+            if ["cover", "lamaran"].contains(where: lower.contains) { return .coverLetter }
+            return .jobPosting
         default: break
         }
-        let lower = fileName.lowercased()
         if ["certificate", "sertifikat", "cert"].contains(where: lower.contains) { return .certificate }
         if UTType(filenameExtension: (fileName as NSString).pathExtension)?.conforms(to: .image) == true { return .portfolio }
         return .other
     }
 }
 
-/// A Career Profile record that documents can be attached to.
-nonisolated protocol DocumentOwner: ImportableRecord {
+/// A record that documents can be attached to.
+nonisolated protocol DocumentHolder: EditableRecord {
+    var id: UUID { get }
     var documents: [SupportingDocument] { get }
+}
+
+extension JobApplication: DocumentHolder {}
+
+/// A Career Profile record that documents can be attached to.
+nonisolated protocol DocumentOwner: ImportableRecord, DocumentHolder {
     /// The record's proof or credential link as typed; empty when there is none.
     var proofLink: String { get }
 }

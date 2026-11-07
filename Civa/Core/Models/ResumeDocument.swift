@@ -125,6 +125,8 @@ nonisolated struct ResumeEntry: Codable, Hashable, Identifiable {
         var thesis: String?
         var coursework: [String]?
         var proofURL: String?
+        /// Skill lines: the skills the line was built from, by record id, with their names then.
+        var skills: [UUID: String]?
     }
 
     var asSourceCopy: SourceCopy {

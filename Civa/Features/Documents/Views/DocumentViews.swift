@@ -34,7 +34,7 @@ enum DocumentFiles {
     }
 
     @discardableResult
-    static func insert(_ files: [Loaded], linkedTo record: (any DocumentOwner)?, in context: ModelContext) -> [SupportingDocument] {
+    static func insert(_ files: [Loaded], linkedTo record: (any DocumentHolder)?, in context: ModelContext) -> [SupportingDocument] {
         files.map { file in
             let fileName = file.url.lastPathComponent
             let document = SupportingDocument(
@@ -164,9 +164,9 @@ struct DocumentRow: View {
     }
 }
 
-/// Documents attached to a Career Profile record, in its editor. Attaching and detaching are
+/// Documents attached to a record, in its editor. Attaching and detaching are
 /// edits to the record, saved or reverted with it.
-struct DocumentsSection<Model: DocumentOwner>: View {
+struct DocumentsSection<Model: DocumentHolder>: View {
     let editor: RecordEditor<Model>
 
     @Environment(\.modelContext) private var context
@@ -183,7 +183,11 @@ struct DocumentsSection<Model: DocumentOwner>: View {
         } header: {
             Text("Documents")
         } footer: {
-            Text("Certificates, project files, or portfolio pieces for this record. Drop files here too. They never change your profile by themselves.")
+            if editor.record is JobApplication {
+                Text("The job posting, your cover letter, or an offer letter. Drop files here too.")
+            } else {
+                Text("Certificates, project files, or portfolio pieces for this record. Drop files here too. They never change your profile by themselves.")
+            }
         }
         .documentAdder(isChoosing: $isChoosing) { files in
             editor.update { record in DocumentFiles.insert(files, linkedTo: record, in: context) }

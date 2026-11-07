@@ -102,6 +102,7 @@ struct DocumentForm: View {
     @Query(sort: \Project.name) private var projects: [Project]
     @Query(sort: \Achievement.title) private var achievements: [Achievement]
     @Query(sort: \Certification.name) private var certifications: [Certification]
+    @Query(sort: \JobApplication.company) private var applications: [JobApplication]
     @State private var previewURL: URL?
     @State private var importRequest: ImportRequest?
 
@@ -143,9 +144,10 @@ struct DocumentForm: View {
                     recordGroup(String(localized: "Projects"), projects)
                     recordGroup(String(localized: "Achievements"), achievements)
                     recordGroup(String(localized: "Certifications"), certifications)
+                    recordGroup(String(localized: "Applications"), applications)
                 }
             } footer: {
-                Text("Linking shows this document on that Career Profile record. It doesn't change the record.")
+                Text("Linking shows this document on that record. It doesn't change the record.")
             }
             Section("Notes") {
                 TextField("Notes", text: editor.binding(\.notes), prompt: Text("Where it's from, what it shows"), axis: .vertical)
@@ -159,7 +161,7 @@ struct DocumentForm: View {
     }
 
     @ViewBuilder
-    private func recordGroup(_ title: String, _ records: [some DocumentOwner]) -> some View {
+    private func recordGroup(_ title: String, _ records: [some DocumentHolder]) -> some View {
         if !records.isEmpty {
             Section(title) {
                 ForEach(records, id: \.id) { Text($0.displayTitle).tag(UUID?.some($0.id)) }
@@ -167,8 +169,8 @@ struct DocumentForm: View {
         }
     }
 
-    private var allRecords: [any DocumentOwner] {
-        experiences as [any DocumentOwner] + education + projects + achievements + certifications
+    private var allRecords: [any DocumentHolder] {
+        experiences as [any DocumentHolder] + education + projects + achievements + certifications + applications
     }
 
     private var linkedRecord: Binding<UUID?> {

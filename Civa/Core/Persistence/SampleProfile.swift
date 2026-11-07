@@ -268,8 +268,12 @@ enum SampleProfile {
         applications[1].resume = travelokaResume
         [applications[2], applications[4], applications[7]].forEach { $0.resume = masterResume }
 
-        // The profile gained a line after the Master was made, so a suggestion is waiting (FR-042).
+        applicationDocuments(applications).forEach { context.insert($0) }
+
+        // The profile gained a line and a skill after the Master was made, so suggestions are waiting (FR-042).
         gojek.impacts.append("Mentored 3 interns on SwiftUI architecture and testing")
+        let swiftTesting = skill("Swift Testing", "Tools")
+        context.insert(swiftTesting)
 
         // Spread "last edited" over the past weeks so Recent Activity reads like real use.
         for (index, record) in profile.compactMap({ $0 as? any EditableRecord }).enumerated() {
@@ -375,6 +379,43 @@ enum SampleProfile {
         )
         letter.experience = experience
         return [pdf, screens, letter]
+    }
+
+    /// A posting and cover letter for the first application, and an offer letter for the one at Offer.
+    private static func applicationDocuments(_ applications: [JobApplication]) -> [SupportingDocument] {
+        func pdf(_ name: String, title: String, lines: [String], kind: DocumentKind) -> SupportingDocument {
+            var page = ResumeDocument()
+            page.header = ResumeHeader(fullName: title)
+            page.summary = lines.joined(separator: "\n\n")
+            return SupportingDocument(name: name, fileName: "\(name).pdf", data: ResumeRenderer.pdf(for: page), kind: kind)
+        }
+        let first = applications[0]
+        let posting = pdf(
+            "\(first.company) job posting", title: first.position,
+            lines: [first.company, first.jobDescription], kind: .jobPosting
+        )
+        let cover = pdf(
+            "Cover letter for \(first.company)", title: "Raka Aditya Pratama",
+            lines: [
+                "Dear \(first.company) Hiring Team,",
+                "I'm applying for the \(first.position) role. At Gojek I rebuilt the GoPay payment confirmation flow in SwiftUI and cut cold-start time by 38%.",
+                "Sincerely, Raka",
+            ],
+            kind: .coverLetter
+        )
+        posting.application = first
+        cover.application = first
+        var documents = [posting, cover]
+        if let offer = applications.first(where: { $0.status == .offer }) {
+            let letter = pdf(
+                "\(offer.company) offer letter", title: "Offer of Employment",
+                lines: ["Dear Raka,", "We're pleased to offer you the position of \(offer.position) at \(offer.company)."],
+                kind: .offerLetter
+            )
+            letter.application = offer
+            documents.append(letter)
+        }
+        return documents
     }
 
     /// A few versions so History has something to compare.
