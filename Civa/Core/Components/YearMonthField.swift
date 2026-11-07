@@ -11,6 +11,8 @@ import SwiftUI
 struct YearMonthField: View {
     let title: String
     @Binding var value: YearMonth?
+    /// What the year picker says when there's no date, such as "Ongoing" for a project's end.
+    var emptyTitle = String(localized: "Not Set")
 
     private static let years: [Int] = {
         let current = Calendar.current.component(.year, from: .now)
@@ -21,7 +23,7 @@ struct YearMonthField: View {
         LabeledContent(title) {
             HStack {
                 Picker("\(title) month", selection: month) {
-                    Text("No Month").tag(Int?.none)
+                    Text("Month").tag(Int?.none)
                     ForEach(1...12, id: \.self) { month in
                         Text(Calendar.current.monthSymbols[month - 1]).tag(Int?.some(month))
                     }
@@ -29,7 +31,7 @@ struct YearMonthField: View {
                 .disabled(value == nil)
 
                 Picker("\(title) year", selection: year) {
-                    Text("No Date").tag(Int?.none)
+                    Text(emptyTitle).tag(Int?.none)
                     ForEach(Self.years, id: \.self) { year in
                         Text(String(year)).tag(Int?.some(year))
                     }

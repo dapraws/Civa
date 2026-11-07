@@ -74,6 +74,10 @@ struct RecordListDetail<Model: EditableRecord, Editor: View>: View {
                 if navigation.startsNewRecord {
                     navigation.startsNewRecord = false
                     addRecord()
+                } else if let target = navigation.recordToOpen, let record = records.first(where: { AnyHashable($0.id) == target }) {
+                    // Asked for before this list existed, so onChange never saw it.
+                    navigation.recordToOpen = nil
+                    open(record.id)
                 } else {
                     selectFirst()
                 }
@@ -122,6 +126,7 @@ struct RecordListDetail<Model: EditableRecord, Editor: View>: View {
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     RecordEditorBar(editor: editor, onClose: close)
                 }
+                .startsWithoutFocus(!editor.isNew)
                 .id(editor.record.id)
         } else {
             ContentUnavailableView(

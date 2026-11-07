@@ -62,8 +62,16 @@ struct SuggestedChangesSheet: View {
             }
             .padding()
         }
-        // Short when there's only a message, so it doesn't sit in a mostly empty sheet.
-        .frame(width: 640, height: suggestions.isEmpty ? 280 : 520)
+        .frame(width: 640, height: Self.height(for: suggestions))
+    }
+
+    /// About as tall as its content, so one or two changes don't sit in a mostly empty sheet.
+    // ponytail: estimated from row counts; measure the form if rows grow uneven.
+    static func height(for suggestions: [ResumeSuggestion]) -> CGFloat {
+        guard !suggestions.isEmpty else { return 280 }
+        let rows = suggestions.reduce(0) { $0 + $1.changes.count + 1 }
+        let content = CGFloat(suggestions.count) * 56 + CGFloat(rows) * 46 + 40
+        return min(max(content, 280), 560)
     }
 
     private func changeRow(_ change: ResumeSuggestion.Change) -> some View {

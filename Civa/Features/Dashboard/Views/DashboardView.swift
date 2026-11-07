@@ -66,6 +66,8 @@ struct DashboardView: View {
             Button(action: addExperience) {
                 Label("Add Experience", systemImage: "plus")
             }
+            ImportMenu(showsTitle: true)
+                .fixedSize()
         }
     }
 
@@ -87,7 +89,12 @@ struct DashboardView: View {
                 }
                 if summary.needsReviewCount > 0 {
                     Divider()
-                    CountRow(count: summary.needsReviewCount) { ReviewBadge() }
+                    HStack {
+                        CountRow(count: summary.needsReviewCount) { ReviewBadge() }
+                        Button("Review", action: openFirstNeedsReview)
+                            .buttonStyle(.link)
+                            .help("Open the first record that needs review")
+                    }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -145,6 +152,35 @@ struct DashboardView: View {
 
     private func open(_ category: ProfileCategory) {
         go {
+            navigation.profileCategory = category
+            navigation.section = .careerProfile
+        }
+    }
+
+    /// The first record that still needs review, on its own page.
+    private func openFirstNeedsReview() {
+        let target: (ProfileCategory, AnyHashable, String?)? = if let record = personalInfo.first(where: \.needsReview) {
+            (.personal, AnyHashable(record.id), nil)
+        } else if let record = experiences.first(where: \.needsReview) {
+            (record.kind == .professional ? .professional : .organizational, AnyHashable(record.id), nil)
+        } else if let record = education.first(where: \.needsReview) {
+            (.education, AnyHashable(record.id), nil)
+        } else if let record = projects.first(where: \.needsReview) {
+            (.projects, AnyHashable(record.id), nil)
+        } else if let record = achievements.first(where: \.needsReview) {
+            (.other, AnyHashable(record.id), "achievements")
+        } else if let record = certifications.first(where: \.needsReview) {
+            (.other, AnyHashable(record.id), "certifications")
+        } else if let record = skills.first(where: \.needsReview) {
+            (.other, AnyHashable(record.id), "skills")
+        } else {
+            nil
+        }
+        guard let (category, id, otherKind) = target else { return }
+        go {
+            // Personal Information is a single record with no list to pick from.
+            navigation.recordToOpen = category == .personal ? nil : id
+            navigation.otherKind = otherKind
             navigation.profileCategory = category
             navigation.section = .careerProfile
         }

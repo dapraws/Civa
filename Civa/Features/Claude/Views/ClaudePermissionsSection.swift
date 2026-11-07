@@ -22,6 +22,7 @@ struct ClaudePermissionsSection: View {
                     Toggle("Suggest", isOn: suggest(category))
                 }
                 .toggleStyle(.checkbox)
+                .tint(.claude)
             }
         } header: {
             Text("What Claude May Use")

@@ -133,6 +133,7 @@ struct RecordGallery<Model: EditableRecord, Card: View, Editor: View>: View {
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     RecordEditorBar(editor: editor, onClose: close)
                 }
+                .startsWithoutFocus(!editor.isNew)
                 .id(editor.record.id)
                 .navigationTitle(editor.title)
                 .toolbar {

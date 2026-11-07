@@ -21,6 +21,7 @@ struct PersonalInfoView: View {
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     RecordEditorBar(editor: editor, canDelete: false, onClose: startEditing)
                 }
+                .startsWithoutFocus()
         } else {
             // An empty view never appears, so give onAppear something to attach to.
             Color.clear.onAppear(perform: startEditing)
@@ -60,7 +61,7 @@ struct PersonalInfoForm: View {
             } header: {
                 Text("Summary")
             } footer: {
-                Text("New resumes start their header with this.")
+                Text("New resumes use this as their summary.")
             }
             Section("Contact") {
                 TextField("Email", text: editor.binding(\.email), prompt: Text("name@example.com"))

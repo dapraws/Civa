@@ -46,7 +46,11 @@ struct ProjectForm: View {
             }
             Section {
                 ProofField(editor: editor, title: "Live Link", link: \.url)
-                TextField("Repository", text: editor.binding(\.repositoryURL), prompt: Text("https://github.com/…"))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Repository")
+                    TextField("Repository", text: editor.binding(\.repositoryURL), prompt: Text("https://github.com/…"))
+                        .labelsHidden()
+                }
                 FieldError(editor.error(for: \.repositoryURL))
             } header: {
                 Text("Links")
@@ -55,7 +59,7 @@ struct ProjectForm: View {
             }
             Section("Dates") {
                 YearMonthField(title: String(localized: "Start"), value: editor.binding(\.start))
-                YearMonthField(title: String(localized: "End"), value: editor.binding(\.end))
+                YearMonthField(title: String(localized: "End"), value: editor.binding(\.end), emptyTitle: String(localized: "Ongoing"))
                 FieldError(editor.error(for: \.end))
             }
             Section {

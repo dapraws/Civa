@@ -40,7 +40,7 @@ struct DocumentsView: View {
         )
         .id(kind)
         .toolbar {
-            ToolbarItem(placement: .navigation) {
+            ToolbarItem(placement: .primaryAction) {
                 Picker("Kind", selection: changes.selection($kind, pending: $pendingKind)) {
                     Text("All Kinds").tag(DocumentKind?.none)
                     Divider()

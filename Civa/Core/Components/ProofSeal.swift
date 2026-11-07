@@ -54,9 +54,15 @@ struct ProofField<Model: DocumentOwner>: View {
     let link: ReferenceWritableKeyPath<Model, String>
 
     var body: some View {
-        HStack {
+        // Label above a full-width field, so long links don't crowd the label.
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(title)
+                Spacer()
+                if let proof = editor.record.proof { ProofSeal(proof: proof, showsTitle: true) }
+            }
             TextField(title, text: editor.binding(link), prompt: Text("https://"))
-            if let proof = editor.record.proof { ProofSeal(proof: proof, showsTitle: true) }
+                .labelsHidden()
         }
         FieldError(editor.error(for: link))
     }
