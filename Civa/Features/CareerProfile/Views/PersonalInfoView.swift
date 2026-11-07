@@ -42,6 +42,7 @@ struct PersonalInfoForm: View {
     var body: some View {
         Form {
             ReviewBanner(editor: editor)
+            ClaudeRecordProposalsSection(editor: editor)
             Section {
                 TextField("Full Name", text: editor.binding(\.fullName), prompt: Text("Required"))
                 FieldError(editor.error(for: \.fullName))

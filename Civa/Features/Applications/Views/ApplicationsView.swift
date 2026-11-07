@@ -190,8 +190,14 @@ struct ApplicationForm: View {
                         }
                     }
                 }
+                AskClaudeButton(
+                    title: "Draft a Resume with Claude",
+                    ask: .init(kind: .draftResume, category: .resumes, targetID: editor.record.id, targetTitle: editor.record.displayTitle),
+                    disabled: editor.isNew || editor.isDirty || editor.record.jobDescription.isBlank
+                )
+                .buttonStyle(.borderless)
             } footer: {
-                Text("The resume you sent for this job.")
+                Text("The resume you sent for this job. Claude can draft one from your Career Profile for this job description; you keep or discard it.")
             }
             Section {
                 Toggle("Applied on a Date", isOn: hasDate)

@@ -35,8 +35,10 @@ nonisolated enum ClaudeLink {
         let description: String
         /// The permission the tool needs; nil for tools anyone connected may call.
         var category: ClaudeCategory?
-        /// Argument name → description. All arguments are strings.
+        /// Argument name → description, for string arguments.
         var arguments: [String: String] = [:]
+        /// JSON Schema `properties`, for tools whose arguments aren't all strings. Replaces `arguments`.
+        var schema = ""
         var required: [String] = []
     }
 
@@ -64,8 +66,48 @@ nonisolated enum ClaudeLink {
         ),
     ]
 
+    /// Tools that write. Each saves a suggestion the user approves in Civa, never a change.
+    static let writeTools: [Tool] = [
+        Tool(
+            name: "get_pending_requests",
+            description: "Requests the user queued in Civa with its Ask Claude buttons, such as tailoring a resume. Each says what to read and which tool sends the result. Call this when the user asks you to run their Civa requests."
+        ),
+        Tool(
+            name: "finish_request",
+            description: "Close a request you can't or won't complete, with a short note for the user. Requests you answer with a suggestion close by themselves.",
+            arguments: ["request_id": "The request's id.", "note": "Why, in one or two sentences.", "failed": "\"true\" if it couldn't be done."],
+            required: ["request_id", "note"]
+        ),
+        Tool(
+            name: "suggest_resume_edit",
+            description: "Suggest new wording for a resume in Civa: its summary and the title, subtitle, or bullets of entries (ids from get_resume). Keep every fact, number, date, and employer. The user reviews it in Civa; nothing changes until they apply it.",
+            category: .resumes,
+            schema: #"{"resume_id":{"type":"string"},"request_id":{"type":"string"},"note":{"type":"string","description":"What you changed and why, for the user."},"summary":{"type":"string"},"entries":{"type":"array","items":{"type":"object","properties":{"entry_id":{"type":"string"},"title":{"type":"string"},"subtitle":{"type":"string"},"bullets":{"type":"array","items":{"type":"string"}}},"required":["entry_id"]}}}"#,
+            required: ["resume_id", "note"]
+        ),
+        Tool(
+            name: "suggest_profile_edit",
+            description: "Suggest a new value for one field of a Career Profile record: an experience's or project's impacts (lines) or details (text), or the personal summary or headline (text). Use only facts the user gave. The user reviews it in Civa.",
+            schema: #"{"record_id":{"type":"string"},"field":{"type":"string","enum":["impacts","details","summary","headline"]},"text":{"type":"string"},"lines":{"type":"array","items":{"type":"string"}},"request_id":{"type":"string"},"note":{"type":"string"}}"#,
+            required: ["record_id", "field", "note"]
+        ),
+        Tool(
+            name: "create_resume_draft",
+            description: "Draft a new resume in Civa from the user's Career Profile. Civa builds it from the records you pick, in its ATS-safe layout, with your summary and bullets. It appears as a draft the user keeps or discards.",
+            category: .resumes,
+            schema: #"{"title":{"type":"string"},"target_position":{"type":"string"},"application_id":{"type":"string"},"request_id":{"type":"string"},"note":{"type":"string"},"summary":{"type":"string"},"records":{"type":"array","description":"Experience, education, project, achievement, and certification ids to include, in any order.","items":{"type":"object","properties":{"record_id":{"type":"string"},"bullets":{"type":"array","items":{"type":"string"}}},"required":["record_id"]}},"skills":{"type":"array","items":{"type":"string"},"description":"Skill names from list_skills to include."}}"#,
+            required: ["title", "records", "note"]
+        ),
+        Tool(
+            name: "suggest_profile_records",
+            description: "Send records you found (for example in a CV the user shared with you) to Civa's import review, where the user adds, merges, or skips each one. Categories: experience, organizational, education, projects, achievements, certifications, skills. Dates as YYYY-MM or YYYY.",
+            schema: #"{"source":{"type":"string","description":"Where the records came from, like the file name."},"note":{"type":"string"},"records":{"type":"array","items":{"type":"object","properties":{"category":{"type":"string"},"title":{"type":"string"},"subtitle":{"type":"string"},"location":{"type":"string"},"start":{"type":"string"},"end":{"type":"string"},"current":{"type":"boolean"},"bullets":{"type":"array","items":{"type":"string"}}},"required":["category","title"]}}}"#,
+            required: ["source", "records", "note"]
+        ),
+    ]
+
     static func tool(named name: String) -> Tool? {
-        tools.first { $0.name == name }
+        (tools + writeTools).first { $0.name == name }
     }
 
     /// The socket, in the container's temporary folder: both the app and the helper resolve the same path.

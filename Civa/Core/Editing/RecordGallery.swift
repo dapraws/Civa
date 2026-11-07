@@ -129,6 +129,7 @@ struct RecordGallery<Model: EditableRecord, Card: View, Editor: View>: View {
     private var content: some View {
         if let editor {
             editorView(editor)
+                .environment(\.closeRecordEditor, close)
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     RecordEditorBar(editor: editor, onClose: close)
                 }

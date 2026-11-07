@@ -92,3 +92,8 @@ struct RecordEditorBar<Model: EditableRecord>: View {
     .frame(width: 600, height: 200)
     .previewEnvironment()
 }
+
+extension EnvironmentValues {
+    /// Closes the editor hosting this view, for actions inside it that end the edit (like discarding a draft).
+    @Entry var closeRecordEditor: () -> Void = {}
+}

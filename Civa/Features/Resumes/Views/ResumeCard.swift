@@ -46,6 +46,11 @@ struct ResumeCard: View {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.tint)
                 }
+                if resume.isClaudeDraft {
+                    Label("Draft from Claude", systemImage: "sparkles")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.orange)
+                }
                 Text(resume.displayTitle)
                     .font(.headline)
                     .lineLimit(1)

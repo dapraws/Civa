@@ -9,7 +9,7 @@ import Foundation
 import SwiftData
 
 nonisolated enum SnapshotReason: String, Codable {
-    case created, exported, checkpoint, beforeRestore
+    case created, exported, checkpoint, beforeRestore, beforeClaude, createdByClaude
 
     var title: String {
         switch self {
@@ -17,6 +17,8 @@ nonisolated enum SnapshotReason: String, Codable {
         case .exported: String(localized: "Exported")
         case .checkpoint: String(localized: "Checkpoint")
         case .beforeRestore: String(localized: "Before Restore")
+        case .beforeClaude: String(localized: "Before Claude's Changes")
+        case .createdByClaude: String(localized: "Created by Claude")
         }
     }
 }

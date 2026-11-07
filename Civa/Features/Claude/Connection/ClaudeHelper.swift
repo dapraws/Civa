@@ -35,13 +35,19 @@ nonisolated enum ClaudeHelper {
                 "protocolVersion": params["protocolVersion"] as? String ?? "2025-06-18",
                 "capabilities": ["tools": [String: Any]()],
                 "serverInfo": ["name": "civa", "version": Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"],
-                "instructions": "Civa is the user's career workspace on this Mac. It shares only what the user allows, and any change you suggest waits for the user's approval in Civa. Civa must be open.",
+                "instructions": "Civa is the user's career workspace on this Mac. It shares only what the user allows, and any change you suggest waits for the user's approval in Civa. Civa must be open. When the user wants a resume, tailoring, or better wording and Civa is connected, do it in Civa with create_resume_draft, suggest_resume_edit, or suggest_profile_edit rather than writing it elsewhere, so it keeps Civa's ATS-safe layout and the user's confirmed facts. When the user shares a CV or profile text, offer to send its records to Civa with suggest_profile_records. When asked to run Civa requests, call get_pending_requests.",
             ])
         case "tools/list":
-            return result(["tools": ClaudeLink.tools.map(definition)])
+            return result(["tools": (ClaudeLink.tools + ClaudeLink.writeTools).map(definition)])
         case "tools/call":
             let name = params["name"] as? String ?? ""
-            let arguments = (params["arguments"] as? [String: Any] ?? [:]).compactMapValues { $0 as? String }
+            // Lists and objects travel as JSON text; Civa decodes the ones it expects.
+            let arguments = (params["arguments"] as? [String: Any] ?? [:]).compactMapValues { value -> String? in
+                if let text = value as? String { return text }
+                if let flag = value as? Bool { return flag ? "true" : "false" }
+                guard JSONSerialization.isValidJSONObject(value), let data = try? JSONSerialization.data(withJSONObject: value) else { return nil }
+                return String(data: data, encoding: .utf8)
+            }
             let reply = ask(ClaudeLink.Request(tool: name, arguments: arguments))
                 ?? ClaudeLink.Reply(ok: false, text: "Civa can't be reached. Either Civa isn't open, or the user turned off Claude's connection in Civa's Settings. Ask the user to open Civa and check its Claude Desktop setting.")
             return result(["content": [["type": "text", "text": reply.text]], "isError": !reply.ok])
@@ -53,14 +59,12 @@ nonisolated enum ClaudeHelper {
     }
 
     private static func definition(_ tool: ClaudeLink.Tool) -> [String: Any] {
-        [
+        let properties = (try? JSONSerialization.jsonObject(with: Data(tool.schema.utf8)) as? [String: Any])
+            ?? tool.arguments.mapValues { ["type": "string", "description": $0] }
+        return [
             "name": tool.name,
             "description": tool.description,
-            "inputSchema": [
-                "type": "object",
-                "properties": tool.arguments.mapValues { ["type": "string", "description": $0] },
-                "required": tool.required,
-            ],
+            "inputSchema": ["type": "object", "properties": properties, "required": tool.required],
         ]
     }
 

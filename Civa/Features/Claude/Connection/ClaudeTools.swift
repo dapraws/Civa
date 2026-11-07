@@ -28,6 +28,9 @@ enum ClaudeTools {
         guard let tool = ClaudeLink.tool(named: request.tool) else {
             return ClaudeLink.Reply(ok: false, text: "Civa doesn't offer the tool \(request.tool).")
         }
+        if ClaudeLink.writeTools.contains(where: { $0.name == tool.name }) {
+            return ClaudeWriteTools.respond(request, context: context, permissions: permissions)
+        }
         guard let category = tool.category else { return connectionStatus(permissions) }
         guard permissions.canRead(category) else {
             context.insert(ClaudeActivity(
@@ -242,7 +245,7 @@ enum ClaudeText {
                     parts.append([entry.title, entry.subtitle].filter { !$0.isBlank }.joined(separator: ": "))
                     continue
                 }
-                parts.append([entry.title, entry.grade ?? "", entry.datesText(document.format.dateStyle ?? .short)].filter { !$0.isBlank }.joined(separator: " | "))
+                parts.append("[entry_id: \(entry.id)] " + [entry.title, entry.grade ?? "", entry.datesText(document.format.dateStyle ?? .short)].filter { !$0.isBlank }.joined(separator: " | "))
                 if !entry.subtitle.isBlank { parts.append(entry.subtitle) }
                 if let thesis = entry.thesis, !thesis.isBlank { parts.append("Thesis: \(thesis)") }
                 if let coursework = entry.coursework, !coursework.isEmpty { parts.append("Relevant Coursework: \(coursework.joined(separator: ", "))") }

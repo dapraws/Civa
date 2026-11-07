@@ -48,6 +48,7 @@ struct DashboardView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     quickActions
                     ClaudeSetupCard()
+                    ClaudeInboxCard()
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 300), alignment: .top)], spacing: 16) {
                         profileCard(summary)
                         applicationsCard(summary)
