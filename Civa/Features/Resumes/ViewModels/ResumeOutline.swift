@@ -10,7 +10,7 @@ import SwiftUI  // move(fromOffsets:toOffset:)
 
 /// What the editor's outline can select.
 nonisolated enum ResumeOutlineItem: Hashable {
-    case info, header, summary
+    case info, header
     case section(UUID)
     case entry(UUID)
 }

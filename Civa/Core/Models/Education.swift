@@ -50,8 +50,8 @@ nonisolated struct Grade: Equatable {
     static let commonScales: [Double] = [4, 3, 5, 10, 100]
 
     /// "3.86 / 4.00" for small scales, "91.4 / 100" for large ones.
-    func formatted(locale: Locale = .current) -> String {
-        "\(value.formatted(style(locale))) / \(scaleText(locale: locale))"
+    func formatted(locale: Locale = .current, separator: String = " / ") -> String {
+        "\(value.formatted(style(locale)))\(separator)\(scaleText(locale: locale))"
     }
 
     /// The maximum alone: "4.00", "100".

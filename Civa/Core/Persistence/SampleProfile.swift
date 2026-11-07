@@ -243,7 +243,10 @@ enum SampleProfile {
         var grab = master
         grab.sections.removeAll { $0.kind == .organizational }
         grab.summary = "iOS engineer focused on payments and performance. Rebuilt GoPay's confirmation flow in SwiftUI and cut cold-start time by 38%, and ready to do the same for Grab's super app."
-        grab.format = ResumeFormat(font: .georgia, accent: .navy)
+        grab.format = ResumeFormat(font: .georgia, accent: .navy, showsWorkArrangement: true, dateStyle: .long)
+        if let index = grab.sections.firstIndex(where: { $0.kind == .experience }) {
+            grab.sections[index].heading = "Professional Experience"
+        }
         let grabResume = Resume(
             title: "Grab Application", targetPosition: "Software Engineer II, iOS",
             jobDescription: applications[0].jobDescription, document: grab

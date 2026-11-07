@@ -94,6 +94,11 @@ enum ResumeBuilder {
         return impacts.isEmpty ? [details].filter { !$0.isBlank } : impacts
     }
 
+    /// nil for empty text, so entries without a value don't carry an empty one.
+    private static func text(_ value: String) -> String? {
+        value.isBlank ? nil : value
+    }
+
     private static func entry(_ experience: Experience) -> ResumeEntry {
         ResumeEntry(
             sourceID: experience.id,
@@ -101,7 +106,12 @@ enum ResumeBuilder {
             subtitle: joined([experience.organization, experience.location]),
             dates: YearMonth.rangeText(start: experience.start, end: experience.end, isCurrent: experience.isCurrent),
             bullets: bullets(impacts: experience.impacts, details: experience.details),
-            employmentType: experience.employmentType?.title
+            employmentType: experience.employmentType?.title,
+            start: experience.start,
+            end: experience.isCurrent ? nil : experience.end,
+            isCurrent: experience.isCurrent,
+            workArrangement: experience.workArrangement?.title,
+            proofURL: text(experience.proofLink)
         )
     }
 
@@ -112,10 +122,13 @@ enum ResumeBuilder {
             title: degree.isEmpty ? education.institution : degree,
             subtitle: joined([degree.isEmpty ? "" : education.institution, education.location]),
             dates: YearMonth.rangeText(start: education.start, end: education.end),
-            bullets: [
-                education.gradeText,
-                education.details,
-            ].filter { !$0.isBlank }
+            bullets: [education.honors, education.details].filter { !$0.isBlank },
+            start: education.start,
+            end: education.end,
+            grade: text(education.numericGrade?.formatted(locale: resumeLocale, separator: "/") ?? education.grade),
+            thesis: text(education.thesis),
+            coursework: education.coursework.filter { !$0.isBlank }.nilIfEmpty,
+            proofURL: text(education.proofLink)
         )
     }
 
@@ -125,17 +138,26 @@ enum ResumeBuilder {
             title: project.name,
             subtitle: joined([project.role, project.url]),
             dates: YearMonth.rangeText(start: project.start, end: project.end),
-            bullets: bullets(impacts: project.impacts, details: project.details)
+            bullets: bullets(impacts: project.impacts, details: project.details),
+            start: project.start,
+            end: project.end,
+            proofURL: text(project.proofLink)
         )
     }
+
+    /// Resumes print grades with a decimal point, whatever the Mac's region.
+    // ponytail: fixed to English number style; follow a per-resume language once resumes have one.
+    private static let resumeLocale = Locale(identifier: "en_US_POSIX")
 
     private static func entry(_ achievement: Achievement) -> ResumeEntry {
         ResumeEntry(
             sourceID: achievement.id,
-            title: achievement.title,
+            title: joined([achievement.placement, achievement.title], ", "),
             subtitle: achievement.issuer,
             dates: achievement.date?.formatted() ?? "",
-            bullets: [achievement.details].filter { !$0.isBlank }
+            bullets: [achievement.details].filter { !$0.isBlank },
+            start: achievement.date,
+            proofURL: text(achievement.proofLink)
         )
     }
 
@@ -144,7 +166,9 @@ enum ResumeBuilder {
             sourceID: certification.id,
             title: certification.name,
             subtitle: certification.issuer,
-            dates: certification.issued?.formatted() ?? ""
+            dates: certification.issued?.formatted() ?? "",
+            start: certification.issued,
+            proofURL: text(certification.proofLink)
         )
     }
 
@@ -156,4 +180,8 @@ enum ResumeBuilder {
                 ResumeEntry(title: category, subtitle: skills.map(\.name).sorted().joined(separator: ", "))
             }
     }
+}
+
+private nonisolated extension Array {
+    var nilIfEmpty: Self? { isEmpty ? nil : self }
 }

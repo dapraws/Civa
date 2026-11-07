@@ -29,7 +29,6 @@ struct ResumeItemForm: View {
                 infoFields
             case .header:
                 headerFields
-            case .summary:
                 summaryField
             case .section(let id):
                 if let section = sectionBinding(id) {
@@ -132,7 +131,7 @@ struct ResumeItemForm: View {
         } header: {
             Text("Summary")
         } footer: {
-            Text("Appears under your name without a heading. Leave it empty if you don't need one.")
+            Text("Appears under your contact details without a heading. Leave it empty if you don't need one.")
         }
     }
 
@@ -179,13 +178,28 @@ private struct SectionFields: View {
                 selection = .entry(entry.id)
             }
         } header: {
-            Text(section.kind.heading)
+            Text(section.title)
         } footer: {
             Text("Drag sections and entries in the outline to reorder them.")
         }
         Section {
+            Picker("Heading", selection: heading) {
+                ForEach(section.kind.headingOptions, id: \.self) { Text($0).tag($0) }
+            }
+        } footer: {
+            Text("Standard headings that applicant tracking systems recognize.")
+        }
+        Section {
             Button("Remove Section", role: .destructive, action: onRemove)
         }
+    }
+
+    /// The default heading is stored as nil.
+    private var heading: Binding<String> {
+        Binding(
+            get: { section.title },
+            set: { section.heading = $0 == section.kind.heading ? nil : $0 }
+        )
     }
 }
 
@@ -199,13 +213,26 @@ private struct EntryFields: View {
             TextField(kind.titleLabel, text: $entry.title, prompt: Text(kind.titlePrompt))
             TextField(kind.subtitleLabel, text: $entry.subtitle, prompt: Text(kind.subtitlePrompt))
             if kind == .experience {
-                TextField("Employment Type", text: Binding(
-                    get: { entry.employmentType ?? "" },
-                    set: { entry.employmentType = $0.isBlank ? nil : $0 }
-                ), prompt: Text("Internship"))
+                TitlePicker("Employment Type", selection: $entry.employmentType, options: EmploymentType.allCases.map(\.title))
             }
-            if kind != .skills {
-                TextField("Dates", text: $entry.dates, prompt: Text("Mar 2024 – Present"))
+            if kind == .experience || kind == .organizational {
+                TitlePicker("Work Arrangement", selection: $entry.workArrangement, options: WorkArrangement.allCases.map(\.title))
+            }
+        }
+        if kind != .skills {
+            datesSection
+        }
+        if kind == .education {
+            Section("Academic Details") {
+                TextField("GPA or Score", text: optional(\.grade), prompt: Text("3.86/4.00"))
+                TextField("Thesis", text: optional(\.thesis), prompt: Text("Title of your thesis"), axis: .vertical)
+            }
+            Section("Relevant Coursework") {
+                StringListEditor(
+                    items: Binding(get: { entry.coursework ?? [] }, set: { entry.coursework = $0.isEmpty ? nil : $0 }),
+                    prompt: String(localized: "Course name"),
+                    addTitle: String(localized: "Add Course")
+                )
             }
         }
         if kind != .skills {
@@ -216,10 +243,84 @@ private struct EntryFields: View {
                     addTitle: String(localized: "Add Bullet Point")
                 )
             }
+            Section {
+                TextField("Proof Link", text: optional(\.proofURL), prompt: Text("https://"))
+            } footer: {
+                Text("When Layout → Link Proof is on, the title opens this link in the PDF.")
+            }
         }
         Section {
             Button("Delete Entry", role: .destructive, action: onDelete)
         }
+    }
+
+    /// Month and year pickers. Achievements and certifications have one date; the rest a range.
+    @ViewBuilder
+    private var datesSection: some View {
+        let isSingleDate = kind == .achievements || kind == .certifications
+        Section("Dates") {
+            YearMonthField(title: isSingleDate ? String(localized: "Date") : String(localized: "Start"), value: date(\.start))
+            if !isSingleDate {
+                if kind != .projects {
+                    Toggle("Present", isOn: Binding(
+                        get: { entry.isCurrent == true },
+                        set: { value in setDates { $0.isCurrent = value; if value { $0.end = nil } } }
+                    ))
+                }
+                if entry.isCurrent != true {
+                    YearMonthField(title: String(localized: "End"), value: date(\.end))
+                }
+            }
+            // Resumes made before the pickers, or typed by hand, keep their text until a date is picked.
+            if !entry.hasDateValues, !entry.dates.isBlank {
+                TextField("Dates as Typed", text: $entry.dates)
+            }
+        }
+    }
+
+    private func date(_ field: WritableKeyPath<ResumeEntry, YearMonth?>) -> Binding<YearMonth?> {
+        Binding(get: { entry[keyPath: field] }, set: { value in setDates { $0[keyPath: field] = value } })
+    }
+
+    /// Changes the date values and keeps the text in step, for history and suggestions.
+    private func setDates(_ change: (inout ResumeEntry) -> Void) {
+        var new = entry
+        change(&new)
+        new.dates = new.hasDateValues
+            ? YearMonth.rangeText(start: new.start, end: new.end, isCurrent: new.isCurrent == true)
+            : ""
+        entry = new
+    }
+
+    /// Empty text is stored as nil.
+    private func optional(_ field: WritableKeyPath<ResumeEntry, String?>) -> Binding<String> {
+        Binding(get: { entry[keyPath: field] ?? "" }, set: { entry[keyPath: field] = $0.isBlank ? nil : $0 })
+    }
+}
+
+/// A dropdown that stores the chosen title as text; a value typed before the dropdown existed stays listed.
+private struct TitlePicker: View {
+    let title: LocalizedStringKey
+    @Binding var selection: String?
+    let options: [String]
+
+    init(_ title: LocalizedStringKey, selection: Binding<String?>, options: [String]) {
+        self.title = title
+        _selection = selection
+        self.options = options
+    }
+
+    var body: some View {
+        Picker(title, selection: $selection) {
+            Text("Not Set").tag(String?.none)
+            Divider()
+            ForEach(allOptions, id: \.self) { Text($0).tag(String?.some($0)) }
+        }
+    }
+
+    private var allOptions: [String] {
+        guard let selection, !selection.isBlank, !options.contains(selection) else { return options }
+        return options + [selection]
     }
 }
 
