@@ -129,7 +129,10 @@ extension ResumeEditorView {
 
     private func ask(_ kind: ClaudeRequest.Kind, application: JobApplication? = nil) {
         askOutcome = ClaudeAsk.send(
-            .init(kind: kind, category: .resumes, targetID: editor.record.id, targetTitle: editor.record.displayTitle, applicationID: application?.id),
+            .init(
+                kind: kind, category: .resumes, targetID: editor.record.id, targetTitle: editor.record.displayTitle,
+                applicationID: application?.id, makesCopy: kind == .tailorResume
+            ),
             container: context.container
         )
     }

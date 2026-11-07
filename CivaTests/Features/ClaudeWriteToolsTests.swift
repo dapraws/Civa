@@ -134,8 +134,55 @@ struct ClaudeWriteToolsTests {
 
     @Test func askNeedsAConnectionAndPermission() {
         let ask = ClaudeAsk.Ask(kind: .writeSummary, category: .resumes, targetID: resume.id, targetTitle: "Master")
-        if !ClaudeBridge.shared.isEnabled {
-            #expect(ClaudeAsk.send(ask, container: container, permissions: permissions).id == "notConnected")
-        }
+        #expect(ClaudeAsk.send(ask, container: container, permissions: permissions, connected: false).id == "notConnected")
+        #expect(ClaudeAsk.send(ask, container: container, permissions: permissions, connected: true).id == "notAllowed")
+    }
+
+    private func tailorAsk(for application: JobApplication) -> ClaudeAsk.Ask {
+        ClaudeAsk.Ask(
+            kind: .tailorResume, category: .resumes, targetID: resume.id, targetTitle: "Master Resume",
+            applicationID: application.id, makesCopy: true
+        )
+    }
+
+    private func stripe() throws -> JobApplication {
+        let application = JobApplication(company: "Stripe", position: "iOS Engineer")
+        application.jobDescription = "Swift, payments"
+        container.mainContext.insert(application)
+        try container.mainContext.save()
+        return application
+    }
+
+    @Test func tailorCopyQueuesOnACopy() throws {
+        let application = try stripe()
+        permissions.suggest.insert(.resumes)
+        let outcome = ClaudeAsk.tailorCopy(tailorAsk(for: application), container: container, permissions: permissions, connected: true)
+        let resumes = try fetch(Resume.self)
+        #expect(resumes.count == 2)
+        let copy = try #require(resumes.first { $0.id != resume.id })
+        #expect(copy.title == "Stripe Application")
+        #expect(copy.targetPosition == "iOS Engineer")
+        #expect(copy.document == resume.document)
+        #expect(try fetch(ClaudeRequest.self).first?.targetID == copy.id)
+        #expect(try fetch(JobApplication.self).first?.resume?.id == copy.id)
+        guard case .queued(let opened) = outcome else { Issue.record("not queued"); return }
+        #expect(opened?.id == copy.id)
+    }
+
+    @Test func tailorCopyKeepsAnExistingLink() throws {
+        let application = try stripe()
+        application.resume = resume
+        try container.mainContext.save()
+        permissions.suggest.insert(.resumes)
+        _ = ClaudeAsk.tailorCopy(tailorAsk(for: application), container: container, permissions: permissions, connected: true)
+        #expect(try fetch(JobApplication.self).first?.resume?.id == resume.id)
+    }
+
+    @Test func tailorCopyNeedsConnectionAndPermission() throws {
+        let ask = tailorAsk(for: try stripe())
+        #expect(ClaudeAsk.tailorCopy(ask, container: container, permissions: permissions, connected: false).id == "notConnected")
+        #expect(ClaudeAsk.tailorCopy(ask, container: container, permissions: permissions, connected: true).id == "notAllowed")
+        #expect(try fetch(Resume.self).count == 1)
+        #expect(try fetch(ClaudeRequest.self).isEmpty)
     }
 }

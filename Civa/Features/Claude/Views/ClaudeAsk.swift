@@ -21,31 +21,79 @@ enum ClaudeAsk {
         let targetID: UUID
         let targetTitle: String
         var applicationID: UUID?
+        /// Tailoring: Claude works on a new copy for the job, so the Master or a resume already
+        /// sent stays as it is.
+        var makesCopy = false
     }
 
     enum Outcome: Identifiable {
         case notConnected
         case notAllowed(Ask)
-        case queued
+        /// With the copy Claude will work on, when the request made one.
+        case queued(copy: Copy?)
+        case failed(String)
+
+        struct Copy {
+            let id: UUID
+            let title: String
+        }
 
         var id: String {
             switch self {
             case .notConnected: "notConnected"
             case .notAllowed: "notAllowed"
             case .queued: "queued"
+            case .failed: "failed"
             }
         }
     }
 
     /// Queues the request through its own context, so an open editor's unsaved edits stay unsaved.
-    static func send(_ ask: Ask, container: ModelContainer, permissions: ClaudePermissions = .shared) -> Outcome {
-        guard ClaudeBridge.shared.isEnabled else { return .notConnected }
+    static func send(
+        _ ask: Ask, container: ModelContainer, permissions: ClaudePermissions = .shared,
+        connected: Bool = ClaudeBridge.shared.isEnabled
+    ) -> Outcome {
+        if ask.makesCopy { return tailorCopy(ask, container: container, permissions: permissions, connected: connected) }
+        guard connected else { return .notConnected }
         guard permissions.canSuggest(ask.category) else { return .notAllowed(ask) }
         let context = ModelContext(container)
         context.insert(ClaudeRequest(kind: ask.kind, targetID: ask.targetID, targetTitle: ask.targetTitle, applicationID: ask.applicationID))
         try? context.save()
         openClaude()
-        return .queued
+        return .queued(copy: nil)
+    }
+
+    /// Makes "<Company> Application" from the target resume, then queues the request on it.
+    /// The copy is linked to the application only when the application has no resume yet.
+    static func tailorCopy(
+        _ ask: Ask, container: ModelContainer, permissions: ClaudePermissions = .shared,
+        connected: Bool = ClaudeBridge.shared.isEnabled
+    ) -> Outcome {
+        guard connected else { return .notConnected }
+        guard permissions.canSuggest(ask.category) else { return .notAllowed(ask) }
+        let context = ModelContext(container)
+        let resumeID = ask.targetID
+        guard let resume = try? context.fetch(FetchDescriptor<Resume>(predicate: #Predicate { $0.id == resumeID })).first
+        else { return .failed(String(localized: "The resume was deleted.")) }
+        let application = ask.applicationID.flatMap { applicationID in
+            try? context.fetch(FetchDescriptor<JobApplication>(predicate: #Predicate { $0.id == applicationID })).first
+        }
+        let copy = resume.tailoredCopy(
+            title: application.map { String(localized: "\($0.company) Application") } ?? resume.title,
+            targetPosition: application?.position ?? resume.targetPosition,
+            jobDescription: application?.jobDescription ?? resume.jobDescription
+        )
+        context.insert(copy)
+        copy.recordSnapshot(.created, in: context)
+        if let application, application.resume == nil { application.resume = copy }
+        context.insert(ClaudeRequest(kind: ask.kind, targetID: copy.id, targetTitle: copy.displayTitle, applicationID: ask.applicationID))
+        do {
+            try context.save()
+        } catch {
+            return .failed(error.localizedDescription)
+        }
+        openClaude()
+        return .queued(copy: .init(id: copy.id, title: copy.displayTitle))
     }
 
     /// Copies the prompt and opens Claude Desktop.
@@ -85,7 +133,16 @@ struct ClaudeAskAlerts: ViewModifier {
                     },
                     secondaryButton: .cancel()
                 )
-            case .queued:
+            case .queued(let copy?):
+                Alert(
+                    title: Text("Sent to Claude"),
+                    message: Text("Claude will tailor “\(copy.title)”, a new copy, so the original stays as it is. In Claude Desktop, send “\(ClaudeAsk.prompt)” It's on your clipboard."),
+                    primaryButton: .default(Text("Open Copy")) { navigation.recordToOpen = copy.id },
+                    secondaryButton: .cancel(Text("Not Now"))
+                )
+            case .failed(let reason):
+                Alert(title: Text("Civa Couldn't Send the Request"), message: Text(reason))
+            case .queued(nil):
                 Alert(
                     title: Text("Sent to Claude"),
                     message: Text("In Claude Desktop, send “\(ClaudeAsk.prompt)” It's on your clipboard. Claude's answer comes back to Civa for your review.")
