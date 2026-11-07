@@ -100,6 +100,8 @@ struct ResumeEditorView: View {
             isShowingHistory = UserDefaults.standard.bool(forKey: "CivaShowHistory") && !editor.isNew
             // -CivaShowSuggestions YES opens Suggested Changes.
             isShowingSuggestions = UserDefaults.standard.bool(forKey: "CivaShowSuggestions")
+            // -CivaShowClaude YES opens Claude's suggestions.
+            isShowingClaude = UserDefaults.standard.bool(forKey: "CivaShowClaude")
         }
         #endif
     }

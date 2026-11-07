@@ -80,15 +80,15 @@ nonisolated enum ClaudeLink {
         ),
         Tool(
             name: "suggest_resume_edit",
-            description: "Suggest new wording for a resume in Civa: its summary and the title, subtitle, or bullets of entries (ids from get_resume). Keep every fact, number, date, and employer. The user reviews it in Civa; nothing changes until they apply it.",
+            description: "Suggest new wording for a resume in Civa: its summary and the title, subtitle, or bullets of entries (ids from get_resume). Prefer offering 2–3 versions per change with short labels (Concise, With Numbers, Job Keywords): summary_options for the summary, options on an entry. The user picks one or keeps theirs. Keep every fact, number, date, and employer; nothing changes until the user applies it.",
             category: .resumes,
-            schema: #"{"resume_id":{"type":"string"},"request_id":{"type":"string"},"note":{"type":"string","description":"What you changed and why, for the user."},"summary":{"type":"string"},"entries":{"type":"array","items":{"type":"object","properties":{"entry_id":{"type":"string"},"title":{"type":"string"},"subtitle":{"type":"string"},"bullets":{"type":"array","items":{"type":"string"}}},"required":["entry_id"]}}}"#,
+            schema: #"{"resume_id":{"type":"string"},"request_id":{"type":"string"},"note":{"type":"string","description":"What you changed and why, for the user."},"summary":{"type":"string"},"summary_options":{"type":"array","minItems":2,"maxItems":3,"items":{"type":"object","properties":{"label":{"type":"string"},"text":{"type":"string"}},"required":["label","text"]}},"entries":{"type":"array","items":{"type":"object","properties":{"entry_id":{"type":"string"},"title":{"type":"string"},"subtitle":{"type":"string"},"bullets":{"type":"array","items":{"type":"string"}},"options":{"type":"array","minItems":2,"maxItems":3,"items":{"type":"object","properties":{"label":{"type":"string"},"title":{"type":"string"},"subtitle":{"type":"string"},"bullets":{"type":"array","items":{"type":"string"}}},"required":["label"]}}},"required":["entry_id"]}}}"#,
             required: ["resume_id", "note"]
         ),
         Tool(
             name: "suggest_profile_edit",
-            description: "Suggest a new value for one field of a Career Profile record: an experience's or project's impacts (lines) or details (text), or the personal summary or headline (text). Use only facts the user gave. The user reviews it in Civa.",
-            schema: #"{"record_id":{"type":"string"},"field":{"type":"string","enum":["impacts","details","summary","headline"]},"text":{"type":"string"},"lines":{"type":"array","items":{"type":"string"}},"request_id":{"type":"string"},"note":{"type":"string"}}"#,
+            description: "Suggest a new value for one field of a Career Profile record: an experience's or project's impacts (lines) or details (text), or the personal summary or headline (text). Prefer 2–3 labeled options (Concise, With Numbers, Job Keywords); the user picks one or keeps theirs. Use only facts the user gave.",
+            schema: #"{"record_id":{"type":"string"},"field":{"type":"string","enum":["impacts","details","summary","headline"]},"text":{"type":"string"},"lines":{"type":"array","items":{"type":"string"}},"options":{"type":"array","minItems":2,"maxItems":3,"items":{"type":"object","properties":{"label":{"type":"string"},"text":{"type":"string"},"lines":{"type":"array","items":{"type":"string"}}},"required":["label"]}},"request_id":{"type":"string"},"note":{"type":"string"}}"#,
             required: ["record_id", "field", "note"]
         ),
         Tool(

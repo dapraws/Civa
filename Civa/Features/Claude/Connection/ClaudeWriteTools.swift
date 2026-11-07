@@ -47,7 +47,7 @@ enum ClaudeWriteTools {
     /// What Claude should do for one request, and with which tools.
     static func task(_ request: ClaudeRequest) -> String {
         let id = "request_id: \(request.id)"
-        let rule = "Keep every fact, number, date, and employer; change only wording and order. If something the task needs isn't shared, call finish_request with failed \"true\" and say what to allow in Civa."
+        let rule = "Offer 2–3 versions per change with short labels (such as Concise, With Numbers, Job Keywords) using options or summary_options; the user picks one. Keep every fact, number, date, and employer; change only wording and order. If something the task needs isn't shared, call finish_request with failed \"true\" and say what to allow in Civa."
         let body = switch request.kind {
         case .tailorResume:
             "Tailor the resume \(request.targetID) (“\(request.targetTitle)”) to the job in application \(request.applicationID?.uuidString ?? "?"). Read them with get_resume and get_application, then send one suggest_resume_edit with a new summary and reworded entry bullets that match the job."
@@ -104,10 +104,55 @@ enum ClaudeWriteTools {
         let title: String?
         let subtitle: String?
         let bullets: [String]?
+        let options: [VersionInput]?
 
         enum CodingKeys: String, CodingKey {
-            case entryID = "entry_id", title, subtitle, bullets
+            case entryID = "entry_id", title, subtitle, bullets, options
         }
+    }
+
+    /// One option as Claude sends it. Entries send `bullets`, impacts send `lines`.
+    private struct VersionInput: Decodable {
+        let label: String
+        let text: String?
+        let title: String?
+        let subtitle: String?
+        let bullets: [String]?
+        let lines: [String]?
+    }
+
+    /// A message Claude can act on.
+    private struct OptionsError: Error {
+        let message: String
+    }
+
+    /// 2–3 labeled options, each with a value; nil when Claude sent none.
+    private static func options(
+        _ inputs: [VersionInput]?, isUsable: (ClaudeProposal.Version) -> Bool
+    ) throws -> [ClaudeProposal.Version]? {
+        guard let inputs else { return nil }
+        guard (2...3).contains(inputs.count) else { throw OptionsError(message: "Send 2 or 3 options per change, each with a short label.") }
+        let versions = inputs.map {
+            ClaudeProposal.Version(
+                label: $0.label.trimmingCharacters(in: .whitespacesAndNewlines), text: $0.text, title: $0.title,
+                subtitle: $0.subtitle, lines: ($0.bullets ?? $0.lines)?.filter { !$0.isBlank }
+            )
+        }
+        guard versions.allSatisfy({ !$0.label.isBlank && isUsable($0) }) else {
+            throw OptionsError(message: "Every option needs a short label, like “Concise”, and a value.")
+        }
+        return versions
+    }
+
+    /// Options sent as a JSON argument; an argument that isn't valid JSON is an error, not "none".
+    private static func options(
+        _ arguments: [String: String], _ key: String, isUsable: (ClaudeProposal.Version) -> Bool
+    ) throws -> [ClaudeProposal.Version]? {
+        guard let raw = arguments[key] else { return nil }
+        guard let inputs = decode([VersionInput].self, raw) else {
+            throw OptionsError(message: "\(key) must be a list of objects with a label and a value.")
+        }
+        return try options(inputs, isUsable: isUsable)
     }
 
     private static func resumeEdit(_ arguments: [String: String], _ context: ModelContext, _ permissions: ClaudePermissions) -> Reply {
@@ -119,18 +164,31 @@ enum ClaudeWriteTools {
 
         let known = Set(resume.document.sections.flatMap(\.entries).map(\.id))
         let inputs = decode([EntryInput].self, arguments["entries"]) ?? []
-        let entries = inputs.compactMap { input -> ClaudeProposal.ResumeEdit.Entry? in
-            guard let entryID = UUID(uuidString: input.entryID), known.contains(entryID) else { return nil }
-            return .init(entryID: entryID, title: input.title, subtitle: input.subtitle, bullets: input.bullets?.filter { !$0.isBlank })
+        let entries: [ClaudeProposal.ResumeEdit.Entry]
+        let summaryOptions: [ClaudeProposal.Version]?
+        do {
+            summaryOptions = try options(arguments, "summary_options") { $0.text?.isBlank == false }
+            entries = try inputs.compactMap { input in
+                guard let entryID = UUID(uuidString: input.entryID), known.contains(entryID) else { return nil }
+                let versions = try options(input.options) { $0.title?.isBlank == false || $0.subtitle?.isBlank == false || $0.lines?.isEmpty == false }
+                return .init(
+                    entryID: entryID, title: input.title, subtitle: input.subtitle,
+                    bullets: input.bullets?.filter { !$0.isBlank }, options: versions
+                )
+            }
+        } catch let error as OptionsError {
+            return Reply(ok: false, text: error.message)
+        } catch {
+            return Reply(ok: false, text: error.localizedDescription)
         }
-        let summary = arguments["summary"].flatMap { $0.isBlank ? nil : $0 }
-        guard summary != nil || !entries.isEmpty else {
+        let summary = summaryOptions == nil ? arguments["summary"].flatMap { $0.isBlank ? nil : $0 } : nil
+        guard summary != nil || summaryOptions != nil || !entries.isEmpty else {
             return Reply(ok: false, text: "Nothing to suggest: send a summary or entries with entry ids from get_resume.")
         }
         let proposal = ClaudeProposal(
             kind: .resumeEdit, targetID: resume.id, targetTitle: resume.displayTitle, category: .resumes,
             requestID: arguments["request_id"].flatMap(UUID.init(uuidString:)), note: arguments["note"] ?? "",
-            payload: ClaudeProposal.ResumeEdit(summary: summary, entries: entries)
+            payload: ClaudeProposal.ResumeEdit(summary: summary, summaryOptions: summaryOptions, entries: entries)
         )
         var reply = propose(proposal, tool: tool, summary: String(localized: "Suggested changes to “\(resume.displayTitle)”"), context: context)
         let skipped = inputs.count - entries.count
@@ -163,13 +221,24 @@ enum ClaudeWriteTools {
         }
         let lines = decode([String].self, arguments["lines"])?.filter { !$0.isBlank }
         let text = arguments["text"]
-        guard field == .impacts ? lines?.isEmpty == false : text?.isBlank == false else {
-            return Reply(ok: false, text: field == .impacts ? "Send the new impacts as lines." : "Send the new \(field.rawValue) as text.")
+        let versions: [ClaudeProposal.Version]?
+        do {
+            versions = try options(arguments, "options") { field == .impacts ? $0.lines?.isEmpty == false : $0.text?.isBlank == false }
+        } catch let error as OptionsError {
+            return Reply(ok: false, text: error.message)
+        } catch {
+            return Reply(ok: false, text: error.localizedDescription)
+        }
+        guard versions != nil || (field == .impacts ? lines?.isEmpty == false : text?.isBlank == false) else {
+            return Reply(ok: false, text: field == .impacts ? "Send the new impacts as lines, or options with lines." : "Send the new \(field.rawValue) as text, or options with text.")
         }
         let proposal = ClaudeProposal(
             kind: .recordEdit, targetID: id, targetTitle: target.title, category: target.category,
             requestID: arguments["request_id"].flatMap(UUID.init(uuidString:)), note: arguments["note"] ?? "",
-            payload: ClaudeProposal.RecordEdit(field: field, text: field == .impacts ? nil : text, lines: field == .impacts ? lines : nil)
+            payload: ClaudeProposal.RecordEdit(
+                field: field, text: versions != nil || field == .impacts ? nil : text,
+                lines: versions != nil || field != .impacts ? nil : lines, options: versions
+            )
         )
         return propose(proposal, tool: tool, summary: String(localized: "Suggested a new \(field.rawValue) for “\(target.title)”"), context: context)
     }

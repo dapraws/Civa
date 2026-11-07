@@ -12,7 +12,8 @@ import SwiftData
 enum ClaudeDecisions {
     /// Marks a suggestion applied or dismissed and logs it. Uses its own context, so an open
     /// editor's unsaved changes are never saved along with it.
-    static func record(_ proposalID: UUID, _ status: ClaudeProposal.Status, container: ModelContainer) {
+    /// `choice` names the picked versions when Claude offered options.
+    static func record(_ proposalID: UUID, _ status: ClaudeProposal.Status, container: ModelContainer, choice: String? = nil) {
         let context = ModelContext(container)
         guard let proposal = try? context.fetch(FetchDescriptor<ClaudeProposal>(predicate: #Predicate { $0.id == proposalID })).first else { return }
         proposal.status = status
@@ -23,7 +24,7 @@ enum ClaudeDecisions {
             summary: status == .applied
                 ? String(localized: "Applied Claude's suggestion for “\(proposal.targetTitle)”")
                 : String(localized: "Dismissed Claude's suggestion for “\(proposal.targetTitle)”"),
-            detail: proposal.note
+            detail: choice.map { String(localized: "Chose \($0)") } ?? proposal.note
         ))
         try? context.save()
     }
