@@ -87,6 +87,13 @@ struct ApplicationCard: View {
                     .foregroundStyle(.tertiary)
                     .fixedSize()
                 Spacer(minLength: 0)
+                if !application.documents.isEmpty {
+                    Label("\(application.documents.count)", systemImage: "paperclip")
+                        .foregroundStyle(.secondary)
+                        .help("Documents attached")
+                        .accessibilityLabel("^[\(application.documents.count) document](inflect: true)")
+                        .fixedSize()
+                }
                 if let resume = application.resume {
                     Label(resume.displayTitle, systemImage: "doc.text")
                         .foregroundStyle(.secondary)
@@ -206,6 +213,7 @@ struct ApplicationForm: View {
                 .labelsHidden()
                 .lineLimit(6...24)
             }
+            DocumentsSection(editor: editor)
         }
         .formStyle(.grouped)
     }

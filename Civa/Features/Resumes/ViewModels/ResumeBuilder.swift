@@ -173,12 +173,28 @@ enum ResumeBuilder {
     }
 
     /// One line per category: "Languages: Swift, Kotlin". Uncategorized skills share a line.
+    /// Each line remembers its skills, so later additions, removals, and renames can be suggested (FR-042).
     private static func skillLines(_ skills: [Skill]) -> [ResumeEntry] {
-        Dictionary(grouping: skills) { $0.category.trimmingCharacters(in: .whitespaces) }
+        Dictionary(grouping: skills) { skillCategory($0.category) }
             .sorted { $0.key.isEmpty == $1.key.isEmpty ? $0.key < $1.key : !$0.key.isEmpty }
             .map { category, skills in
-                ResumeEntry(title: category, subtitle: skills.map(\.name).sorted().joined(separator: ", "))
+                var entry = ResumeEntry(title: category, subtitle: skillList(skills.map(\.name)))
+                entry.sourceCopy = skillLineCopy(category: category, skills: Dictionary(uniqueKeysWithValues: skills.map { ($0.id, $0.name) }))
+                return entry
             }
+    }
+
+    static func skillCategory(_ category: String) -> String {
+        category.trimmingCharacters(in: .whitespaces)
+    }
+
+    static func skillList(_ names: [String]) -> String {
+        names.sorted { $0.localizedStandardCompare($1) == .orderedAscending }.joined(separator: ", ")
+    }
+
+    /// A skill line as the profile has it: the category, and its skills by id.
+    static func skillLineCopy(category: String, skills: [UUID: String]) -> ResumeEntry.SourceCopy {
+        ResumeEntry.SourceCopy(title: category, subtitle: skillList(Array(skills.values)), dates: "", bullets: [], skills: skills)
     }
 }
 

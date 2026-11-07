@@ -17,13 +17,27 @@ struct ProfileSource {
     var knownIDs: Set<UUID> = []
     /// Personal Information in resume form, when confirmed.
     var header: ResumeHeader?
+    /// Confirmed skills by id, for skill lines.
+    var skills: [UUID: (name: String, category: String)] = [:]
 
     init(person: PersonalInfo?, records: [any ImportableRecord]) {
         if let person, !person.needsReview { header = ResumeBuilder.header(from: person) }
         for record in records {
             knownIDs.insert(record.id)
             if !record.needsReview, let entry = ResumeBuilder.entry(for: record) { entries[record.id] = entry }
+            if let skill = record as? Skill, !skill.needsReview {
+                skills[skill.id] = (skill.name, ResumeBuilder.skillCategory(skill.category))
+            }
         }
+    }
+
+    /// The profile's skills in one category, as a skill line would copy them.
+    func skillLine(category: String) -> ResumeEntry.SourceCopy {
+        let category = ResumeBuilder.skillCategory(category)
+        return ResumeBuilder.skillLineCopy(
+            category: category,
+            skills: skills.filter { $0.value.category == category }.mapValues(\.name)
+        )
     }
 
     // ponytail: fetches the whole profile on each call; fine at profile sizes, cache if it shows up in profiles.
@@ -77,8 +91,15 @@ enum SuggestedChanges {
         }
         for section in document.sections {
             for entry in section.entries {
-                guard let id = entry.sourceID, let old = entry.sourceCopy else { continue }
                 let name = "\(section.title): \(entry.title.isBlank ? section.kind.newEntryTitle : entry.title)"
+                if let old = entry.sourceCopy, let oldSkills = old.skills {
+                    let changes = skillChanges(old: oldSkills, new: profile.skillLine(category: old.title).skills ?? [:], current: entry)
+                    if !changes.isEmpty {
+                        suggestions.append(ResumeSuggestion(target: .entry(entry.id), title: name, changes: changes))
+                    }
+                    continue
+                }
+                guard let id = entry.sourceID, let old = entry.sourceCopy else { continue }
                 if !profile.knownIDs.contains(id) {
                     suggestions.append(ResumeSuggestion(
                         target: .removedEntry(entry.id),
@@ -109,6 +130,13 @@ enum SuggestedChanges {
         case .entry(let id):
             guard let position = document.entryPosition(id) else { return }
             var entry = document.sections[position.section].entries[position.entry]
+            if let old = entry.sourceCopy, let oldSkills = old.skills {
+                let new = profile.skillLine(category: old.title)
+                entry.subtitle = applySkills(old: oldSkills, new: new.skills ?? [:], to: entry.subtitle)
+                entry.sourceCopy = new
+                document.sections[position.section].entries[position.entry] = entry
+                return
+            }
             guard let old = entry.sourceCopy, let sourceID = entry.sourceID, let profileEntry = profile.entries[sourceID] else { return }
             let new = profileEntry.asSourceCopy
             if old.title != new.title { entry.title = new.title }
@@ -140,9 +168,12 @@ enum SuggestedChanges {
         case .header:
             document.headerSource = profile.header
         case .entry(let id):
-            guard let position = document.entryPosition(id),
-                  let sourceID = document.sections[position.section].entries[position.entry].sourceID
-            else { return }
+            guard let position = document.entryPosition(id) else { return }
+            if let old = document.sections[position.section].entries[position.entry].sourceCopy, old.skills != nil {
+                document.sections[position.section].entries[position.entry].sourceCopy = profile.skillLine(category: old.title)
+                return
+            }
+            guard let sourceID = document.sections[position.section].entries[position.entry].sourceID else { return }
             document.sections[position.section].entries[position.entry].sourceCopy = profile.entries[sourceID]?.asSourceCopy
         case .removedEntry(let id):
             // Keeps the entry as resume-only text.
@@ -165,12 +196,63 @@ enum SuggestedChanges {
         for s in document.sections.indices {
             for e in document.sections[s].entries.indices {
                 let entry = document.sections[s].entries[e]
-                guard entry.sourceCopy == nil, let id = entry.sourceID, let current = profile.entries[id] else { continue }
+                guard entry.sourceCopy == nil else { continue }
+                if document.sections[s].kind == .skills {
+                    let line = profile.skillLine(category: entry.title)
+                    guard line.skills?.isEmpty == false else { continue }
+                    document.sections[s].entries[e].sourceCopy = line
+                    changed = true
+                    continue
+                }
+                guard let id = entry.sourceID, let current = profile.entries[id] else { continue }
                 document.sections[s].entries[e].sourceCopy = current.asSourceCopy
                 changed = true
             }
         }
         return changed
+    }
+
+    // MARK: - Skill lines
+
+    /// "Swift, SwiftUI" as names.
+    private static func skillNames(_ text: String) -> [String] {
+        text.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+    }
+
+    /// Additions, removals, and renames in the profile that the line doesn't have yet.
+    private static func skillChanges(old: [UUID: String], new: [UUID: String], current: ResumeEntry) -> [ResumeSuggestion.Change] {
+        let line = Set(skillNames(current.subtitle))
+        var changes: [ResumeSuggestion.Change] = []
+        for (id, oldName) in old.sorted(by: { $0.value < $1.value }) {
+            if let newName = new[id] {
+                if newName != oldName, !line.contains(newName) {
+                    changes.append(.init(label: String(localized: "Skill renamed"), old: oldName, new: newName, replacesEdit: !line.contains(oldName)))
+                }
+            } else if line.contains(oldName) {
+                changes.append(.init(label: String(localized: "Skill removed"), old: oldName, new: "", replacesEdit: false))
+            }
+        }
+        for (id, newName) in new.sorted(by: { $0.value < $1.value }) where old[id] == nil && !line.contains(newName) {
+            changes.append(.init(label: String(localized: "Skill added"), old: "", new: newName, replacesEdit: false))
+        }
+        return changes
+    }
+
+    /// The line with the profile's changes, keeping the user's order; added skills go at the end.
+    private static func applySkills(old: [UUID: String], new: [UUID: String], to text: String) -> String {
+        var names = skillNames(text)
+        for (id, oldName) in old {
+            if let newName = new[id] {
+                guard newName != oldName, !names.contains(newName) else { continue }
+                if let index = names.firstIndex(of: oldName) { names[index] = newName } else { names.append(newName) }
+            } else {
+                names.removeAll { $0 == oldName }
+            }
+        }
+        for (id, newName) in new.sorted(by: { $0.value < $1.value }) where old[id] == nil && !names.contains(newName) {
+            names.append(newName)
+        }
+        return names.joined(separator: ", ")
     }
 
     // MARK: - Fields
