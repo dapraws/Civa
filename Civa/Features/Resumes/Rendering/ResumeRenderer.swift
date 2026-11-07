@@ -46,19 +46,22 @@ enum ResumeRenderer {
 
         beginPage()
         for block in blocks(for: document, style: style) {
-            let height = ceil(block.boundingRect(
-                with: CGSize(width: style.width, height: .greatestFiniteMagnitude),
-                options: [.usesLineFragmentOrigin, .usesFontLeading]
-            ).height)
+            let height = style.height(of: block.text)
             // ponytail: an entry taller than a whole page overflows; split it by line if that ever happens.
             if y + height > page.height - margin, y > margin {
                 endPage()
                 beginPage()
             }
-            block.draw(
+            block.text.draw(
                 with: CGRect(x: margin, y: y, width: style.width, height: height),
                 options: [.usesLineFragmentOrigin, .usesFontLeading]
             )
+            if let link = block.link {
+                // The context is flipped, and link rects are in page space, so flip the rect back.
+                let top = y + link.top
+                let rect = CGRect(x: margin, y: page.height - top - link.height, width: style.width, height: link.height)
+                context.setURL(link.url as CFURL, for: rect)
+            }
             y += height
         }
         endPage()
@@ -66,7 +69,13 @@ enum ResumeRenderer {
         return data as Data
     }
 
-    private static func blocks(for document: ResumeDocument, style: Style) -> [NSAttributedString] {
+    /// Text that moves to a new page as a whole, with an optional link over one line of it.
+    private struct Block {
+        let text: NSAttributedString
+        var link: (url: URL, top: CGFloat, height: CGFloat)?
+    }
+
+    private static func blocks(for document: ResumeDocument, style: Style) -> [Block] {
         let header = NSMutableAttributedString()
         let person = document.header
         if !person.fullName.isBlank {
@@ -85,38 +94,74 @@ enum ResumeRenderer {
             header.append(style.text(document.summary, before: 6, after: 2))
         }
 
-        var blocks = header.length > 0 ? [header as NSAttributedString] : []
+        var blocks = header.length > 0 ? [Block(text: header)] : []
         for section in document.sections where !section.entries.isEmpty {
             for (index, entry) in section.entries.enumerated() {
-                let block = NSMutableAttributedString()
+                let text = NSMutableAttributedString()
                 if index == 0 {
-                    block.append(style.text(
-                        section.kind.heading, scale: 1.1, bold: true, color: style.accent,
+                    text.append(style.text(
+                        section.title, scale: 1.1, bold: true, color: style.accent,
                         before: style.format.sectionSpacing, after: 3
                     ))
                 }
-                block.append(section.kind == .skills ? skillLine(entry, style: style) : entryLines(entry, style: style))
+                if section.kind == .skills {
+                    text.append(skillLine(entry, style: style))
+                    blocks.append(Block(text: text))
+                    continue
+                }
+                let headingHeight = text.length > 0 ? style.height(of: text) : 0
+                let title = titleLine(entry, kind: section.kind, style: style)
+                text.append(title)
+                text.append(detailLines(entry, kind: section.kind, style: style))
+                var block = Block(text: text)
+                if style.format.linksProof != false, let url = entry.proofURL.flatMap(URL.webLink) {
+                    block.link = (url, headingHeight, style.height(of: title))
+                }
                 blocks.append(block)
             }
         }
         return blocks
     }
 
-    private static func entryLines(_ entry: ResumeEntry, style: Style) -> NSAttributedString {
-        let lines = NSMutableAttributedString()
-        let titleLine = entry.dates.isBlank ? entry.title : "\(entry.title)\t\(entry.dates)"
-        lines.append(style.text(titleLine, bold: true, before: 4, rightTab: style.width))
-        var subtitle = entry.subtitle
-        if style.format.showsEmploymentType == true, let type = entry.employmentType, !type.isBlank {
-            subtitle = [subtitle, type].filter { !$0.isBlank }.joined(separator: " · ")
+    /// "Bachelor of Computer Science, 3.86/4.00" on the left, the dates on the right.
+    private static func titleLine(_ entry: ResumeEntry, kind: ResumeSection.Kind, style: Style) -> NSAttributedString {
+        var title = entry.title
+        if kind == .education, style.format.showsGrade != false, let grade = entry.grade, !grade.isBlank {
+            title = [title, grade].filter { !$0.isBlank }.joined(separator: ", ")
         }
-        if !subtitle.isBlank {
-            lines.append(style.text(subtitle, italic: true, after: 1))
+        let dates = entry.datesText(style.format.dateStyle ?? .short)
+        return style.text(dates.isBlank ? title : "\(title)\t\(dates)", bold: true, before: 4, rightTab: style.width)
+    }
+
+    private static func detailLines(_ entry: ResumeEntry, kind: ResumeSection.Kind, style: Style) -> NSAttributedString {
+        let lines = NSMutableAttributedString()
+        var subtitle = [entry.subtitle]
+        if style.format.showsEmploymentType == true { subtitle.append(entry.employmentType ?? "") }
+        if style.format.showsWorkArrangement == true { subtitle.append(entry.workArrangement ?? "") }
+        let subtitleText = subtitle.filter { !$0.isBlank }.joined(separator: " · ")
+        if !subtitleText.isBlank {
+            lines.append(style.text(subtitleText, italic: true, after: 1))
+        }
+        if kind == .education {
+            if let thesis = entry.thesis, !thesis.isBlank {
+                lines.append(labeled(String(localized: "Thesis"), thesis, style: style))
+            }
+            let coursework = (entry.coursework ?? []).filter { !$0.isBlank }
+            if !coursework.isEmpty {
+                lines.append(labeled(String(localized: "Relevant Coursework"), coursework.joined(separator: ", "), style: style))
+            }
         }
         for bullet in entry.bullets where !bullet.isBlank {
             lines.append(style.text("•\t\(bullet)", after: 1, indent: 12))
         }
         return lines
+    }
+
+    /// "Thesis: On-device speech recognition", with the label in bold.
+    private static func labeled(_ label: String, _ value: String, style: Style) -> NSAttributedString {
+        let line = NSMutableAttributedString(string: "\(label): ", attributes: style.attributes(bold: true, after: 1))
+        line.append(style.text(value, after: 1))
+        return line
     }
 
     /// "Languages: Swift, Kotlin", or just the skills when there's no category.
@@ -141,6 +186,13 @@ private struct Style {
         case .teal: NSColor(srgbRed: 0.04, green: 0.38, blue: 0.40, alpha: 1)
         case .burgundy: NSColor(srgbRed: 0.45, green: 0.10, blue: 0.18, alpha: 1)
         }
+    }
+
+    func height(of text: NSAttributedString) -> CGFloat {
+        ceil(text.boundingRect(
+            with: CGSize(width: width, height: .greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading]
+        ).height)
     }
 
     func font(scale: CGFloat, bold: Bool, italic: Bool) -> NSFont {

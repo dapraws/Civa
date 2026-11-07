@@ -78,7 +78,7 @@ enum SuggestedChanges {
         for section in document.sections {
             for entry in section.entries {
                 guard let id = entry.sourceID, let old = entry.sourceCopy else { continue }
-                let name = "\(section.kind.heading): \(entry.title.isBlank ? section.kind.newEntryTitle : entry.title)"
+                let name = "\(section.title): \(entry.title.isBlank ? section.kind.newEntryTitle : entry.title)"
                 if !profile.knownIDs.contains(id) {
                     suggestions.append(ResumeSuggestion(
                         target: .removedEntry(entry.id),
@@ -109,11 +109,20 @@ enum SuggestedChanges {
         case .entry(let id):
             guard let position = document.entryPosition(id) else { return }
             var entry = document.sections[position.section].entries[position.entry]
-            guard let old = entry.sourceCopy, let sourceID = entry.sourceID, let new = profile.entries[sourceID]?.asSourceCopy else { return }
+            guard let old = entry.sourceCopy, let sourceID = entry.sourceID, let profileEntry = profile.entries[sourceID] else { return }
+            let new = profileEntry.asSourceCopy
             if old.title != new.title { entry.title = new.title }
             if old.subtitle != new.subtitle { entry.subtitle = new.subtitle }
-            if old.dates != new.dates { entry.dates = new.dates }
-            if old.employmentType != new.employmentType { entry.employmentType = new.employmentType }
+            if old.dates != new.dates {
+                entry.dates = new.dates
+                entry.start = profileEntry.start
+                entry.end = profileEntry.end
+                entry.isCurrent = profileEntry.isCurrent
+            }
+            for (_, copyField, entryField) in optionalFields where old[keyPath: copyField] != new[keyPath: copyField] {
+                entry[keyPath: entryField] = new[keyPath: copyField]
+            }
+            if old.coursework != new.coursework { entry.coursework = new.coursework }
             let removed = Set(old.bullets).subtracting(new.bullets)
             entry.bullets.removeAll { removed.contains($0) }
             entry.bullets += new.bullets.filter { !old.bullets.contains($0) && !entry.bullets.contains($0) }
@@ -182,18 +191,34 @@ enum SuggestedChanges {
         return .init(label: label, old: current, new: new, replacesEdit: current != old)
     }
 
+    /// Single-value entry fields that come from the profile, besides title, subtitle, and dates.
+    private static var optionalFields: [(String, KeyPath<ResumeEntry.SourceCopy, String?>, WritableKeyPath<ResumeEntry, String?>)] {
+        [
+            (String(localized: "Employment Type"), \.employmentType, \.employmentType),
+            (String(localized: "Work Arrangement"), \.workArrangement, \.workArrangement),
+            (String(localized: "Grade"), \.grade, \.grade),
+            (String(localized: "Thesis"), \.thesis, \.thesis),
+            (String(localized: "Proof Link"), \.proofURL, \.proofURL),
+        ]
+    }
+
     private static func entryChanges(
         old: ResumeEntry.SourceCopy, new: ResumeEntry.SourceCopy, current: ResumeEntry, kind: ResumeSection.Kind
     ) -> [ResumeSuggestion.Change] {
-        var changes = [
+        var changes = ([
             change(kind.titleLabel, old: old.title, new: new.title, current: current.title),
             change(kind.subtitleLabel, old: old.subtitle, new: new.subtitle, current: current.subtitle),
             change(String(localized: "Dates"), old: old.dates, new: new.dates, current: current.dates),
             change(
-                String(localized: "Employment Type"),
-                old: old.employmentType ?? "", new: new.employmentType ?? "", current: current.employmentType ?? ""
+                String(localized: "Relevant Coursework"),
+                old: (old.coursework ?? []).joined(separator: ", "),
+                new: (new.coursework ?? []).joined(separator: ", "),
+                current: (current.coursework ?? []).joined(separator: ", ")
             ),
         ]
+        + optionalFields.map { label, copyField, entryField in
+            change(label, old: old[keyPath: copyField] ?? "", new: new[keyPath: copyField] ?? "", current: current[keyPath: entryField] ?? "")
+        })
         .compactMap { $0 }
         for line in new.bullets where !old.bullets.contains(line) && !current.bullets.contains(line) {
             changes.append(.init(label: String(localized: "Line added"), old: "", new: line, replacesEdit: false))

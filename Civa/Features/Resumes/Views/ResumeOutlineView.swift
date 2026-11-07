@@ -17,10 +17,8 @@ struct ResumeOutlineView: View {
             Section {
                 Label("Resume Info", systemImage: "info.circle")
                     .tag(ResumeOutlineItem.info)
-                Label("Header", systemImage: "person.crop.rectangle")
+                Label("Header and Summary", systemImage: "person.crop.rectangle")
                     .tag(ResumeOutlineItem.header)
-                Label("Summary", systemImage: "text.alignleft")
-                    .tag(ResumeOutlineItem.summary)
             }
             Section("Sections") {
                 ForEach(document.outlineRows) { row in
@@ -40,7 +38,7 @@ struct ResumeOutlineView: View {
     }
 
     private func sectionRow(_ section: ResumeSection) -> some View {
-        Label(section.kind.heading, systemImage: section.kind.systemImage)
+        Label(section.title, systemImage: section.kind.systemImage)
             .fontWeight(.medium)
             .tag(ResumeOutlineItem.section(section.id))
             .contextMenu {

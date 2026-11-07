@@ -47,7 +47,7 @@ enum ResumeDiff {
     }
 
     private static func entryChanges(from old: ResumeSection, to new: ResumeSection) -> [ResumeChange] {
-        let heading = new.kind.heading
+        let heading = new.title
         let oldIDs = old.entries.map(\.id)
         let newIDs = new.entries.map(\.id)
         func name(_ entry: ResumeEntry) -> String { entry.title.isBlank ? new.kind.newEntryTitle : entry.title }

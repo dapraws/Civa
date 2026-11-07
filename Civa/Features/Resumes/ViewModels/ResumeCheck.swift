@@ -29,12 +29,12 @@ enum ResumeCheck {
         }
         for (section, entry) in entries {
             if section.kind == .skills, entry.subtitle.isBlank {
-                issues.append(String(localized: "\(section.kind.heading) has a line without any skills."))
+                issues.append(String(localized: "\(section.title) has a line without any skills."))
             } else if section.kind != .skills, entry.title.isBlank {
-                issues.append(String(localized: "\(section.kind.heading) has an entry without a title."))
+                issues.append(String(localized: "\(section.title) has an entry without a title."))
             }
             if let source = entry.sourceID, unconfirmedSources.contains(source) {
-                let name = entry.title.isBlank ? section.kind.heading : entry.title
+                let name = entry.title.isBlank ? section.title : entry.title
                 issues.append(String(localized: "“\(name)” comes from profile information that still needs review."))
             }
         }

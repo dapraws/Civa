@@ -48,15 +48,22 @@ struct ResumeFormatBar: View {
                         Picker("Paper", selection: $format.paper) {
                             ForEach(ResumeFormat.Paper.allCases, id: \.self) { Text($0.title).tag($0) }
                         }
+                        Picker("Dates", selection: Binding(
+                            get: { format.dateStyle ?? .short },
+                            set: { format.dateStyle = $0 }
+                        )) {
+                            ForEach(ResumeFormat.DateStyle.allCases, id: \.self) { Text($0.title).tag($0) }
+                        }
                         Divider()
-                        Toggle("Show Employment Type", isOn: Binding(
-                            get: { format.showsEmploymentType ?? false },
-                            set: { format.showsEmploymentType = $0 }
-                        ))
+                        Toggle("Show Employment Type", isOn: option(\.showsEmploymentType, default: false))
+                        Toggle("Show Work Arrangement", isOn: option(\.showsWorkArrangement, default: false))
+                        Toggle("Show GPA or Score", isOn: option(\.showsGrade, default: true))
+                        Toggle("Link Proof", isOn: option(\.linksProof, default: true))
+                            .help("Entry titles with a proof link open it from the PDF")
                     } label: {
                         Label("Layout", systemImage: "rectangle.split.1x2")
                     }
-                    .help("Spacing, margins, and paper size")
+                    .help("Spacing, margins, dates, and what each entry shows")
 
                     Picker("Accent Color", selection: $format.accent) {
                         ForEach(ResumeFormat.Accent.allCases, id: \.self) { accent in
@@ -86,6 +93,11 @@ struct ResumeFormatBar: View {
         .padding(.vertical, 6)
     }
 
+    /// An option stored as an optional, where nil means its default.
+    private func option(_ field: WritableKeyPath<ResumeFormat, Bool?>, default value: Bool) -> Binding<Bool> {
+        Binding(get: { format[keyPath: field] ?? value }, set: { format[keyPath: field] = $0 })
+    }
+
     private var summary: String {
         String(AttributedString(localized: "^[\(pageCount) page](inflect: true)").characters)
     }
@@ -98,6 +110,13 @@ extension ResumeFormat.Margins {
         case .normal: String(localized: "Normal (0.75 in)")
         case .wide: String(localized: "Wide (1 in)")
         }
+    }
+}
+
+extension ResumeFormat.DateStyle {
+    var title: String {
+        let sample = YearMonth(year: 2024, month: 3)
+        return sample.formatted(self)
     }
 }
 
