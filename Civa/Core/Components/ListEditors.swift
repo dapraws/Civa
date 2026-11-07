@@ -55,6 +55,27 @@ struct PairListEditor<Item: Identifiable & Equatable>: View {
     }
 }
 
+/// A dropdown for an optional choice stored as its raw value; empty is Not Set.
+struct OptionPicker<Option: TitledOption>: View {
+    let title: LocalizedStringKey
+    @Binding var selection: String
+    let options: [Option]
+
+    init(_ title: LocalizedStringKey, selection: Binding<String>, options: [Option]) {
+        self.title = title
+        _selection = selection
+        self.options = options
+    }
+
+    var body: some View {
+        Picker(title, selection: $selection) {
+            Text("Not Set").tag("")
+            Divider()
+            ForEach(options) { Text($0.title).tag($0.rawValue) }
+        }
+    }
+}
+
 struct RemoveButton: View {
     let action: () -> Void
 

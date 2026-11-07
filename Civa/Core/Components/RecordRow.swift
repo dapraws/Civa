@@ -7,16 +7,21 @@
 
 import SwiftUI
 
-/// A list row: title, optional subtitle, and a review badge when the record isn't confirmed.
+/// A list row: title, optional subtitle, the Verified seal when there's proof,
+/// and a review badge when the record isn't confirmed.
 struct RecordRow: View {
     let title: String
     var subtitle = ""
     var needsReview = false
+    var proof: Proof?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(title)
-                .lineLimit(1)
+            HStack(spacing: 4) {
+                Text(title)
+                    .lineLimit(1)
+                if let proof { ProofSeal(proof: proof) }
+            }
             if !subtitle.isEmpty {
                 Text(subtitle)
                     .font(.callout)

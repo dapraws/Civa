@@ -50,6 +50,7 @@ struct AchievementForm: View {
             Section {
                 TextField("Title", text: editor.binding(\.title), prompt: Text("Required"))
                 FieldError(editor.error(for: \.title))
+                TextField("Placement", text: editor.binding(\.placement), prompt: Text("1st Place, Finalist"))
                 TextField("Issuer", text: editor.binding(\.issuer), prompt: Text("Who gave it"))
                 YearMonthField(title: String(localized: "Date"), value: editor.binding(\.date))
             }
@@ -84,6 +85,13 @@ struct AchievementForm: View {
                 )
                 .labelsHidden()
                 .lineLimit(3...10)
+            }
+            Section {
+                ProofField(editor: editor, title: "Proof Link", link: \.proofURL)
+            } header: {
+                Text("Proof")
+            } footer: {
+                Text("An announcement or certificate. With a link or an attached document, this achievement shows a Verified seal.")
             }
             DocumentsSection(editor: editor)
             CustomFieldsSection(fields: editor.binding(\.customFields))

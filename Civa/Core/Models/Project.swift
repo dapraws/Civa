@@ -13,7 +13,9 @@ nonisolated final class Project: ProfileRecord {
     var id = UUID()
     var name: String
     var role: String
+    /// Where the project runs: a website or store page.
     var url: String
+    var repositoryURL = ""
     var start: YearMonth?
     var end: YearMonth?
     var details: String
@@ -45,6 +47,8 @@ nonisolated final class Project: ProfileRecord {
         var errors: [PartialKeyPath<Project>: String] = [:]
         if name.isBlank { errors[\.name] = String(localized: "Enter a project name.") }
         if YearMonth.isReversed(start: start, end: end) { errors[\.end] = ValidationMessage.endBeforeStart }
+        if !url.isBlank, URL.webLink(url) == nil { errors[\.url] = ValidationMessage.invalidLink }
+        if !repositoryURL.isBlank, URL.webLink(repositoryURL) == nil { errors[\.repositoryURL] = ValidationMessage.invalidLink }
         return errors
     }
 

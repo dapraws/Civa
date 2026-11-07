@@ -47,6 +47,20 @@ struct PersonalInfoForm: View {
                 FieldError(editor.error(for: \.fullName))
                 TextField("Headline", text: editor.binding(\.headline), prompt: Text("iOS Engineer"))
             }
+            Section {
+                TextField(
+                    "Summary",
+                    text: editor.binding(\.summary),
+                    prompt: Text("Two or three sentences on what you do and what you're looking for"),
+                    axis: .vertical
+                )
+                .labelsHidden()
+                .lineLimit(3...8)
+            } header: {
+                Text("Summary")
+            } footer: {
+                Text("New resumes start their header with this.")
+            }
             Section("Contact") {
                 TextField("Email", text: editor.binding(\.email), prompt: Text("name@example.com"))
                 FieldError(editor.error(for: \.email))

@@ -24,6 +24,15 @@ extension ModelContainer {
             configurations: configuration
         )
         container.mainContext.autosaveEnabled = false
+        convertTextGrades(in: container.mainContext)
         return container
+    }
+
+    /// Grades used to be free text; read the ones that parse into a number and scale.
+    /// ponytail: runs on every launch (one fetch of Education); move into a SchemaV2 migration stage once released.
+    private static func convertTextGrades(in context: ModelContext) {
+        let records = (try? context.fetch(FetchDescriptor<Education>(predicate: #Predicate { $0.gradeValue == nil && $0.grade != "" }))) ?? []
+        guard records.map({ $0.convertTextGrade() }).contains(true) else { return }
+        try? context.save()
     }
 }

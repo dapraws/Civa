@@ -77,10 +77,13 @@ nonisolated protocol EditableRecord: PersistentModel {
     func validationErrors() -> [PartialKeyPath<Self>: String]
     /// Runs inside a valid save, before the store commits. `isNew` is true on a record's first save.
     func willSave(isNew: Bool, in context: ModelContext)
+    /// What backs the record up; records with proof show a seal.
+    var proof: Proof? { get }
 }
 
 nonisolated extension EditableRecord {
     var needsReview: Bool { false }
+    var proof: Proof? { nil }
     func willSave(isNew: Bool, in context: ModelContext) {}
 }
 
@@ -140,4 +143,28 @@ nonisolated extension YearMonth {
 
 nonisolated enum ValidationMessage {
     static var endBeforeStart: String { String(localized: "The end date can't be before the start date.") }
+    static var invalidLink: String { String(localized: "Enter a web address, like https://example.com.") }
+}
+
+nonisolated extension URL {
+    /// A web address typed by the user, with "https://" added when they left it out. Nil unless it has a host.
+    static func webLink(_ text: String) -> URL? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !trimmed.contains(" ") else { return nil }
+        let full = trimmed.contains("://") ? trimmed : "https://" + trimmed
+        guard let url = URL(string: full), ["http", "https"].contains(url.scheme?.lowercased()),
+              let host = url.host(), host.contains(".") else { return nil }
+        return url
+    }
+}
+
+/// A choice stored on a record as its raw value, with a title for pickers.
+nonisolated protocol TitledOption: RawRepresentable<String>, Identifiable, CaseIterable {
+    var title: String { get }
+}
+
+/// What backs a record up: a link, or a document kept in Civa. Records with proof show a seal.
+nonisolated enum Proof {
+    case link(URL)
+    case document(SupportingDocument)
 }

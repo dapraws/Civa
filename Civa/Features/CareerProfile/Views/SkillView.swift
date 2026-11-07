@@ -17,7 +17,9 @@ struct SkillList: View {
                 systemImage: "star"
             ),
             order: { sortKey($0) < sortKey($1) },
-            subtitle: \.category,
+            subtitle: { skill in
+                [skill.type?.title ?? "", skill.category].filter { !$0.isEmpty }.joined(separator: " · ")
+            },
             makeRecord: { Skill(name: "") },
             editor: { SkillForm(editor: $0) }
         )
@@ -38,6 +40,7 @@ struct SkillForm: View {
             Section {
                 TextField("Name", text: editor.binding(\.name), prompt: Text("Required"))
                 FieldError(editor.error(for: \.name))
+                OptionPicker("Type", selection: editor.binding(\.typeRaw), options: SkillType.allCases)
                 TextField("Category", text: editor.binding(\.category), prompt: Text("Languages, Tools, Design"))
             }
             Section {

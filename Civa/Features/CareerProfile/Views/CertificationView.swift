@@ -44,9 +44,13 @@ struct CertificationForm: View {
                 YearMonthField(title: String(localized: "Expires"), value: editor.binding(\.expires))
                 FieldError(editor.error(for: \.expires))
             }
-            Section("Credential") {
+            Section {
                 TextField("Credential ID", text: editor.binding(\.credentialID))
-                TextField("Credential URL", text: editor.binding(\.credentialURL), prompt: Text("https://"))
+                ProofField(editor: editor, title: "Credential URL", link: \.credentialURL)
+            } header: {
+                Text("Credential")
+            } footer: {
+                Text("With a credential URL or an attached certificate, this shows a Verified seal.")
             }
             DocumentsSection(editor: editor)
             CustomFieldsSection(fields: editor.binding(\.customFields))

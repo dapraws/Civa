@@ -18,7 +18,9 @@ enum SampleProfile {
     static func populate(_ context: ModelContext) {
         // MARK: Skills
         func skill(_ name: String, _ category: String, _ status: ReviewStatus = .confirmed) -> Skill {
-            Skill(name: name, category: category, status: status)
+            let skill = Skill(name: name, category: category, status: status)
+            skill.type = category == "Soft Skills" ? .soft : .hard
+            return skill
         }
         let swift = skill("Swift", "Languages")
         let kotlin = skill("Kotlin", "Languages")
@@ -48,6 +50,7 @@ enum SampleProfile {
             customFields: [CustomField(name: "Team Size", value: "8")]
         )
         gojek.employmentType = .fullTime
+        gojek.workArrangement = .hybrid
         gojek.skills = [swift, swiftUI, combine, tools[1]]
         gojek.sources = [.manual(), cvSource]
 
@@ -60,6 +63,7 @@ enum SampleProfile {
             ]
         )
         tokopedia.employmentType = .internship
+        tokopedia.workArrangement = .onSite
         tokopedia.skills = [swift, uiKit, swiftUI]
 
         let telkom = Experience(
@@ -71,6 +75,8 @@ enum SampleProfile {
             ]
         )
         telkom.employmentType = .internship
+        telkom.workArrangement = .onSite
+        telkom.proofURL = "https://credentials.example.com/telkom-internship/RP-2023"
         telkom.skills = [python]
 
         let research = Experience(
@@ -100,6 +106,10 @@ enum SampleProfile {
                 "Led the 6-person capstone team that built Sehatin, an on-device nutrition tracker",
             ]
         )
+        bangkit.organizationType = .program
+        bangkit.workArrangement = .remote
+        bangkit.recognition = "Graduate with Distinction"
+        bangkit.proofURL = "https://credentials.example.com/bangkit-2023/RP-M117"
         let gdg = Experience(
             kind: .organizational, organization: "Google Developer Groups on Campus Telkom University",
             role: "Mobile Development Lead", location: "Bandung, Indonesia",
@@ -109,6 +119,8 @@ enum SampleProfile {
                 "Organized 3 workshops with Google Developer Experts",
             ]
         )
+        gdg.organizationType = .community
+        gdg.workArrangement = .onSite
         let lab = Experience(
             kind: .organizational, organization: "Mobile Innovation Laboratory, Telkom University",
             role: "Laboratory Assistant", location: "Bandung, Indonesia",
@@ -118,20 +130,30 @@ enum SampleProfile {
                 "Wrote the lab's SwiftUI module, used for 4 semesters",
             ]
         )
+        lab.organizationType = .assistant
+        lab.workArrangement = .onSite
 
         // MARK: Education
         let university = Education(
-            institution: "Telkom University", degree: "Bachelor of Informatics", location: "Bandung, Indonesia",
-            start: YearMonth(year: 2020, month: 8), end: YearMonth(year: 2024, month: 8), grade: "3.86 / 4.00",
-            details: """
-            Thesis: On-device Indonesian speech recognition for low-end smartphones
-            Relevant coursework: Data Structures, Mobile Programming, Machine Learning, Human-Computer Interaction
-            """
+            institution: "Telkom University", degree: "Bachelor of Computer Science", fieldOfStudy: "Informatics",
+            location: "Bandung, Indonesia", start: YearMonth(year: 2020, month: 8), end: YearMonth(year: 2024, month: 8),
+            details: "Exchange semester at Universiti Teknologi Malaysia, 2023."
         )
+        university.degreeLevel = .bachelor
+        university.gradeValue = 3.86
+        university.gradeLabel = .gpa
+        university.thesis = "On-device Indonesian speech recognition for low-end smartphones"
+        university.coursework = ["Data Structures", "Mobile Programming", "Machine Learning", "Human-Computer Interaction"]
+        university.honors = "Cum Laude"
+        university.proofURL = "https://credentials.example.com/telkom-university/diploma-RP-2024"
         let school = Education(
-            institution: "SMA Negeri 3 Bandung", degree: "High School, Natural Sciences", location: "Bandung, Indonesia",
-            start: YearMonth(year: 2017, month: 7), end: YearMonth(year: 2020, month: 6), grade: "91.4 / 100"
+            institution: "SMA Negeri 3 Bandung", degree: "Natural Sciences (IPA)", location: "Bandung, Indonesia",
+            start: YearMonth(year: 2017, month: 7), end: YearMonth(year: 2020, month: 6)
         )
+        school.degreeLevel = .highSchool
+        school.gradeValue = 91.4
+        school.gradeScale = 100
+        school.gradeLabel = .score
 
         // MARK: Projects, achievements, certifications
         let sehatin = Project(
@@ -144,6 +166,7 @@ enum SampleProfile {
             ]
         )
         sehatin.skills = [swift, swiftUI, coreML]
+        sehatin.repositoryURL = "https://github.com/raka-pratama-sample/sehatin"
         let kirana = Project(
             name: "Kirana", role: "Solo Developer", url: "https://kirana.example.com",
             start: YearMonth(year: 2025, month: 1), details: "A SwiftUI budgeting app for shared household expenses.",
@@ -153,18 +176,23 @@ enum SampleProfile {
             ]
         )
         kirana.skills = [swift, swiftUI, swiftData]
+        kirana.repositoryURL = "https://github.com/raka-pratama-sample/kirana"
 
         let distinction = Achievement(
             title: "Graduate with Distinction", issuer: "Bangkit Academy", date: YearMonth(year: 2023, month: 7),
             details: "Top 10% of 4,000+ participants in the Mobile Development path."
         )
         distinction.experience = bangkit
+        distinction.placement = "Top 10%"
+        distinction.proofURL = "https://credentials.example.com/bangkit-2023/distinction-RP-M117"
         let capstone = Achievement(title: "Best Capstone Project", issuer: "Bangkit Academy", date: YearMonth(year: 2023, month: 7))
         capstone.project = sehatin
+        capstone.placement = "1st Place"
         let gemastik = Achievement(
-            title: "Finalist, Mobile App Development", issuer: "GEMASTIK XVI", date: YearMonth(year: 2023, month: 10),
+            title: "Mobile App Development", issuer: "GEMASTIK XVI", date: YearMonth(year: 2023, month: 10),
             details: "National ICT competition for university students."
         )
+        gemastik.placement = "Finalist"
 
         let azure = Certification(
             name: "Microsoft Certified: Azure AI Fundamentals", issuer: "Microsoft", issued: YearMonth(year: 2024, month: 3),
@@ -185,6 +213,7 @@ enum SampleProfile {
                 ProfileLink(label: "Portfolio", url: "raka-pratama.example.com"),
             ]
         )
+        person.summary = "iOS engineer with 2+ years building consumer apps at Indonesian scale. Ships SwiftUI features used by millions, cares about performance and accessibility, and brings on-device machine learning into products."
 
         let profile: [any PersistentModel] = [
             person, gojek, tokopedia, telkom, research, duplicate, bangkit, gdg, lab, university, school,
@@ -208,7 +237,6 @@ enum SampleProfile {
             certifications: [azure, appleCert, toefl],
             skills: skills
         ))
-        master.summary = "iOS engineer with 2+ years building consumer apps at Indonesian scale. Ships SwiftUI features used by millions, cares about performance and accessibility, and brings on-device machine learning into products."
         let masterResume = Resume(title: "Master Resume", targetPosition: "iOS Engineer", document: master)
         masterResume.isMaster = true
 
