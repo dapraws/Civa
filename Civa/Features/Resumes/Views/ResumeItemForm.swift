@@ -239,13 +239,22 @@ private struct EntryFields: View {
                 TextField(kind.subtitleLabel, text: $entry.subtitle, prompt: Text(kind.subtitlePrompt))
             }
             if kind == .experience {
-                TitlePicker("Employment Type", selection: $entry.employmentType, options: EmploymentType.allCases.map(\.title))
+                HStack {
+                    TitlePicker("Employment Type", selection: $entry.employmentType, options: EmploymentType.allCases.map(\.title))
+                    eye(.employmentType)
+                }
             }
             if kind == .experience || kind == .organizational || kind == .education {
-                TextField("Location", text: location, prompt: Text("Jakarta, Indonesia"))
+                HStack {
+                    TextField("Location", text: location, prompt: Text("Jakarta, Indonesia"))
+                    eye(.location)
+                }
             }
             if kind == .experience || kind == .organizational {
-                TitlePicker("Work Arrangement", selection: $entry.workArrangement, options: WorkArrangement.allCases.map(\.title))
+                HStack {
+                    TitlePicker("Work Arrangement", selection: $entry.workArrangement, options: WorkArrangement.allCases.map(\.title))
+                    eye(.workArrangement)
+                }
             }
         } header: {
             HStack {
@@ -253,36 +262,32 @@ private struct EntryFields: View {
                 if entry.claudeTouched == true { ClaudeTag() }
             }
         }
-        if kind == .experience || kind == .organizational || kind == .education {
-            Section {
-                if kind == .experience {
-                    Toggle("Employment Types", isOn: option(\.showsEmploymentType, default: false))
-                }
-                if kind != .education {
-                    Toggle("Work Arrangements", isOn: option(\.showsWorkArrangement, default: false))
-                } else {
-                    Toggle("GPA or Score", isOn: option(\.showsGrade, default: true))
-                }
-            } header: {
-                Text("Show on Resume")
-            } footer: {
-                Text("For every entry in this resume.")
-            }
-        }
         if kind != .skills {
             datesSection
         }
         if kind == .education {
             Section("Academic Details") {
-                TextField("GPA or Score", text: optional(\.grade), prompt: Text("3.86/4.00"))
-                TextField("Thesis", text: optional(\.thesis), prompt: Text("Title of your thesis"), axis: .vertical)
+                HStack {
+                    TextField("GPA or Score", text: optional(\.grade), prompt: Text("3.86/4.00"))
+                    eye(.grade)
+                }
+                HStack {
+                    TextField("Thesis", text: optional(\.thesis), prompt: Text("Title of your thesis"), axis: .vertical)
+                    eye(.thesis)
+                }
             }
-            Section("Relevant Coursework") {
+            Section {
                 StringListEditor(
                     items: Binding(get: { entry.coursework ?? [] }, set: { entry.coursework = $0.isEmpty ? nil : $0 }),
                     prompt: String(localized: "Course name"),
                     addTitle: String(localized: "Add Course")
                 )
+            } header: {
+                HStack {
+                    Text("Relevant Coursework")
+                    Spacer()
+                    eye(.coursework)
+                }
             }
         }
         if kind != .skills {
@@ -294,9 +299,12 @@ private struct EntryFields: View {
                 )
             }
             Section {
-                TextField("Proof Link", text: optional(\.proofURL), prompt: Text("https://"))
+                HStack {
+                    TextField("Proof Link", text: optional(\.proofURL), prompt: Text("https://"))
+                    eye(.proof)
+                }
             } footer: {
-                Text("With Proof Check on in the ribbon, the title gets a small check and opens this link in the PDF.")
+                Text("The title gets a small check and opens this link in the PDF. Turn the check off for the whole resume with Proof Check in the ribbon.")
             }
         }
         Section {
@@ -368,13 +376,34 @@ private struct EntryFields: View {
         )
     }
 
-    /// A format option stored as an optional, where nil means its default.
-    private func option(_ field: WritableKeyPath<ResumeFormat, Bool?>, default value: Bool) -> Binding<Bool> {
-        Binding(get: { format[keyPath: field] ?? value }, set: { format[keyPath: field] = $0 })
+    /// Shows or hides one detail of this entry on the resume.
+    private func eye(_ detail: ResumeEntry.Detail) -> some View {
+        EyeToggle(isShown: Binding(
+            get: { entry.shows(detail, in: format) },
+            set: { entry.setShows(detail, $0) }
+        ))
     }
 
     private func optional(_ field: WritableKeyPath<ResumeEntry, String?>) -> Binding<String> {
         Binding(get: { entry[keyPath: field] ?? "" }, set: { entry[keyPath: field] = $0.isBlank ? nil : $0 })
+    }
+}
+
+/// An eye button: open shows the detail on the resume, crossed out hides it.
+struct EyeToggle: View {
+    @Binding var isShown: Bool
+
+    var body: some View {
+        Button {
+            isShown.toggle()
+        } label: {
+            Image(systemName: isShown ? "eye" : "eye.slash")
+                .foregroundStyle(isShown ? .secondary : .tertiary)
+                .frame(width: 20)
+        }
+        .buttonStyle(.borderless)
+        .help(isShown ? "Shown on the resume. Click to hide it." : "Hidden on the resume. Click to show it.")
+        .accessibilityLabel(isShown ? "Shown on resume" : "Hidden on resume")
     }
 }
 

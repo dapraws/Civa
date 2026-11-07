@@ -117,3 +117,45 @@ struct SkillGroupTests {
         #expect(SkillGroup(type: .soft, category: "Tools") != SkillGroup(type: .hard, category: "Tools"))
     }
 }
+
+/// The gap between entries is exactly the entry spacing: no hidden extra line.
+@MainActor
+struct HiddenSpacingTests {
+    @Test func entryGapHasNoHiddenLine() throws {
+        var document = ResumeDocument(header: ResumeHeader(fullName: "Raka Pratama"))
+        var experience = ResumeSection(kind: .experience)
+        experience.entries = [
+            ResumeEntry(title: "First Role", subtitle: "Acme", bullets: ["Did a thing"]),
+            ResumeEntry(title: "Second Role", subtitle: "Beta", bullets: ["Did another"]),
+        ]
+        document.sections = [experience]
+        document.format.entrySpacing = 0
+        let pdf = try #require(PDFDocument(data: ResumeRenderer.pdf(for: document)))
+        let page = try #require(pdf.page(at: 0))
+        let bullet = try #require(pdf.findString("Did a thing", withOptions: []).first).bounds(for: page)
+        let next = try #require(pdf.findString("Second Role", withOptions: []).first).bounds(for: page)
+        // Next title starts within about one line of the bullet above, not two.
+        #expect(bullet.minY - next.maxY < 6, "gap \(bullet.minY - next.maxY)")
+    }
+}
+
+/// The eye shows or hides a detail on one entry only; untouched entries follow the old defaults.
+@MainActor
+struct EntryVisibilityTests {
+    @Test func eyeHidesOneEntryOnly() throws {
+        var document = ResumeDocument(header: ResumeHeader(fullName: "Raka Pratama"))
+        var first = ResumeEntry(title: "iOS Engineer", subtitle: "Gojek · Jakarta", employmentType: "Full-time", location: "Jakarta")
+        first.setShows(.employmentType, true)
+        var second = ResumeEntry(title: "Intern", subtitle: "Tokopedia · Bandung", employmentType: "Internship", location: "Bandung")
+        second.setShows(.location, false)
+        var experience = ResumeSection(kind: .experience)
+        experience.entries = [first, second]
+        document.sections = [experience]
+        let text = try #require(PDFDocument(data: ResumeRenderer.pdf(for: document))?.string)
+        #expect(text.contains("Full-time"))
+        #expect(!text.contains("Internship"))  // employment types are off by default
+        #expect(text.contains("Jakarta"))
+        #expect(!text.contains("Bandung"))
+        #expect(text.contains("Tokopedia"))
+    }
+}

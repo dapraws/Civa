@@ -11,7 +11,9 @@ import UniformTypeIdentifiers
 /// "Import": a CV (FR-020) or LinkedIn's data export (FR-021), then review what was found.
 struct ImportMenu: View {
     @Environment(UnsavedChangesGuard.self) private var changes
-    @State private var choosing: ImportRequest.Kind?
+    @State private var isChoosing = false
+    /// Kept apart from `isChoosing`: the panel closes, clearing that, before the chosen file arrives.
+    @State private var kind = ImportRequest.Kind.cv
     @State private var request: ImportRequest?
 
     var body: some View {
@@ -25,11 +27,10 @@ struct ImportMenu: View {
         .menuIndicator(.hidden)
         .help("Add your details from a CV, a LinkedIn PDF, or a LinkedIn data export")
         .fileImporter(
-            isPresented: Binding(get: { choosing != nil }, set: { if !$0 { choosing = nil } }),
-            allowedContentTypes: choosing == .linkedInExport ? [.zip, .folder] : CVTextExtractor.contentTypes
+            isPresented: $isChoosing,
+            allowedContentTypes: kind == .linkedInExport ? [.zip, .folder] : CVTextExtractor.contentTypes
         ) { result in
-            if case .success(let url) = result, let kind = choosing { request = ImportRequest(url: url, kind: kind) }
-            choosing = nil
+            if case .success(let url) = result { request = ImportRequest(url: url, kind: kind) }
         }
         .sheet(item: $request) { ImportReviewSheet(request: $0) }
         #if DEBUG
@@ -47,7 +48,10 @@ struct ImportMenu: View {
     }
 
     private func choose(_ kind: ImportRequest.Kind) {
-        changes.perform { choosing = kind }
+        changes.perform {
+            self.kind = kind
+            isChoosing = true
+        }
     }
 }
 
