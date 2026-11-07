@@ -14,12 +14,14 @@ import Foundation
 nonisolated enum CVParser {
     private enum Heading {
         case category(ImportCategory)
+        /// "Achievements, Projects, Certificates, and Skills": one line per item, each labeled.
+        case mixed
         case summary
         case other
     }
 
     static func parse(_ text: String) -> ImportDraft {
-        let lines = text.components(separatedBy: .newlines).map(clean).filter { !$0.isEmpty }
+        let lines = text.components(separatedBy: .newlines).map { closeHyphens(clean($0)) }.filter { !$0.isEmpty }
         var header: [String] = []
         var sections: [(heading: Heading, title: String, body: [String])] = []
         for line in lines {
@@ -42,6 +44,10 @@ nonisolated enum CVParser {
                 draft.unsorted += leftovers
             case .category(let category):
                 draft.items += parseEntries(section.body, category: category)
+            case .mixed:
+                let (items, leftovers) = parseMixed(section.body)
+                draft.items += items
+                draft.unsorted += leftovers
             case .summary, .other:
                 if !section.body.isEmpty { draft.unsorted += [section.title] + section.body }
             }
@@ -55,6 +61,25 @@ nonisolated enum CVParser {
         line.replacingOccurrences(of: "\u{00A0}", with: " ")
             .split(whereSeparator: \.isWhitespace)
             .joined(separator: " ")
+    }
+
+    /// "AI- powered" becomes "AI-powered": some PDFs store a hyphen with a space after it.
+    /// A spaced dash between words ("Telkom University - Bandung") is left alone.
+    static func closeHyphens(_ line: String) -> String {
+        line.replacingOccurrences(of: #"(?<=\p{L})- (?=\p{L})"#, with: "-", options: .regularExpression)
+    }
+
+    /// The next line continues this one: no sentence end yet and it starts in lowercase, or
+    /// this one breaks a word with a hyphen.
+    static func continues(_ line: String, with next: String) -> Bool {
+        guard let first = next.first else { return false }
+        if line.hasSuffix("-") { return true }
+        return !".!?:;".contains(line.last ?? ".") && first.isLowercase
+    }
+
+    /// Joins `next` onto `line`, without a space after a hyphen that broke a word.
+    static func join(_ line: String, _ next: String) -> String {
+        line.hasSuffix("-") ? line + next : line + " " + next
     }
 
     private static let bulletMarks: Set<Character> = ["•", "·", "▪", "●", "◦", "‣", "-", "–", "*", "○", "■", "♦"]
@@ -120,11 +145,55 @@ nonisolated enum CVParser {
     }()
 
     private static func heading(for line: String) -> Heading? {
-        guard line.count <= 45, bulletText(line) == nil else { return nil }
-        let key = line.lowercased()
+        guard line.count <= 60, bulletText(line) == nil, !line.contains(where: \.isNumber) else { return nil }
+        let key = clean(line.lowercased()
             .replacingOccurrences(of: "&", with: " and ")
-            .filter { $0.isLetter || $0 == " " }
-        return headings[clean(key)]
+            .map { $0.isLetter ? $0 : " " }
+            .reduce(into: "") { $0.append($1) })
+        if let heading = headings[key] { return heading }
+        return headingByWords(key.split(separator: " ").map(String.init))
+    }
+
+    /// Words a section heading can be made of. A line made only of these is a heading, so
+    /// "Education Level" is one and "Project Manager" isn't.
+    private static let headingWords: Set<String> = [
+        "experience", "experiences", "professional", "work", "relevant", "additional", "other", "employment", "history",
+        "career", "internship", "internships", "organizational", "organisational", "organization", "organizations",
+        "organisations", "leadership", "volunteer", "volunteering", "extracurricular", "activities", "education",
+        "educational", "level", "academic", "background", "projects", "project", "personal", "selected", "portfolio",
+        "achievements", "achievement", "awards", "award", "honors", "honours", "accomplishments", "certifications",
+        "certification", "certificates", "certificate", "licenses", "licences", "courses", "training", "skills", "skill",
+        "technical", "tools", "technologies", "and", "summary", "profile", "about", "me", "languages", "interests",
+        "pengalaman", "kerja", "profesional", "organisasi", "kepanitiaan", "pendidikan", "riwayat", "proyek", "projek",
+        "prestasi", "penghargaan", "sertifikat", "sertifikasi", "pelatihan", "keahlian", "keterampilan", "kemampuan",
+        "dan", "lainnya", "tambahan",
+    ]
+
+    /// Which category each heading word points to. Organizational words win over "experience",
+    /// so "Additional Experience" and "Leadership Experience" are organizational.
+    private static let headingKeywords: [(category: ImportCategory, words: Set<String>)] = [
+        (.organizational, ["organizational", "organisational", "organization", "organizations", "organisations", "leadership",
+                           "volunteer", "volunteering", "extracurricular", "activities", "additional", "organisasi",
+                           "kepanitiaan", "tambahan"]),
+        (.education, ["education", "educational", "academic", "pendidikan"]),
+        (.projects, ["projects", "project", "portfolio", "proyek", "projek"]),
+        (.achievements, ["achievements", "achievement", "awards", "award", "honors", "honours", "accomplishments",
+                         "prestasi", "penghargaan"]),
+        (.certifications, ["certifications", "certification", "certificates", "certificate", "licenses", "licences",
+                           "courses", "training", "sertifikat", "sertifikasi", "pelatihan"]),
+        (.skills, ["skills", "skill", "tools", "technologies", "keahlian", "keterampilan", "kemampuan"]),
+        (.experience, ["experience", "experiences", "work", "employment", "internship", "internships", "career", "pengalaman", "kerja"]),
+    ]
+
+    private static func headingByWords(_ words: [String]) -> Heading? {
+        guard !words.isEmpty, words.count <= 7, words.allSatisfy(headingWords.contains) else { return nil }
+        let found = headingKeywords.filter { !$0.words.isDisjoint(with: words) }.map(\.category)
+        // Several item kinds named in one heading, beyond organizational's own "experience".
+        let kinds = Set(found).subtracting(found.contains(.organizational) ? [.experience] : [])
+        if kinds.count > 1 { return .mixed }
+        if let category = found.first { return .category(category) }
+        if !Set(words).isDisjoint(with: ["summary", "profile", "about"]) { return .summary }
+        return .other
     }
 
     // MARK: - Header
@@ -263,8 +332,19 @@ nonisolated enum CVParser {
     private static func parseEntries(_ lines: [String], category: ImportCategory) -> [ImportItem] {
         var blocks: [Block] = []
         for line in lines {
+            // A wrapped line continues the bullet above it.
+            if bulletText(line) == nil, let last = blocks.last?.bullets.last, continues(last, with: line) {
+                blocks[blocks.count - 1].bullets[blocks[blocks.count - 1].bullets.count - 1] = join(last, line)
+                continue
+            }
             if let bullet = bulletText(line) {
                 if blocks.isEmpty { blocks.append(Block()) }
+                // "- Remote" wrapped off the dates line is the location, not a bullet.
+                let block = blocks[blocks.count - 1]
+                if block.bullets.isEmpty, block.dates != nil, block.texts.count == 1, isLocation(bullet) {
+                    blocks[blocks.count - 1].texts[0] += " - " + bullet
+                    continue
+                }
                 blocks[blocks.count - 1].bullets.append(bullet)
             } else if let dates = dateLine(line), !isSentence(line) {
                 if blocks.isEmpty || blocks[blocks.count - 1].dates != nil || !blocks[blocks.count - 1].bullets.isEmpty {
@@ -299,7 +379,11 @@ nonisolated enum CVParser {
         item.bullets = block.bullets
 
         var texts = block.texts
-        if texts.count == 1 {
+        // MIT-style entries: "Organization - Location" with the dates, the role on the next line.
+        if block.dates != nil, texts.count >= 2, let (organization, location) = splitLocation(texts[0]) {
+            item.location = location
+            texts = [texts[1], organization] + texts.dropFirst(2)
+        } else if texts.count == 1 {
             texts = splitTitle(texts[0])
         }
         item.title = texts.first ?? ""
@@ -340,6 +424,26 @@ nonisolated enum CVParser {
         return type
     }
 
+    /// "Acme Labs - Bali, Indonesia" as the organization and its location, split at the last
+    /// dash or bar, when what follows reads as a place.
+    static func splitLocation(_ text: String) -> (String, String)? {
+        for separator in [" - ", " – ", " — ", " | "] {
+            guard let range = text.range(of: separator, options: .backwards) else { continue }
+            let place = clean(String(text[range.upperBound...]))
+            let organization = clean(String(text[..<range.lowerBound]))
+            if !organization.isEmpty, isLocation(place) { return (organization, place) }
+        }
+        return nil
+    }
+
+    /// "Bandung, Indonesia", "Remote", "Jakarta": short, and a city with its region or a work mode.
+    static func isLocation(_ text: String) -> Bool {
+        let lower = text.lowercased()
+        if ["remote", "hybrid", "on-site", "onsite", "online", "work from home", "wfh"].contains(lower) { return true }
+        let words = text.split(separator: " ")
+        return text.contains(",") && words.count <= 5 && words.allSatisfy { $0.first?.isUppercase == true }
+    }
+
     /// "iOS Engineer — Tokopedia", "iOS Engineer at Tokopedia", "Tokopedia | iOS Engineer".
     private static func splitTitle(_ text: String) -> [String] {
         for separator in [" — ", " – ", " - ", " | ", " at ", " di ", " @ ", ", "] {
@@ -354,6 +458,47 @@ nonisolated enum CVParser {
     private static func isInstitution(_ text: String) -> Bool {
         let lower = text.lowercased() + " "
         return institutionWords.contains { lower.contains($0) }
+    }
+
+    // MARK: - Combined sections
+
+    /// One labeled line per item: "Achievements (2025): Best Pitching | Hack Batch",
+    /// "Certificate (2024): Cloud Fundamentals | Example Cloud", "Hard Skills: Python, Swift".
+    /// A line without a label continues the one above.
+    private static func parseMixed(_ lines: [String]) -> (items: [ImportItem], leftovers: [String]) {
+        let label = /^([^:()]{1,40}?)\s*(?:\((\d{4})\))?\s*:\s*(.*)$/
+        var joined: [String] = []
+        for line in lines {
+            if let last = joined.last, line.firstMatch(of: label) == nil {
+                joined[joined.count - 1] = last.hasSuffix("|") || last.hasSuffix("-") ? join(last, line) : last + ", " + line
+            } else {
+                joined.append(line)
+            }
+        }
+        var items: [ImportItem] = []
+        var skillLines: [String] = []
+        var leftovers: [String] = []
+        for line in joined {
+            guard let match = line.firstMatch(of: label) else {
+                leftovers.append(line)
+                continue
+            }
+            let name = clean(String(match.output.1))
+            let words = Set(name.lowercased().split(separator: " ").map(String.init))
+            let category = headingKeywords.first { !$0.words.isDisjoint(with: words) }?.category ?? .projects
+            if category == .skills {
+                skillLines.append("\(name): \(match.output.3)")
+                continue
+            }
+            let parts = String(match.output.3).components(separatedBy: " | ").map(clean)
+            var item = ImportItem(category: category == .experience || category == .organizational ? .projects : category)
+            item.title = parts.first ?? ""
+            item.subtitle = parts.dropFirst().joined(separator: " · ")
+            item.start = match.output.2.flatMap { Int($0) }.map { YearMonth(year: $0) }
+            items.append(item)
+        }
+        let (skills, skillLeftovers) = parseSkills(skillLines)
+        return (items + skills, leftovers + skillLeftovers)
     }
 
     // MARK: - Skills

@@ -113,54 +113,56 @@ struct ImportReviewSheet: View {
         .background(.background.secondary)
     }
 
+    /// Laid out in full rather than as a lazy form: rows of different heights (wrapped bullets)
+    /// made the lazy list jump to an estimated position when a field was clicked.
     private var review: some View {
-        Form {
-            personalSection
-            ForEach(ImportCategory.allCases) { category in
-                let indices = draft.items.indices.filter { draft.items[$0].category == category }
-                if !indices.isEmpty {
-                    if category == .skills {
-                        Section {
-                            ForEach(indices, id: \.self) { SkillRow(item: $draft.items[$0]) }
-                        } header: {
-                            categoryHeader(category, count: indices.count)
-                        }
-                    } else {
-                        ForEach(indices, id: \.self) { index in
-                            Section {
-                                ImportItemFields(
-                                    item: $draft.items[index],
-                                    existing: draft.items[index].matchID.flatMap { draft.existing[$0] },
-                                    sourceName: request.sourceName
-                                )
-                            } header: {
-                                if index == indices.first { categoryHeader(category, count: indices.count) }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                personalSection
+                ForEach(ImportCategory.allCases) { category in
+                    let indices = draft.items.indices.filter { draft.items[$0].category == category }
+                    if !indices.isEmpty {
+                        categoryHeader(category, count: indices.count)
+                        if category == .skills {
+                            ReviewGroup {
+                                ForEach(indices, id: \.self) { SkillRow(item: $draft.items[$0]) }
+                            }
+                        } else {
+                            ForEach(indices, id: \.self) { index in
+                                ReviewGroup {
+                                    ImportItemFields(
+                                        item: $draft.items[index],
+                                        existing: draft.items[index].matchID.flatMap { draft.existing[$0] },
+                                        sourceName: request.sourceName
+                                    )
+                                }
                             }
                         }
                     }
                 }
-            }
-            if !draft.unsorted.isEmpty {
-                Section {
-                    ForEach(draft.unsorted.indices, id: \.self) { index in
-                        Text(draft.unsorted[index])
-                            .textSelection(.enabled)
+                if !draft.unsorted.isEmpty {
+                    Text("Not Sorted").font(.headline)
+                    ReviewGroup {
+                        ForEach(draft.unsorted.indices, id: \.self) { index in
+                            Text(draft.unsorted[index])
+                                .textSelection(.enabled)
+                        }
                     }
-                } header: {
-                    Text("Not Sorted")
-                } footer: {
                     Text("Lines Civa couldn't place. They aren't added; copy anything you need into your profile.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
                 }
             }
+            .padding(20)
         }
-        .formStyle(.grouped)
         .startsWithoutFocus()
     }
 
     @ViewBuilder
     private var personalSection: some View {
         if !draft.personal.isEmpty {
-            Section {
+            Text("Personal Information").font(.headline)
+            ReviewGroup {
                 Toggle("Add Personal Information", isOn: $draft.personal.isIncluded)
                 if draft.personal.isIncluded {
                     TextField("Full Name", text: $draft.personal.fullName)
@@ -177,18 +179,17 @@ struct ImportReviewSheet: View {
                         makeItem: { ProfileLink(label: "", url: "") }
                     )
                 }
-            } header: {
-                Text("Personal Information")
-            } footer: {
-                if personalInfo.first != nil {
-                    Text("You already have Personal Information. Only its empty fields are filled; nothing is overwritten.")
-                }
+            }
+            if personalInfo.first != nil {
+                Text("You already have Personal Information. Only its empty fields are filled; nothing is overwritten.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
             }
         }
     }
 
     private func categoryHeader(_ category: ImportCategory, count: Int) -> some View {
-        Text("\(category.title) (\(count))")
+        Text("\(category.title) (\(count))").font(.headline)
     }
 
     private var actions: some View {
@@ -355,6 +356,19 @@ private struct SkillRow: View {
                 .frame(maxWidth: 180)
             ImportTag(item: item)
         }
+    }
+}
+
+/// One card of fields, labels in a column on the left, like a grouped form.
+private struct ReviewGroup<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        Form { content }
+            .formStyle(.columns)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+            .background(.background.secondary, in: .rect(cornerRadius: 10))
     }
 }
 
