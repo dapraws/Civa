@@ -94,7 +94,8 @@ struct ResumeFormatBar: View {
                         .toggleStyle(.checkbox)
                         .help("A line under each section heading")
                     Picker("Thickness", selection: Binding(get: { format.dividerWidth }, set: { format.dividerWeight = $0 })) {
-                        ForEach(ResumeFormat.dividerWeights, id: \.self) { Text("\($0.formatted()) pt").tag($0) }
+                        // "0.5 pt" with a point, like the other spacing values, whatever the Mac's language.
+                        ForEach(ResumeFormat.dividerWeights, id: \.self) { Text(String(format: "%g pt", $0)).tag($0) }
                     }
                     .disabled(!format.dividers)
                     .labelsHidden()

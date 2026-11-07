@@ -134,6 +134,35 @@ nonisolated struct ResumeEntry: Codable, Hashable, Identifiable {
     var sourceCopy: SourceCopy?
     /// Claude wrote part of this entry and it hasn't been edited since; the editor tags it.
     var claudeTouched: Bool?
+    /// Details the user showed or hid on this entry with the eye, by `Detail` raw value.
+    /// A detail with no choice follows its default.
+    var visibility: [String: Bool]?
+
+    /// Optional details each entry can show or hide on its own.
+    enum Detail: String, CaseIterable {
+        case employmentType, workArrangement, location, grade, thesis, coursework, proof
+
+        /// Before the eye, employment types, work arrangements, and grades were switched for the
+        /// whole resume; those choices stay the default, so older resumes print as they did.
+        func shownByDefault(in format: ResumeFormat) -> Bool {
+            switch self {
+            case .employmentType: format.showsEmploymentType == true
+            case .workArrangement: format.showsWorkArrangement == true
+            case .grade: format.showsGrade != false
+            case .location, .thesis, .coursework, .proof: true
+            }
+        }
+    }
+
+    func shows(_ detail: Detail, in format: ResumeFormat) -> Bool {
+        visibility?[detail.rawValue] ?? detail.shownByDefault(in: format)
+    }
+
+    mutating func setShows(_ detail: Detail, _ isShown: Bool) {
+        var visibility = self.visibility ?? [:]
+        visibility[detail.rawValue] = isShown
+        self.visibility = visibility
+    }
 
     /// Whether the dates come from pickers rather than typed text.
     var hasDateValues: Bool { start != nil || end != nil || isCurrent == true }
@@ -246,13 +275,13 @@ nonisolated struct ResumeFormat: Codable, Hashable {
     var showsSummaryHeading: Bool?
     /// Left and right. Same as `margins` when nil.
     var sideMargins: Margins?
-    /// Points between entries in a section. 4 when nil.
+    /// Points between entries in a section. 8 when nil.
     var entrySpacing: Double?
     /// Divider thickness in points. 0.5 when nil.
     var dividerWeight: Double?
 
     var sideMargin: Margins { sideMargins ?? margins }
-    var entryGap: Double { entrySpacing ?? 4 }
+    var entryGap: Double { entrySpacing ?? 8 }
     var dividerWidth: Double { dividerWeight ?? 0.5 }
 
     /// The layout's look. Every template is single-column and text-based (BR-001).

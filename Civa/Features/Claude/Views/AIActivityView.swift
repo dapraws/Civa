@@ -24,23 +24,41 @@ struct AIActivityView: View {
     @Query(sort: \ClaudeActivity.date, order: .reverse) private var activity: [ClaudeActivity]
 
     var body: some View {
+        Group {
+            // Empty tabs fill the page with one centered message instead of a card in a form.
+            if tab == .suggestions, proposals.isEmpty {
+                empty("No Suggestions to Review", "What Claude suggests appears here and on the page it's about. Nothing changes until you apply it.")
+            } else if tab == .requests, requests.isEmpty {
+                empty("Nothing Asked Yet", "Use the orange Ask Claude buttons on resumes, experience, projects, and applications.")
+            } else if tab == .log, activity.isEmpty {
+                empty("No Activity Yet", "Everything Claude reads or suggests is logged here.")
+            } else {
+                list
+            }
+        }
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Picker("Show", selection: $tab) {
+                    Text("Suggestions").tag(Tab.suggestions)
+                    Text("Requests").tag(Tab.requests)
+                    Text("Log").tag(Tab.log)
+                }
+                .pickerStyle(.segmented)
+                .fixedSize()
+            }
+        }
+    }
+
+    private var list: some View {
         Form {
             switch tab {
             case .suggestions:
-                if proposals.isEmpty {
-                    empty("No Suggestions to Review", "What Claude suggests appears here and on the page it's about. Nothing changes until you apply it.")
-                } else {
-                    Section {
-                        ForEach(proposals) { ClaudeProposalRow(proposal: $0) }
-                    }
+                Section {
+                    ForEach(proposals) { ClaudeProposalRow(proposal: $0) }
                 }
             case .requests:
-                if requests.isEmpty {
-                    empty("Nothing Asked Yet", "Use the orange Ask Claude buttons on resumes, experience, projects, and applications.")
-                } else {
-                    Section {
-                        ForEach(requests) { ClaudeRequestRow(request: $0, showsAll: true) }
-                    }
+                Section {
+                    ForEach(requests) { ClaudeRequestRow(request: $0, showsAll: true) }
                 }
             case .log:
                 let entries = activity.filter { (kind == nil || $0.kind == kind) && (category == nil || $0.category == category) }
@@ -65,22 +83,15 @@ struct AIActivityView: View {
             }
         }
         .formStyle(.grouped)
-        .toolbar {
-            ToolbarItem(placement: .principal) {
-                Picker("Show", selection: $tab) {
-                    Text("Suggestions").tag(Tab.suggestions)
-                    Text("Requests").tag(Tab.requests)
-                    Text("Log").tag(Tab.log)
-                }
-                .pickerStyle(.segmented)
-                .fixedSize()
-            }
-        }
     }
 
     private func empty(_ title: LocalizedStringKey, _ message: LocalizedStringKey) -> some View {
         ContentUnavailableView {
-            Label(title, systemImage: "sparkles").foregroundStyle(.claude)
+            Label {
+                Text(title)
+            } icon: {
+                Image(systemName: "sparkles").foregroundStyle(.claude)
+            }
         } description: {
             Text(message)
         }

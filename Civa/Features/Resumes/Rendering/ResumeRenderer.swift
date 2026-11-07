@@ -62,7 +62,10 @@ enum ResumeRenderer {
 
         beginPage()
         for block in blocks(for: document, style: style) {
-            let height = style.height(of: block.text)
+            // Without the final line break: text layout turns it into an empty extra line,
+            // which added about a line of hidden space under every block.
+            let text = block.text.droppingFinalLineBreak
+            let height = style.height(of: text)
             // The space above is added here, not as paragraph spacing: text drawing ignores
             // spacing before the first line it draws. None at the top of a page.
             var gap = y > margin ? block.spacingBefore : 0
@@ -80,7 +83,7 @@ enum ResumeRenderer {
                 firstLine = line.offsetBy(dx: side, dy: y)
                 lineShown = true
             }
-            block.text.draw(
+            text.draw(
                 with: CGRect(x: side, y: y, width: style.width, height: height),
                 options: [.usesLineFragmentOrigin, .usesFontLeading]
             )
@@ -167,8 +170,8 @@ enum ResumeRenderer {
             context.setLineDash(phase: 0, lengths: [])
             verticalBeam(in: context, x: page.width / 2, from: 0, to: margin)
             pill(String(localized: "Top \(format.margins.inches)"), leading: CGPoint(x: page.width / 2 + 6, y: margin / 2))
-            // Low on the page, clear of the section guides near the top.
-            let y = page.height - margin - 24
+            // In the bottom margin, where it can't cover text or the section guides.
+            let y = page.height - margin / 2
             horizontalBeam(in: context, y: y, from: 0, to: side)
             pill(String(localized: "Side \(format.sideMargin.inches)"), leading: CGPoint(x: side + 4, y: y))
         }
@@ -333,13 +336,13 @@ enum ResumeRenderer {
     ) -> NSRange {
         let format = style.format
         var title = entry.title
-        if kind == .education, format.showsGrade != false, let grade = entry.grade, !grade.isBlank {
+        if kind == .education, entry.shows(.grade, in: format), let grade = entry.grade, !grade.isBlank {
             title = [title, grade].filter { !$0.isBlank }.joined(separator: ", ")
         }
         let dates = entry.datesText(format.dateStyle ?? .short)
         let details = [
-            format.showsEmploymentType == true ? entry.employmentType ?? "" : "",
-            format.showsWorkArrangement == true ? entry.workArrangement ?? "" : "",
+            entry.shows(.employmentType, in: format) ? entry.employmentType ?? "" : "",
+            entry.shows(.workArrangement, in: format) ? entry.workArrangement ?? "" : "",
         ].filter { !$0.isBlank }
         let organization = entry.organization
         let organizationFirst = [.experience, .organizational, .education].contains(kind)
@@ -347,7 +350,7 @@ enum ResumeRenderer {
 
         let titleRange: NSRange
         if organizationFirst {
-            let location = entry.location ?? ""
+            let location = entry.shows(.location, in: format) ? entry.location ?? "" : ""
             let titleText = ([title] + details).filter { !$0.isBlank }.joined(separator: " · ")
             // MIT and Harvard: organization … location, then title … dates. Tech: organization …
             // dates, then title … location.
@@ -360,16 +363,17 @@ enum ResumeRenderer {
             let start = text.length
             text.append(style.text(tabbed(title, dates), bold: true, rightTab: style.width))
             titleRange = NSRange(location: start, length: max(1, (title as NSString).length))
-            let subtitle = ([entry.subtitle] + details).filter { !$0.isBlank }.joined(separator: " · ")
+            // A hidden location comes off the end of the subtitle too.
+            let subtitle = ([entry.shows(.location, in: format) ? entry.subtitle : organization] + details).filter { !$0.isBlank }.joined(separator: " · ")
             if !subtitle.isBlank {
                 text.append(style.text(subtitle, italic: true, after: 1))
             }
         }
         if kind == .education {
-            if let thesis = entry.thesis, !thesis.isBlank {
+            if entry.shows(.thesis, in: format), let thesis = entry.thesis, !thesis.isBlank {
                 text.append(labeled(String(localized: "Thesis"), thesis, style: style))
             }
-            let coursework = (entry.coursework ?? []).filter { !$0.isBlank }
+            let coursework = entry.shows(.coursework, in: format) ? (entry.coursework ?? []).filter { !$0.isBlank } : []
             if !coursework.isEmpty {
                 text.append(labeled(String(localized: "Relevant Coursework"), coursework.joined(separator: ", "), style: style))
             }
@@ -407,10 +411,17 @@ enum ResumeRenderer {
     }
 }
 
+private extension NSAttributedString {
+    var droppingFinalLineBreak: NSAttributedString {
+        guard string.hasSuffix("\n") else { return self }
+        return attributedSubstring(from: NSRange(location: 0, length: length - 1))
+    }
+}
+
 nonisolated extension ResumeEntry {
     /// The proof to link and mark, when the resume links proof.
     func proofLink(_ format: ResumeFormat) -> URL? {
-        format.linksProof == false ? nil : proofURL.flatMap(URL.webLink)
+        format.linksProof == false || !shows(.proof, in: format) ? nil : proofURL.flatMap(URL.webLink)
     }
 
     /// The subtitle without the location at its end: "Gojek" from "Gojek · Jakarta, Indonesia".
