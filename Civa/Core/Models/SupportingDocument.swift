@@ -26,6 +26,19 @@ nonisolated enum DocumentKind: String, Codable, CaseIterable, Identifiable {
         }
     }
 
+    /// The heading over this kind's group in Documents.
+    var groupTitle: String {
+        switch self {
+        case .certificate: String(localized: "Certificates")
+        case .projectDocument: String(localized: "Project Documents")
+        case .portfolio: String(localized: "Portfolio")
+        case .jobPosting: String(localized: "Job Postings")
+        case .coverLetter: String(localized: "Cover Letters")
+        case .offerLetter: String(localized: "Offer Letters")
+        case .other: String(localized: "Other")
+        }
+    }
+
     var systemImage: String {
         switch self {
         case .certificate: "rosette"
@@ -183,4 +196,13 @@ extension Achievement: DocumentOwner {
 }
 extension Certification: DocumentOwner {
     var proofLink: String { credentialURL }
+}
+
+nonisolated extension SupportingDocument {
+    /// Documents grouped by kind in the kinds' order, newest first within a kind.
+    static func galleryOrder(_ a: SupportingDocument, _ b: SupportingDocument) -> Bool {
+        let kinds = DocumentKind.allCases
+        let (ka, kb) = (kinds.firstIndex(of: a.kind) ?? kinds.count, kinds.firstIndex(of: b.kind) ?? kinds.count)
+        return ka != kb ? ka < kb : a.createdAt > b.createdAt
+    }
 }

@@ -10,7 +10,7 @@ import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Supporting documents as a gallery, filterable by kind (FR-022).
+/// Supporting documents as a gallery grouped by kind under a heading each, filterable by kind (FR-022).
 struct DocumentsView: View {
     @Environment(\.modelContext) private var context
     @Environment(UnsavedChangesGuard.self) private var changes
@@ -30,9 +30,10 @@ struct DocumentsView: View {
                 systemImage: AppSection.documents.systemImage
             ),
             filter: kind.map { raw in #Predicate<SupportingDocument> { $0.kindRaw == raw.rawValue } },
-            order: { $0.createdAt > $1.createdAt },
+            order: SupportingDocument.galleryOrder,
             cardWidth: 170,
             makeRecord: { SupportingDocument(name: "", fileName: "", data: Data()) },
+            section: { $0.kind.groupTitle },
             onAdd: { isChoosing = true },
             card: { DocumentCard(document: $0) },
             editor: { DocumentForm(editor: $0) }

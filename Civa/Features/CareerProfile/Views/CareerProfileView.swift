@@ -36,6 +36,8 @@ struct CareerProfileView: View {
                     ImportMenu()
                 }
             }
+            // The sidebar already names the page; the tabs need the room at the smallest window size.
+            .toolbar(removing: .title)
     }
 
     @ViewBuilder

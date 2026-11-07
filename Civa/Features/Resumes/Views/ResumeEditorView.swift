@@ -33,8 +33,8 @@ struct ResumeEditorView: View {
     var body: some View {
         let document = editor.binding(\.document)
         GeometryReader { proxy in
-            // The fields column takes what's left and keeps at least 280 pt.
-            let previewRange = 280...max(280, proxy.size.width - outlineWidth - 282)
+            // The fields column takes what's left and keeps at least 320 pt, so labels and values don't overlap.
+            let previewRange = 280...max(280, proxy.size.width - outlineWidth - 322)
             HStack(spacing: 0) {
                 ResumeOutlineView(document: document, selection: $selection)
                     .frame(width: outlineWidth)

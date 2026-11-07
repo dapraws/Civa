@@ -35,7 +35,7 @@ struct RootView: View {
                     Label(section.title, systemImage: section.systemImage)
                 }
             }
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
+            .navigationSplitViewColumnWidth(min: 190, ideal: 200)
             #if DEBUG
             .safeAreaInset(edge: .bottom) {
                 if DataMode.usesSampleData {
@@ -53,7 +53,8 @@ struct RootView: View {
                 .navigationTitle(navigation.section.title)
         }
         .environment(navigation)
-        .frame(minWidth: 1000, minHeight: 600)
+        // Wide enough for the Career Profile tabs and the resume editor's three columns at their minimums.
+        .frame(minWidth: 1100, minHeight: 640)
         .onChange(of: bridge.isEnabled, initial: true) { _, enabled in
             ClaudeTip.isConnected = enabled
             if !enabled, navigation.section == .aiActivity { navigation.section = .dashboard }
