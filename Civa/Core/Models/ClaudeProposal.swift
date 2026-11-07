@@ -81,20 +81,69 @@ nonisolated final class ClaudeProposal {
         case pending, applied, dismissed
     }
 
-    /// `resumeEdit`: entries are matched by their id in the resume.
+    /// One of the versions Claude offers for a change, like "Concise" or "With Numbers".
+    /// Text fields use `text`; bullets and impacts use `lines`.
+    struct Version: Codable, Hashable {
+        var label: String
+        var text: String?
+        var title: String?
+        var subtitle: String?
+        var lines: [String]?
+    }
+
+    /// `resumeEdit`: entries are matched by their id in the resume. Each change is either one
+    /// value or 2–3 options to pick from.
     struct ResumeEdit: Codable, Hashable {
         struct Entry: Codable, Hashable {
             var entryID: UUID
             var title: String?
             var subtitle: String?
             var bullets: [String]?
+            var options: [Version]?
+
+            /// The options, or the one suggested value.
+            var versions: [Version] {
+                options ?? [Version(label: "", title: title, subtitle: subtitle, lines: bullets)]
+            }
+        }
+
+        /// Which change a pick is for.
+        enum Change: Hashable {
+            case summary
+            case entry(UUID)
         }
 
         var summary: String?
+        var summaryOptions: [Version]?
         var entries: [Entry] = []
+
+        var summaryVersions: [Version] {
+            summaryOptions ?? summary.map { [Version(label: "", text: $0)] } ?? []
+        }
+
+        var hasOptions: Bool {
+            summaryOptions != nil || entries.contains { $0.options != nil }
+        }
+
+        /// The edit with the picked version of each change. A change with one value needs no
+        /// pick; a change with options and no pick is left out (the user kept theirs).
+        func resolved(_ picks: [Change: Int]) -> ResumeEdit {
+            func pick(_ versions: [Version], _ change: Change) -> Version? {
+                if versions.count == 1 { return versions[0] }
+                return picks[change].flatMap { versions.indices.contains($0) ? versions[$0] : nil }
+            }
+            return ResumeEdit(
+                summary: pick(summaryVersions, .summary)?.text,
+                entries: entries.compactMap { entry in
+                    pick(entry.versions, .entry(entry.entryID)).map {
+                        Entry(entryID: entry.entryID, title: $0.title, subtitle: $0.subtitle, bullets: $0.lines)
+                    }
+                }
+            )
+        }
     }
 
-    /// `recordEdit`: one field, as text or as lines.
+    /// `recordEdit`: one field, as text or as lines, or 2–3 options to pick from.
     struct RecordEdit: Codable, Hashable {
         enum Field: String, Codable, CaseIterable {
             case impacts, details, summary, headline
@@ -103,6 +152,17 @@ nonisolated final class ClaudeProposal {
         var field: Field
         var text: String?
         var lines: [String]?
+        var options: [Version]?
+
+        var versions: [Version] {
+            options ?? [Version(label: "", text: text, lines: lines)]
+        }
+
+        /// The edit with one version picked.
+        func resolved(_ index: Int) -> RecordEdit {
+            let version = versions[min(max(index, 0), versions.count - 1)]
+            return RecordEdit(field: field, text: version.text, lines: version.lines)
+        }
     }
 
     /// `profileImport`: what Claude read, in the import review's terms.
