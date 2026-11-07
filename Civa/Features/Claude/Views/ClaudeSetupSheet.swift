@@ -55,6 +55,10 @@ struct ClaudeSetupSheet: View {
                     Text("1. Connect")
                 }
 
+                if isConnected {
+                    ClaudePermissionsSection()
+                }
+
                 Section {
                     Text("Quit Claude Desktop with ⌘Q, then open it again so it finds Civa.")
                     Button("Open Claude Desktop") { ClaudeDesktopConfig.openClaude() }
@@ -78,7 +82,7 @@ struct ClaudeSetupSheet: View {
                 } header: {
                     Text("3. Test")
                 } footer: {
-                    Text("Next, choose what Claude may read in Settings.")
+                    Text("You can change what Claude may use any time in Settings.")
                 }
             }
             .formStyle(.grouped)
@@ -90,7 +94,7 @@ struct ClaudeSetupSheet: View {
             }
             .padding()
         }
-        .frame(width: 520, height: 600)
+        .frame(width: 560, height: 680)
     }
 
     private func connect() {
@@ -115,6 +119,22 @@ struct ClaudeSettingsSection: View {
     @State private var error: String?
 
     var body: some View {
+        Group {
+            statusSection
+            if bridge.isEnabled {
+                ClaudePermissionsSection()
+                ClaudeRecentActivitySection()
+            }
+        }
+        .sheet(isPresented: $isSettingUp) { ClaudeSetupSheet() }
+        .confirmationDialog("Disconnect Claude Desktop?", isPresented: $isConfirmingDisconnect) {
+            Button("Disconnect", role: .destructive, action: disconnect)
+        } message: {
+            Text("Civa stops answering Claude and removes itself from Claude Desktop's settings. You'll be asked to allow that change.")
+        }
+    }
+
+    private var statusSection: some View {
         Section {
             if bridge.isEnabled {
                 LabeledContent("Status") {
@@ -143,12 +163,6 @@ struct ClaudeSettingsSection: View {
             Text("Claude Desktop")
         } footer: {
             Text("Optional. Claude reads only what you allow, and its suggestions wait for your approval. Civa works fully without it.")
-        }
-        .sheet(isPresented: $isSettingUp) { ClaudeSetupSheet() }
-        .confirmationDialog("Disconnect Claude Desktop?", isPresented: $isConfirmingDisconnect) {
-            Button("Disconnect", role: .destructive, action: disconnect)
-        } message: {
-            Text("Civa stops answering Claude and removes itself from Claude Desktop's settings. You'll be asked to allow that change.")
         }
     }
 

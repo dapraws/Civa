@@ -33,6 +33,8 @@ nonisolated enum ClaudeLink {
     struct Tool {
         let name: String
         let description: String
+        /// The permission the tool needs; nil for tools anyone connected may call.
+        var category: ClaudeCategory?
         /// Argument name → description. All arguments are strings.
         var arguments: [String: String] = [:]
         var required: [String] = []
@@ -42,9 +44,29 @@ nonisolated enum ClaudeLink {
     static let tools: [Tool] = [
         Tool(
             name: "check_connection",
-            description: "Check that Civa, the user's local career workspace on this Mac, is open and connected, and what it shares with Claude."
+            description: "Check that Civa, the user's local career workspace on this Mac, is open and connected, and which categories it shares with Claude. Call this first."
+        ),
+        Tool(name: "get_personal_info", description: "The user's name, headline, summary, contact details, and links.", category: .personal),
+        Tool(name: "list_experience", description: "The user's professional and organizational experience: roles, dates, results, and skills used.", category: .experience),
+        Tool(name: "list_education", description: "The user's education: degrees, grades, thesis, coursework, and honors.", category: .education),
+        Tool(name: "list_projects", description: "The user's projects: role, links, dates, results, and skills used.", category: .projects),
+        Tool(name: "list_achievements_and_certifications", description: "The user's awards, placements, and certifications.", category: .recognition),
+        Tool(name: "list_skills", description: "The user's skills, grouped by category.", category: .skills),
+        Tool(name: "list_resumes", description: "The resumes saved in Civa, with their ids, targets, and which one is the Master Resume.", category: .resumes),
+        Tool(
+            name: "get_resume", description: "The full text of one resume in Civa.", category: .resumes,
+            arguments: ["resume_id": "The id from list_resumes."], required: ["resume_id"]
+        ),
+        Tool(name: "list_applications", description: "The job applications the user tracks in Civa: company, position, status, and the resume sent.", category: .applications),
+        Tool(
+            name: "get_application", description: "One job application with its full job description.", category: .applications,
+            arguments: ["application_id": "The id from list_applications."], required: ["application_id"]
         ),
     ]
+
+    static func tool(named name: String) -> Tool? {
+        tools.first { $0.name == name }
+    }
 
     /// The socket, in the container's temporary folder: both the app and the helper resolve the same path.
     static var socketPath: String {

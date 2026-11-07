@@ -68,6 +68,7 @@ struct ClaudeConnectionTests {
     @Test func bridgeAnswersOverItsSocket() async throws {
         let path = FileManager.default.temporaryDirectory.appending(path: "t\(UInt16.random(in: 0...9999)).sock").path(percentEncoded: false)
         let bridge = ClaudeBridge(path: path)
+        bridge.handler = { ClaudeLink.Reply(ok: $0.tool == "check_connection", text: "Connected") }
         bridge.start()
         defer { bridge.stop() }
         #expect(bridge.isListening)
