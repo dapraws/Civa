@@ -24,6 +24,7 @@ struct ClaudeSetupSheet: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Label("Connect Claude Desktop", systemImage: "sparkles")
                             .font(.title2.weight(.semibold))
+                            .foregroundStyle(.claude)
                         Text("Claude can help you rewrite bullet points, write a summary, and tailor a resume to a job. Civa works fully without it.")
                             .foregroundStyle(.secondary)
                     }
@@ -190,7 +191,7 @@ struct ClaudeSetupCard: View {
             HStack(alignment: .top, spacing: 12) {
                 Image(systemName: "sparkles")
                     .font(.title2)
-                    .foregroundStyle(.tint)
+                    .foregroundStyle(.claude)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Get help from Claude (optional)").font(.headline)

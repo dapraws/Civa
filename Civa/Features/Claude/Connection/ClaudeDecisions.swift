@@ -30,13 +30,18 @@ enum ClaudeDecisions {
 
     /// Takes a resume edit into the document. Entries that no longer exist are skipped.
     static func apply(_ edit: ClaudeProposal.ResumeEdit, to document: inout ResumeDocument) {
-        if let summary = edit.summary { document.summary = summary }
+        if let summary = edit.summary {
+            document.summary = summary
+            document.claudeTouchedSummary = true
+        }
         for change in edit.entries {
             guard let position = document.entryPosition(change.entryID) else { continue }
             var entry = document.sections[position.section].entries[position.entry]
+            let before = entry
             if let title = change.title, !title.isBlank { entry.title = title }
             if let subtitle = change.subtitle, !subtitle.isBlank { entry.subtitle = subtitle }
             if let bullets = change.bullets, !bullets.isEmpty { entry.bullets = bullets }
+            if entry != before { entry.claudeTouched = true }
             document.sections[position.section].entries[position.entry] = entry
         }
     }

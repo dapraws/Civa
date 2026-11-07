@@ -17,7 +17,14 @@ struct ResumeOutlineView: View {
             Section {
                 Label("Resume Info", systemImage: "info.circle")
                     .tag(ResumeOutlineItem.info)
-                Label("Header and Summary", systemImage: "person.crop.rectangle")
+                HStack(spacing: 4) {
+                    Label("Header and Summary", systemImage: "person.crop.rectangle")
+                    if document.claudeTouchedSummary == true {
+                        Image(systemName: "sparkles")
+                            .foregroundStyle(.claude)
+                            .help("Claude wrote the summary")
+                    }
+                }
                     .tag(ResumeOutlineItem.header)
             }
             Section("Sections") {
@@ -49,10 +56,17 @@ struct ResumeOutlineView: View {
     }
 
     private func entryRow(_ entry: ResumeEntry, kind: ResumeSection.Kind) -> some View {
-        Text(entry.title.isBlank ? kind.newEntryTitle : entry.title)
-            .foregroundStyle(entry.title.isBlank ? .secondary : .primary)
-            .lineLimit(1)
-            .padding(.leading, 26)
+        HStack(spacing: 4) {
+            Text(entry.title.isBlank ? kind.newEntryTitle : entry.title)
+                .foregroundStyle(entry.title.isBlank ? .secondary : .primary)
+                .lineLimit(1)
+            if entry.claudeTouched == true {
+                Image(systemName: "sparkles")
+                    .foregroundStyle(.claude)
+                    .help("Claude wrote part of this")
+            }
+        }
+        .padding(.leading, 26)
             .tag(ResumeOutlineItem.entry(entry.id))
             .contextMenu {
                 Button("Delete", role: .destructive) { deleteEntry(entry.id) }

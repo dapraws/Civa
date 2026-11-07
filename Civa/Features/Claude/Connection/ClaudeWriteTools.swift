@@ -221,10 +221,14 @@ enum ClaudeWriteTools {
             for e in document.sections[s].entries.indices {
                 if let id = document.sections[s].entries[e].sourceID, let lines = bullets[id], !lines.isEmpty {
                     document.sections[s].entries[e].bullets = lines
+                    document.sections[s].entries[e].claudeTouched = true
                 }
             }
         }
-        if let summary = arguments["summary"], !summary.isBlank { document.summary = summary }
+        if let summary = arguments["summary"], !summary.isBlank {
+            document.summary = summary
+            document.claudeTouchedSummary = true
+        }
         let master = (try? context.fetch(FetchDescriptor<Resume>(predicate: #Predicate { $0.isMaster })))?.first
         if let master { document.format = master.document.format }
 

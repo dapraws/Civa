@@ -74,14 +74,20 @@ struct ProjectForm: View {
                     prompt: String(localized: "Result of your work"),
                     addTitle: String(localized: "Add Impact")
                 )
-                AskClaudeButton(
-                    title: "Improve with Claude",
-                    ask: .init(kind: .improveBullets, category: .projects, targetID: editor.record.id, targetTitle: editor.record.displayTitle),
-                    disabled: editor.isNew || editor.isDirty || editor.record.impacts.allSatisfy(\.isBlank) || editor.record.needsReview
-                )
-                .buttonStyle(.borderless)
             } header: {
-                Text("Impact")
+                HStack(alignment: .top) {
+                    Text("Impact")
+                    Spacer()
+                    AskClaudeButton(
+                        title: "Improve with Claude",
+                        ask: .init(kind: .improveBullets, category: .projects, targetID: editor.record.id, targetTitle: editor.record.displayTitle),
+                        unavailable: ClaudeAsk.unavailable(
+                            isNew: editor.isNew, isDirty: editor.isDirty, needsReview: editor.record.needsReview,
+                            missing: editor.record.impacts.allSatisfy(\.isBlank) ? String(localized: "Add an impact first, then Claude can improve it.") : nil
+                        ),
+                        tip: .improve
+                    )
+                }
             } footer: {
                 Text("Results of the project, like users reached or time saved.")
             }

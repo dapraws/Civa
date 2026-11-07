@@ -6,6 +6,7 @@
 //
 
 import PDFKit
+import SwiftData
 import SwiftUI
 
 /// A resume in the gallery: its first page, name, and target position. The Master is outlined.
@@ -13,6 +14,9 @@ struct ResumeCard: View {
     let resume: Resume
     /// Career Profile changes this resume doesn't have yet (FR-042).
     var suggestionCount = 0
+
+    @Query(filter: #Predicate<ClaudeProposal> { $0.kindRaw == "resumeEdit" && $0.statusRaw == "pending" })
+    private var claudeProposals: [ClaudeProposal]
 
     var body: some View {
         let document = resume.document
@@ -29,16 +33,22 @@ struct ResumeCard: View {
                 }
                 .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
                 .overlay(alignment: .topTrailing) {
-                    if suggestionCount > 0 {
-                        Label("\(suggestionCount)", systemImage: "sparkles")
-                            .font(.caption.weight(.semibold))
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 3)
-                            .foregroundStyle(.white)
-                            .background(.tint, in: .capsule)
-                            .padding(6)
-                            .help("\(suggestionCount) suggested changes from your Career Profile")
+                    HStack(spacing: 4) {
+                        let claudeCount = claudeProposals.filter { $0.targetID == resume.id }.count
+                        if claudeCount > 0 {
+                            ClaudeCount(count: claudeCount)
+                        }
+                        if suggestionCount > 0 {
+                            Label("\(suggestionCount)", systemImage: "arrow.triangle.2.circlepath")
+                                .font(.caption.weight(.semibold))
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 3)
+                                .foregroundStyle(.white)
+                                .background(.tint, in: .capsule)
+                                .help("\(suggestionCount) suggested changes from your Career Profile")
+                        }
                     }
+                    .padding(6)
                 }
             VStack(alignment: .leading, spacing: 2) {
                 if resume.isMaster {
@@ -49,7 +59,7 @@ struct ResumeCard: View {
                 if resume.isClaudeDraft {
                     Label("Draft from Claude", systemImage: "sparkles")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(.claude)
                 }
                 Text(resume.displayTitle)
                     .font(.headline)
@@ -82,4 +92,5 @@ struct ResumeCard: View {
     ResumeCard(resume: Resume(title: "iOS Developer Resume", targetPosition: "iOS Developer", document: .blank))
         .frame(width: 200)
         .padding()
+        .previewEnvironment()
 }

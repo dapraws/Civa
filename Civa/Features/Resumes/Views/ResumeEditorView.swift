@@ -8,6 +8,7 @@
 import PDFKit
 import SwiftData
 import SwiftUI
+import TipKit
 
 /// Outline, fields, and live preview, with draggable dividers between them (FR-032, FR-033).
 struct ResumeEditorView: View {
@@ -60,6 +61,8 @@ struct ResumeEditorView: View {
                         Label("\(claudeCount) From Claude", systemImage: "sparkles")
                             .labelStyle(.titleAndIcon)
                     }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.claude)
                     .help("Wording Claude suggested for this resume")
                 }
                 askClaudeMenu
@@ -70,7 +73,7 @@ struct ResumeEditorView: View {
                     Button {
                         isShowingSuggestions = true
                     } label: {
-                        Label("\(suggestionCount) Suggested", systemImage: "sparkles")
+                        Label("\(suggestionCount) Suggested", systemImage: "arrow.triangle.2.circlepath")
                             .labelStyle(.titleAndIcon)
                     }
                     .help("Changes from your Career Profile that this resume doesn't have yet")
@@ -122,12 +125,18 @@ extension ResumeEditorView {
             }
         } label: {
             Label("Ask Claude", systemImage: "sparkles")
+                .labelStyle(.titleAndIcon)
+                .foregroundStyle(.claude)
         }
+        .tint(.claude)
         .disabled(editor.isNew || editor.isDirty)
         .help(editor.isNew || editor.isDirty ? "Save the resume first, then ask Claude" : "Ask Claude Desktop to suggest wording; you review it here")
+        .popoverTip(ClaudeTip.askResume, arrowEdge: .bottom)
+        .tipImageStyle(Color.claude)
     }
 
     private func ask(_ kind: ClaudeRequest.Kind, application: JobApplication? = nil) {
+        ClaudeTip.askResume.invalidate(reason: .actionPerformed)
         askOutcome = ClaudeAsk.send(
             .init(
                 kind: kind, category: .resumes, targetID: editor.record.id, targetTitle: editor.record.displayTitle,
