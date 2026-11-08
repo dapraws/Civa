@@ -8,8 +8,8 @@
 import SwiftData
 import SwiftUI
 
-/// Skills by category: the categories down the left, grouped under hard and soft skills; the
-/// selected category's skills as chips on the right, with the chosen skill's details below.
+/// Skills by category: the categories the user named down the left; the selected category's
+/// skills as chips on the right, with the chosen skill's details below.
 /// Dragging a chip onto a category moves it there. Selecting and adding go through the
 /// unsaved-changes guard, as on the other record pages.
 struct SkillList: View {
@@ -89,16 +89,11 @@ struct SkillList: View {
 
     private var sidebar: some View {
         List(selection: Binding(get: { group }, set: { new in changes.perform { select(new) } })) {
-            ForEach(SkillGroup.sections, id: \.self) { type in
-                let rows = groups.filter { $0.type == type }
-                if !rows.isEmpty {
-                    Section(type?.pluralTitle ?? String(localized: "No Type")) {
-                        ForEach(rows, id: \.self) { row in
-                            sidebarRow(row)
-                                .tag(row)
-                                .dropDestination(for: String.self) { ids, _ in move(ids, to: row) }
-                        }
-                    }
+            Section("Categories") {
+                ForEach(groups, id: \.self) { row in
+                    sidebarRow(row)
+                        .tag(row)
+                        .dropDestination(for: String.self) { ids, _ in move(ids, to: row) }
                 }
             }
         }
@@ -197,7 +192,6 @@ struct SkillList: View {
     private func addSkill() {
         changes.perform {
             let skill = Skill(name: "", category: group?.category ?? "")
-            skill.type = group?.type
             let editor = RecordEditor(creating: skill, in: context)
             self.editor = editor
             changes.active = editor
@@ -216,7 +210,6 @@ struct SkillList: View {
         changes.perform {
             for skill in moving {
                 skill.category = target.category
-                skill.type = target.type
                 skill.updatedAt = .now
             }
             do {
@@ -230,54 +223,44 @@ struct SkillList: View {
     }
 }
 
-/// A sidebar row: a skill type and a category within it. Categories match ignoring case and spaces.
+/// A sidebar row: one category. Categories match ignoring case and surrounding spaces.
 struct SkillGroup: Hashable, Comparable {
-    let type: SkillType?
     let category: String
 
-    /// Hard skills first, then soft, then skills with no type.
-    static let sections: [SkillType?] = [.hard, .soft, nil]
-
-    init(type: SkillType?, category: String) {
-        self.type = type
+    init(category: String) {
         self.category = category.trimmingCharacters(in: .whitespaces)
     }
 
     init(_ skill: Skill) {
-        self.init(type: skill.type, category: skill.category)
+        self.init(category: skill.category)
     }
 
     var title: String { category.isBlank ? String(localized: "No Category") : category }
 
     static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.type == rhs.type && lhs.category.lowercased() == rhs.category.lowercased()
+        lhs.category.lowercased() == rhs.category.lowercased()
     }
 
     func hash(into hasher: inout Hasher) {
-        hasher.combine(type)
         hasher.combine(category.lowercased())
     }
 
-    /// By section, then categories alphabetically with "No Category" last.
+    /// Alphabetically, with "No Category" last.
     static func < (lhs: Self, rhs: Self) -> Bool {
-        let order = { (type: SkillType?) in sections.firstIndex(of: type) ?? 0 }
-        if order(lhs.type) != order(rhs.type) { return order(lhs.type) < order(rhs.type) }
         if lhs.category.isBlank != rhs.category.isBlank { return rhs.category.isBlank }
         return lhs.category.localizedCaseInsensitiveCompare(rhs.category) == .orderedAscending
     }
-}
 
-extension SkillType {
-    var pluralTitle: String {
-        switch self {
-        case .hard: String(localized: "Hard Skills")
-        case .soft: String(localized: "Soft Skills")
-        }
-    }
+    /// Offered in the Category field next to the ones already in use.
+    static let starters = [
+        String(localized: "Hard Skills"), String(localized: "Soft Skills"),
+        String(localized: "Languages"), String(localized: "Tools"),
+    ]
 }
 
 struct SkillForm: View {
     let editor: RecordEditor<Skill>
+    @Query(sort: \Skill.category) private var skills: [Skill]
 
     var body: some View {
         Form {
@@ -285,8 +268,12 @@ struct SkillForm: View {
             Section {
                 TextField("Name", text: editor.binding(\.name), prompt: Text("Required"))
                 FieldError(editor.error(for: \.name))
-                OptionPicker("Type", selection: editor.binding(\.typeRaw), options: SkillType.allCases)
-                TextField("Category", text: editor.binding(\.category), prompt: Text("Languages, Tools, Design"))
+                TextField("Category", text: editor.binding(\.category), prompt: Text("Hard Skills, Soft Skills, Tools"))
+                    .textInputSuggestions {
+                        ForEach(categorySuggestions, id: \.self) { Text($0).textInputCompletion($0) }
+                    }
+            } footer: {
+                Text("Name categories however you like. Skills in the same category are listed together, on this page and on your resumes.")
             }
             Section {
                 TextField("Proficiency", text: proficiency, prompt: Text("Optional"))
@@ -308,6 +295,16 @@ struct SkillForm: View {
             }
         }
         .formStyle(.grouped)
+    }
+
+    /// Categories in use plus a few starters, narrowed to what's typed.
+    private var categorySuggestions: [String] {
+        let typed = editor.record.category.trimmingCharacters(in: .whitespaces)
+        var seen = Set<String>()
+        return (skills.map { $0.category.trimmingCharacters(in: .whitespaces) } + SkillGroup.starters).filter { name in
+            !name.isEmpty && name.caseInsensitiveCompare(typed) != .orderedSame
+                && (typed.isEmpty || name.localizedCaseInsensitiveContains(typed)) && seen.insert(name.lowercased()).inserted
+        }
     }
 
     /// Stored as nil when empty, since proficiency is optional (FR-014).

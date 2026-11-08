@@ -103,7 +103,7 @@ enum ClaudeTools {
             let skills = confirmed(Skill.self).records
             let groups = Dictionary(grouping: skills) { $0.category.isBlank ? String(localized: "Other") : $0.category }
             let text = groups.keys.sorted().map { category in
-                "\(category): " + groups[category, default: []].map { [$0.name, $0.type.map { "(\($0.title))" }].compactMap(\.self).joined(separator: " ") }.sorted().joined(separator: ", ")
+                "\(category): " + groups[category, default: []].map(\.name).sorted().joined(separator: ", ")
             }.joined(separator: "\n")
             return Result(text: text.isEmpty ? "No confirmed skills in Civa." : text, summary: String(localized: "Read \(skills.count) skills"), titles: skills.map(\.name))
         case "list_resumes":
