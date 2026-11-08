@@ -15,7 +15,7 @@ enum ResumeCheck {
 
     static func issues(for document: ResumeDocument, pageCount: Int, unconfirmedSources: Set<UUID>) -> [String] {
         var issues: [String] = []
-        let header = document.header
+        let header = document.header.printed
         if header.fullName.isBlank {
             issues.append(String(localized: "Add your name in Header."))
         }

@@ -258,7 +258,7 @@ enum ResumeRenderer {
     private static func blocks(for document: ResumeDocument, style: Style) -> [Block] {
         let template = style.format.layout
         let header = NSMutableAttributedString()
-        let person = document.header
+        let person = document.header.printed
         let alignment: NSTextAlignment = template == .classic ? .left : .center
         if !person.fullName.isBlank {
             let name = template == .tech
@@ -276,9 +276,10 @@ enum ResumeRenderer {
             header.append(style.text(contact, scale: 0.95, color: .darkGray, after: 2, alignment: alignment))
         }
         let summaryHasHeading = style.format.showsSummaryHeading == true
-        if !document.summary.isBlank, !summaryHasHeading {
+        let summary = document.printedSummary
+        if !summary.isBlank, !summaryHasHeading {
             // Part of the header block: same alignment, right under the contact line.
-            header.append(style.text(document.summary, before: 2, after: 2, alignment: alignment))
+            header.append(style.text(summary, before: 2, after: 2, alignment: alignment))
         }
 
         var blocks: [Block] = []
@@ -287,10 +288,10 @@ enum ResumeRenderer {
             // MIT, Harvard, and Jake's samples.
             blocks.append(Block(text: header))
         }
-        if !document.summary.isBlank, summaryHasHeading {
+        if !summary.isBlank, summaryHasHeading {
             let text = NSMutableAttributedString()
             let headingRange = style.appendHeading(String(localized: "Summary"), to: text)
-            text.append(style.text(document.summary, after: 2))
+            text.append(style.text(summary, after: 2))
             blocks.append(Block(
                 text: text, rules: style.dividerOffsets(headingRange, in: text), startsWithHeading: true,
                 spacingBefore: style.format.sectionSpacing
@@ -339,7 +340,7 @@ enum ResumeRenderer {
         if kind == .education, entry.shows(.grade, in: format), let grade = entry.grade, !grade.isBlank {
             title = [title, grade].filter { !$0.isBlank }.joined(separator: ", ")
         }
-        let dates = entry.datesText(format.dateStyle ?? .short)
+        let dates = entry.shows(.dates, in: format) ? entry.datesText(format.dateStyle ?? .short) : ""
         let details = [
             entry.shows(.employmentType, in: format) ? entry.employmentType ?? "" : "",
             entry.shows(.workArrangement, in: format) ? entry.workArrangement ?? "" : "",

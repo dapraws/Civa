@@ -23,6 +23,11 @@ nonisolated struct ResumeDocument: Codable, Hashable {
     var headerSource: ResumeHeader?
     /// Claude wrote the summary and it hasn't been edited since; the editor tags it.
     var claudeTouchedSummary: Bool?
+    /// The user hid the summary with the eye; the text stays for later.
+    var hidesSummary: Bool?
+
+    /// The summary as printed: empty while hidden.
+    var printedSummary: String { hidesSummary == true ? "" : summary }
 
     /// A blank resume with the usual sections, for "from scratch" (FR-030).
     static var blank: ResumeDocument {
@@ -55,6 +60,39 @@ nonisolated struct ResumeHeader: Codable, Hashable {
     var phone = ""
     var location = ""
     var links: [ProfileLink] = []
+    /// Parts hidden with the eye, by `Detail` raw value or link id. The values stay for later.
+    var hidden: Set<String>?
+
+    /// Header details each resume can show or hide; each link has its own eye too.
+    enum Detail: String {
+        case headline, email, phone, location
+    }
+
+    func shows(_ detail: Detail) -> Bool { shows(key: detail.rawValue) }
+    func shows(_ link: ProfileLink) -> Bool { shows(key: link.id.uuidString) }
+
+    mutating func setShows(_ detail: Detail, _ isShown: Bool) { setShows(key: detail.rawValue, isShown) }
+    mutating func setShows(_ link: ProfileLink, _ isShown: Bool) { setShows(key: link.id.uuidString, isShown) }
+
+    /// The header as printed: hidden parts left out.
+    var printed: ResumeHeader {
+        ResumeHeader(
+            fullName: fullName,
+            headline: shows(.headline) ? headline : "",
+            email: shows(.email) ? email : "",
+            phone: shows(.phone) ? phone : "",
+            location: shows(.location) ? location : "",
+            links: links.filter(shows)
+        )
+    }
+
+    private func shows(key: String) -> Bool { !(hidden?.contains(key) ?? false) }
+
+    private mutating func setShows(key: String, _ isShown: Bool) {
+        var hidden = self.hidden ?? []
+        if isShown { hidden.remove(key) } else { hidden.insert(key) }
+        self.hidden = hidden.isEmpty ? nil : hidden
+    }
 }
 
 nonisolated struct ResumeSection: Codable, Hashable, Identifiable {
@@ -140,7 +178,7 @@ nonisolated struct ResumeEntry: Codable, Hashable, Identifiable {
 
     /// Optional details each entry can show or hide on its own.
     enum Detail: String, CaseIterable {
-        case employmentType, workArrangement, location, grade, thesis, coursework, proof
+        case employmentType, workArrangement, location, grade, thesis, coursework, proof, dates
 
         /// Before the eye, employment types, work arrangements, and grades were switched for the
         /// whole resume; those choices stay the default, so older resumes print as they did.
@@ -149,7 +187,7 @@ nonisolated struct ResumeEntry: Codable, Hashable, Identifiable {
             case .employmentType: format.showsEmploymentType == true
             case .workArrangement: format.showsWorkArrangement == true
             case .grade: format.showsGrade != false
-            case .location, .thesis, .coursework, .proof: true
+            case .location, .thesis, .coursework, .proof, .dates: true
             }
         }
     }

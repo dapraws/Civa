@@ -101,17 +101,30 @@ struct ResumeItemForm: View {
     }
 
     private var headerFields: some View {
-        Section("Header") {
+        Section {
             TextField("Full Name", text: $document.header.fullName)
             // Label above, so a long headline isn't cut off in the narrow fields column.
             VStack(alignment: .leading, spacing: 4) {
-                Text("Headline")
+                HStack {
+                    Text("Headline")
+                    Spacer()
+                    eye(.headline)
+                }
                 TextField("Headline", text: $document.header.headline, prompt: Text("iOS Engineer"), axis: .vertical)
                     .labelsHidden()
             }
-            TextField("Email", text: $document.header.email, prompt: Text("name@example.com"))
-            TextField("Phone", text: $document.header.phone)
-            TextField("Location", text: $document.header.location, prompt: Text("City, Country"))
+            HStack {
+                TextField("Email", text: $document.header.email, prompt: Text("name@example.com"))
+                eye(.email)
+            }
+            HStack {
+                TextField("Phone", text: $document.header.phone)
+                eye(.phone)
+            }
+            HStack {
+                TextField("Location", text: $document.header.location, prompt: Text("City, Country"))
+                eye(.location)
+            }
             PairListEditor(
                 items: $document.header.links,
                 first: \.label,
@@ -119,8 +132,24 @@ struct ResumeItemForm: View {
                 prompts: (String(localized: "Label"), String(localized: "URL")),
                 addTitle: String(localized: "Add Link"),
                 makeItem: { ProfileLink(label: "", url: "") }
-            )
+            ) { link in
+                EyeToggle(isShown: Binding(
+                    get: { document.header.shows(link) },
+                    set: { document.header.setShows(link, $0) }
+                ))
+            }
+        } header: {
+            Text("Header")
+        } footer: {
+            Text("The eye hides a detail on this resume and keeps what you typed.")
         }
+    }
+
+    private func eye(_ detail: ResumeHeader.Detail) -> some View {
+        EyeToggle(isShown: Binding(
+            get: { document.header.shows(detail) },
+            set: { document.header.setShows(detail, $0) }
+        ))
     }
 
     private var summaryField: some View {
@@ -142,6 +171,10 @@ struct ResumeItemForm: View {
                 Text("Summary")
                 if document.claudeTouchedSummary == true { ClaudeTag() }
                 Spacer()
+                EyeToggle(isShown: Binding(
+                    get: { document.hidesSummary != true },
+                    set: { document.hidesSummary = $0 ? nil : true }
+                ))
                 AskClaudeButton(
                     title: "Write with Claude",
                     ask: .init(kind: .writeSummary, category: .resumes, targetID: editor.record.id, targetTitle: editor.record.displayTitle),
@@ -152,9 +185,13 @@ struct ResumeItemForm: View {
         } footer: {
             VStack(alignment: .leading, spacing: 4) {
                 ClaudeUnavailableNote(reason: summaryUnavailable)
-                Text(document.format.showsSummaryHeading == true
-                     ? "Appears under a “Summary” heading. Turn the heading off to keep it right under your contact details."
-                     : "Appears right under your contact details, with no heading. Leave it empty if you don't need one.")
+                if document.hidesSummary == true {
+                    Text("Hidden on this resume. The eye brings it back.")
+                } else {
+                    Text(document.format.showsSummaryHeading == true
+                         ? "Appears under a “Summary” heading. Turn the heading off to keep it right under your contact details."
+                         : "Appears right under your contact details, with no heading.")
+                }
             }
         }
     }
@@ -321,7 +358,7 @@ private struct EntryFields: View {
     @ViewBuilder
     private var datesSection: some View {
         let isSingleDate = kind == .achievements || kind == .certifications
-        Section("Dates") {
+        Section {
             YearMonthField(title: isSingleDate ? String(localized: "Date") : String(localized: "Start"), value: date(\.start))
             if !isSingleDate {
                 if kind != .projects {
@@ -337,6 +374,12 @@ private struct EntryFields: View {
             // Resumes made before the pickers, or typed by hand, keep their text until a date is picked.
             if !entry.hasDateValues, !entry.dates.isBlank {
                 TextField("Dates as Typed", text: $entry.dates)
+            }
+        } header: {
+            HStack {
+                Text("Dates")
+                Spacer()
+                eye(.dates)
             }
         }
     }

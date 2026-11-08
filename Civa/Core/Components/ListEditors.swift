@@ -34,24 +34,36 @@ struct StringListEditor: View {
 }
 
 /// Editable two-part entries, such as custom fields or links. Place inside a form section.
-struct PairListEditor<Item: Identifiable & Equatable>: View {
+/// `accessory` adds a control to each row, such as an eye.
+struct PairListEditor<Item: Identifiable & Equatable, Accessory: View>: View {
     @Binding var items: [Item]
     let first: WritableKeyPath<Item, String>
     let second: WritableKeyPath<Item, String>
     let prompts: (first: String, second: String)
     let addTitle: String
     let makeItem: () -> Item
+    @ViewBuilder var accessory: (Item) -> Accessory
 
     var body: some View {
         ForEach($items) { $item in
             HStack {
                 TextField(prompts.first, text: $item[dynamicMember: first], prompt: Text(prompts.first))
                 TextField(prompts.second, text: $item[dynamicMember: second], prompt: Text(prompts.second))
+                accessory(item)
                 RemoveButton { items.removeAll { $0.id == item.id } }
             }
             .labelsHidden()
         }
         AddButton(title: addTitle) { items.append(makeItem()) }
+    }
+}
+
+extension PairListEditor where Accessory == EmptyView {
+    init(
+        items: Binding<[Item]>, first: WritableKeyPath<Item, String>, second: WritableKeyPath<Item, String>,
+        prompts: (first: String, second: String), addTitle: String, makeItem: @escaping () -> Item
+    ) {
+        self.init(items: items, first: first, second: second, prompts: prompts, addTitle: addTitle, makeItem: makeItem) { _ in EmptyView() }
     }
 }
 
