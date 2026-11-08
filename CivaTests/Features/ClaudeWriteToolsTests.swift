@@ -5,9 +5,11 @@
 //  Created by Muhammad Darrel Prawira on 06/11/26.
 //
 
+import AppKit
 import Foundation
 import SwiftData
 import Testing
+import UserNotifications
 @testable import Civa
 
 @MainActor
@@ -138,6 +140,35 @@ struct ClaudeWriteToolsTests {
         #expect(ClaudeAsk.send(ask, container: container, permissions: permissions, connected: true).id == "notAllowed")
     }
 
+    /// Asking only queues the request and names it for the notice; Claude opens from Requests.
+    @Test func askQueuesWithoutOpeningClaude() throws {
+        permissions.suggest.insert(.resumes)
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString("untouched", forType: .string)
+        let ask = ClaudeAsk.Ask(kind: .writeSummary, category: .resumes, targetID: resume.id, targetTitle: "Master")
+        guard case .queued(let title, nil) = ClaudeAsk.send(ask, container: container, permissions: permissions, connected: true)
+        else { Issue.record("not queued"); return }
+        #expect(title == "Write a summary for “Master”")
+        #expect(try fetch(ClaudeRequest.self).map(\.status) == [.pending])
+        #expect(pasteboard.string(forType: .string) == "untouched")
+    }
+
+    @Test func noticeNamesTheRequest() {
+        let content = ClaudeRequestNotice.content(for: "Tailor “Stripe Application”")
+        #expect(content.title == "Civa Has a Request for Claude")
+        #expect(content.body == "Tailor “Stripe Application”")
+    }
+
+    /// Clicking a notice or the banner hides the banner and asks RootView to open Requests.
+    @Test func openingTheNoticeGoesToRequests() {
+        let notice = ClaudeRequestNotice()
+        notice.banner = "Write a summary for “Master”"
+        notice.open()
+        #expect(notice.banner == nil)
+        #expect(notice.opensRequests)
+    }
+
     private func tailorAsk(for application: JobApplication) -> ClaudeAsk.Ask {
         ClaudeAsk.Ask(
             kind: .tailorResume, category: .resumes, targetID: resume.id, targetTitle: "Master Resume",
@@ -165,7 +196,7 @@ struct ClaudeWriteToolsTests {
         #expect(copy.document == resume.document)
         #expect(try fetch(ClaudeRequest.self).first?.targetID == copy.id)
         #expect(try fetch(JobApplication.self).first?.resume?.id == copy.id)
-        guard case .queued(let opened) = outcome else { Issue.record("not queued"); return }
+        guard case .queued(_, let opened) = outcome else { Issue.record("not queued"); return }
         #expect(opened?.id == copy.id)
     }
 

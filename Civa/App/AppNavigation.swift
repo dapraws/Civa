@@ -19,6 +19,8 @@ final class AppNavigation {
     var recordToOpen: AnyHashable?
     /// Which list Other Information shows next ("achievements", "certifications", "skills").
     var otherKind: String?
+    /// Which AI Activity tab shows next, such as Requests after a request notice is clicked.
+    var aiActivityTab: AIActivityView.Tab?
 
     init() {
         #if DEBUG

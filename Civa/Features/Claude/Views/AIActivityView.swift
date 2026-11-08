@@ -15,6 +15,7 @@ struct AIActivityView: View {
         case suggestions, requests, log
     }
 
+    @Environment(AppNavigation.self) private var navigation
     @State private var tab = Tab.suggestions
     @State private var kind: ClaudeActivity.Kind?
     @State private var category: ClaudeCategory?
@@ -35,6 +36,11 @@ struct AIActivityView: View {
             } else {
                 list
             }
+        }
+        .onChange(of: navigation.aiActivityTab, initial: true) { _, next in
+            guard let next else { return }
+            tab = next
+            navigation.aiActivityTab = nil
         }
         .toolbar {
             ToolbarItem(placement: .principal) {

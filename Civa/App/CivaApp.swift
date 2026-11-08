@@ -20,6 +20,7 @@ struct CivaApp: App {
 
     init() {
         ClaudeTip.configure()
+        ClaudeRequestNotice.shared.configure()
     }
 
     var body: some Scene {

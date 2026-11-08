@@ -10,8 +10,9 @@ import SwiftData
 import SwiftUI
 import TipKit
 
-/// Queues a request for Claude (FR-072) and brings up Claude Desktop. MCP can't start Claude
-/// from Civa, so the user sends one short prompt there; it's copied to the clipboard.
+/// Queues a request for Claude (FR-072) and says so with a notification that opens AI Activity →
+/// Requests. Claude Desktop opens only from there: MCP can't start Claude from Civa, so the user
+/// sends one short prompt, which "Open Claude" copies to the clipboard.
 enum ClaudeAsk {
     static let prompt = "Run my pending Civa requests."
 
@@ -30,8 +31,8 @@ enum ClaudeAsk {
     enum Outcome: Identifiable {
         case notConnected
         case notAllowed(Ask)
-        /// With the copy Claude will work on, when the request made one.
-        case queued(copy: Copy?)
+        /// The request's title, and the copy Claude will work on when the request made one.
+        case queued(title: String, copy: Copy?)
         case failed(String)
 
         struct Copy {
@@ -58,10 +59,14 @@ enum ClaudeAsk {
         guard connected else { return .notConnected }
         guard permissions.canSuggest(ask.category) else { return .notAllowed(ask) }
         let context = ModelContext(container)
-        context.insert(ClaudeRequest(kind: ask.kind, targetID: ask.targetID, targetTitle: ask.targetTitle, applicationID: ask.applicationID))
-        try? context.save()
-        openClaude()
-        return .queued(copy: nil)
+        let request = ClaudeRequest(kind: ask.kind, targetID: ask.targetID, targetTitle: ask.targetTitle, applicationID: ask.applicationID)
+        context.insert(request)
+        do {
+            try context.save()
+        } catch {
+            return .failed(error.localizedDescription)
+        }
+        return .queued(title: request.title, copy: nil)
     }
 
     /// Makes "<Company> Application" from the target resume, then queues the request on it.
@@ -87,14 +92,14 @@ enum ClaudeAsk {
         context.insert(copy)
         copy.recordSnapshot(.created, in: context)
         if let application, application.resume == nil { application.resume = copy }
-        context.insert(ClaudeRequest(kind: ask.kind, targetID: copy.id, targetTitle: copy.displayTitle, applicationID: ask.applicationID))
+        let request = ClaudeRequest(kind: ask.kind, targetID: copy.id, targetTitle: copy.displayTitle, applicationID: ask.applicationID)
+        context.insert(request)
         do {
             try context.save()
         } catch {
             return .failed(error.localizedDescription)
         }
-        openClaude()
-        return .queued(copy: .init(id: copy.id, title: copy.displayTitle))
+        return .queued(title: request.title, copy: .init(id: copy.id, title: copy.displayTitle))
     }
 
     /// Why an Ask Claude button can't be used yet, in the order the user would fix it.
@@ -115,14 +120,29 @@ enum ClaudeAsk {
     }
 }
 
-/// The alerts that follow an Ask Claude button: not set up, not allowed, or sent.
+/// The alerts that follow an Ask Claude button: not set up, not allowed, or a new copy made.
+/// A queued request also posts a notice (`ClaudeRequestNotice`); plain requests get no alert.
 struct ClaudeAskAlerts: ViewModifier {
     @Binding var outcome: ClaudeAsk.Outcome?
     @Environment(\.modelContext) private var context
     @Environment(AppNavigation.self) private var navigation
 
+    /// The alert's item: everything but a plain queued request, which only gets the notice.
+    private var alerted: Binding<ClaudeAsk.Outcome?> {
+        Binding {
+            if case .queued(_, nil) = outcome { return nil }
+            return outcome
+        } set: { outcome = $0 }
+    }
+
     func body(content: Content) -> some View {
-        content.alert(item: $outcome) { outcome in
+        content
+            .onChange(of: outcome?.id) {
+                guard case .queued(let title, let copy) = outcome else { return }
+                ClaudeRequestNotice.shared.post(title)
+                if copy == nil { outcome = nil }
+            }
+            .alert(item: alerted) { outcome in
             switch outcome {
             case .notConnected:
                 Alert(
@@ -143,20 +163,18 @@ struct ClaudeAskAlerts: ViewModifier {
                     },
                     secondaryButton: .cancel()
                 )
-            case .queued(let copy?):
+            case .queued(_, let copy?):
                 Alert(
-                    title: Text("Sent to Claude"),
-                    message: Text("Claude will tailor “\(copy.title)”, a new copy, so the original stays as it is. In Claude Desktop, send “\(ClaudeAsk.prompt)” It's on your clipboard."),
+                    title: Text("Copy Made for Claude"),
+                    message: Text("Claude will tailor “\(copy.title)”, a new copy, so the original stays as it is. Start the request from AI Activity → Requests."),
                     primaryButton: .default(Text("Open Copy")) { navigation.recordToOpen = copy.id },
                     secondaryButton: .cancel(Text("Not Now"))
                 )
             case .failed(let reason):
                 Alert(title: Text("Civa Couldn't Send the Request"), message: Text(reason))
-            case .queued(nil):
-                Alert(
-                    title: Text("Sent to Claude"),
-                    message: Text("In Claude Desktop, send “\(ClaudeAsk.prompt)” It's on your clipboard. Claude's answer comes back to Civa for your review.")
-                )
+            case .queued(_, nil):
+                // Never shown: `alerted` leaves plain requests to the notice.
+                Alert(title: Text("Request Queued"))
             }
         }
     }
@@ -201,7 +219,7 @@ struct AskClaudeButton: View {
             .tint(unavailable == nil ? .claude : .gray)
             .foregroundStyle(unavailable == nil ? AnyShapeStyle(.claude) : AnyShapeStyle(.secondary))
             .disabled(unavailable != nil)
-            .help(unavailable ?? String(localized: "Queue this for Claude Desktop; you review the result in Civa"))
+            .help(unavailable ?? String(localized: "Queue this for Claude; start it from AI Activity → Requests and review the result in Civa"))
             // Outside the orange style, so the tip's text keeps its normal color.
             .popoverTip(tip, arrowEdge: .top)
             .tipImageStyle(Color.claude)

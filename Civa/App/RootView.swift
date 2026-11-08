@@ -14,8 +14,11 @@ struct RootView: View {
     /// The section clicked while the unsaved-changes prompt is up.
     @State private var pendingSection: AppSection?
     private var bridge = ClaudeBridge.shared
+    private var notice = ClaudeRequestNotice.shared
     @Query(filter: #Predicate<ClaudeProposal> { $0.statusRaw == "pending" }) private var claudeProposals: [ClaudeProposal]
-    @Query(filter: #Predicate<ClaudeRequest> { $0.statusRaw == "failed" }) private var failedRequests: [ClaudeRequest]
+    /// Waiting and failed requests: both need the user to start them in Claude.
+    @Query(filter: #Predicate<ClaudeRequest> { $0.statusRaw == "pending" || $0.statusRaw == "failed" })
+    private var openRequests: [ClaudeRequest]
 
     var body: some View {
         NavigationSplitView {
@@ -24,7 +27,7 @@ struct RootView: View {
                 selection: Binding(changes.selection($navigation.section, pending: $pendingSection))
             ) { section in
                 if section == .aiActivity {
-                    let count = claudeProposals.count + failedRequests.count
+                    let count = claudeProposals.count + openRequests.count
                     Label {
                         Text(section.title)
                     } icon: {
@@ -51,6 +54,24 @@ struct RootView: View {
         } detail: {
             detail
                 .navigationTitle(navigation.section.title)
+        }
+        .overlay(alignment: .top) {
+            if let title = notice.banner {
+                ClaudeRequestBanner(title: title, onOpen: notice.open) { notice.banner = nil }
+                    .padding(.top, 12)
+                    .padding(.horizontal, 24)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(.snappy, value: notice.banner)
+        .onChange(of: notice.opensRequests) { _, opens in
+            guard opens else { return }
+            notice.opensRequests = false
+            // Like a sidebar click: unsaved edits are saved or discarded first.
+            changes.perform {
+                navigation.aiActivityTab = .requests
+                navigation.section = .aiActivity
+            }
         }
         .environment(navigation)
         // Wide enough for the Career Profile tabs and the resume editor's three columns at their minimums.
