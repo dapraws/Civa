@@ -106,14 +106,13 @@ struct ResumeItemForm: View {
             TipView(CivaTip.eye)
             TextField("Full Name", text: $document.header.fullName)
             // Label above, so a long headline isn't cut off in the narrow fields column.
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
                     Text("Headline")
-                    Spacer()
-                    eye(.headline)
+                    TextField("Headline", text: $document.header.headline, prompt: Text("iOS Engineer"), axis: .vertical)
+                        .labelsHidden()
                 }
-                TextField("Headline", text: $document.header.headline, prompt: Text("iOS Engineer"), axis: .vertical)
-                    .labelsHidden()
+                eye(.headline)
             }
             HStack {
                 TextField("Email", text: $document.header.email, prompt: Text("name@example.com"))
