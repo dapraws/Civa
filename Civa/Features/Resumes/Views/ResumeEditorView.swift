@@ -157,13 +157,14 @@ extension ResumeEditorView {
                 .foregroundStyle(.claude)
         }
         .tint(.claude)
-        .disabled(editor.isNew || editor.isDirty)
-        .help(editor.isNew || editor.isDirty ? "Save the resume first, then ask Claude" : "Ask Claude Desktop to suggest wording; you review it here")
+        .help(editor.isNew || editor.isDirty ? "Saves the resume, then asks Claude Desktop to suggest wording; you review it here" : "Ask Claude Desktop to suggest wording; you review it here")
         .popoverTip(ClaudeTip.askResume, arrowEdge: .bottom)
         .tipImageStyle(Color.claude)
     }
 
     private func ask(_ kind: ClaudeRequest.Kind, application: JobApplication? = nil) {
+        // Saves unsaved edits first, so Claude reads what's on screen; a failed save shows its error and stops here.
+        guard editor.saveIfNeeded() else { return }
         ClaudeTip.askResume.invalidate(reason: .actionPerformed)
         askOutcome = ClaudeAsk.send(
             .init(

@@ -123,7 +123,8 @@ struct ExperienceForm: View {
                         ask: .init(kind: .improveBullets, category: .experience, targetID: editor.record.id, targetTitle: editor.record.displayTitle),
                         unavailable: improveUnavailable,
                         tip: .improve,
-                        showsReason: false
+                        showsReason: false,
+                        saveFirst: editor.saveIfNeeded
                     )
                 }
             } footer: {
@@ -148,7 +149,7 @@ struct ExperienceForm: View {
 
     private var improveUnavailable: String? {
         ClaudeAsk.unavailable(
-            isNew: editor.isNew, isDirty: editor.isDirty, needsReview: editor.record.needsReview,
+            needsReview: editor.record.needsReview,
             missing: editor.record.impacts.allSatisfy(\.isBlank) ? String(localized: "Add an impact first, then Claude can improve it.") : nil
         )
     }

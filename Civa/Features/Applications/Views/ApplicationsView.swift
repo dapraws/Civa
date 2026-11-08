@@ -198,10 +198,10 @@ struct ApplicationForm: View {
                     title: "Draft a Resume with Claude",
                     ask: .init(kind: .draftResume, category: .resumes, targetID: editor.record.id, targetTitle: editor.record.displayTitle),
                     unavailable: ClaudeAsk.unavailable(
-                        isNew: editor.isNew, isDirty: editor.isDirty,
                         missing: editor.record.jobDescription.isBlank ? String(localized: "Add the job description first.") : nil
                     ),
-                    tip: .draft
+                    tip: .draft,
+                    saveFirst: editor.saveIfNeeded
                 )
             } footer: {
                 Text("The resume you sent for this job. Claude can draft one from your Career Profile for this job description; you keep or discard it.")
