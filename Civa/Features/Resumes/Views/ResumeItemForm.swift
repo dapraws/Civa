@@ -180,7 +180,8 @@ struct ResumeItemForm: View {
                     title: "Write with Claude",
                     ask: .init(kind: .writeSummary, category: .resumes, targetID: editor.record.id, targetTitle: editor.record.displayTitle),
                     unavailable: summaryUnavailable,
-                    showsReason: false
+                    showsReason: false,
+                    saveFirst: editor.saveIfNeeded
                 )
             }
         } footer: {
@@ -198,7 +199,7 @@ struct ResumeItemForm: View {
     }
 
     private var summaryUnavailable: String? {
-        ClaudeAsk.unavailable(isNew: editor.isNew, isDirty: editor.isDirty)
+        ClaudeAsk.unavailable()
     }
 
     // Bindings by id, not index: a row removed mid-update must not crash a field still reading it.

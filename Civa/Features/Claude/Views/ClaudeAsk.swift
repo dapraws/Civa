@@ -103,12 +103,10 @@ enum ClaudeAsk {
     }
 
     /// Why an Ask Claude button can't be used yet, in the order the user would fix it.
-    static func unavailable(isNew: Bool, isDirty: Bool, needsReview: Bool = false, missing: String? = nil) -> String? {
-        if isNew { return String(localized: "Save this first, then ask Claude.") }
+    /// Unsaved changes aren't a reason: the button saves them first (`AskClaudeButton.saveFirst`).
+    static func unavailable(needsReview: Bool = false, missing: String? = nil) -> String? {
         if needsReview { return String(localized: "Confirm this record first. Claude only sees confirmed records.") }
-        if let missing { return missing }
-        if isDirty { return String(localized: "Save your changes first, then ask Claude.") }
-        return nil
+        return missing
     }
 
     /// Copies the prompt and opens Claude Desktop.
@@ -198,6 +196,9 @@ struct AskClaudeButton: View {
     /// Shows `unavailable` under the button. Off when the button sits in a section header and
     /// the reason goes in the footer instead (`ClaudeUnavailableNote`).
     var showsReason = true
+    /// Saves the record before asking, so Claude reads what's on screen. Returning false (say, a
+    /// required field is empty) stops the ask, and the editor shows why.
+    var saveFirst: (() -> Bool)?
 
     @Environment(\.modelContext) private var context
     @State private var outcome: ClaudeAsk.Outcome?
@@ -205,6 +206,7 @@ struct AskClaudeButton: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Button {
+                if let saveFirst, !saveFirst() { return }
                 tip?.invalidate(reason: .actionPerformed)
                 outcome = ClaudeAsk.send(ask, container: context.container)
             } label: {

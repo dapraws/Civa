@@ -88,6 +88,12 @@ final class RecordEditor<Model: EditableRecord>: EditSession {
         }
     }
 
+    /// Saves only when there's something to save. For actions that need the record saved first,
+    /// such as asking Claude: they save for the user instead of waiting behind a disabled button.
+    func saveIfNeeded() -> Bool {
+        isNew || isDirty ? save() : true
+    }
+
     func discard() {
         context.rollback()
         errors = [:]

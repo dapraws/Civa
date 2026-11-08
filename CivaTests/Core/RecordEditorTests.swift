@@ -54,6 +54,28 @@ struct RecordEditorTests {
         #expect(editor.error(for: \.role) == nil)
     }
 
+    /// Ask Claude saves first: unsaved edits are saved, a clean record is left alone, and a
+    /// record that can't be saved stops the ask.
+    @Test func saveIfNeededSavesOnlyWhatNeedsIt() throws {
+        let editor = RecordEditor(creating: Experience(kind: .professional, organization: "Acme", role: "Intern"), in: context)
+        #expect(editor.saveIfNeeded())
+        #expect(!editor.isNew)
+        let saved = editor.record.updatedAt
+
+        #expect(editor.saveIfNeeded())
+        #expect(editor.record.updatedAt == saved)
+
+        editor.binding(\.role).wrappedValue = " "
+        #expect(!editor.saveIfNeeded())
+        #expect(editor.error(for: \.role) != nil)
+    }
+
+    @Test func unsavedChangesDontBlockAskingClaude() {
+        #expect(ClaudeAsk.unavailable() == nil)
+        #expect(ClaudeAsk.unavailable(missing: "Add the job description first.") == "Add the job description first.")
+        #expect(ClaudeAsk.unavailable(needsReview: true, missing: "x")?.contains("Confirm") == true)
+    }
+
     @Test func settingTheSameValueDoesNotMarkDirty() throws {
         let record = Skill(name: "Swift")
         context.insert(record)
