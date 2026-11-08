@@ -68,13 +68,14 @@ nonisolated final class SupportingDocument: EditableRecord {
     var createdAt = Date.now
     var updatedAt = Date.now
 
-    // At most one is set: the record this document supports, or none for general files.
-    var experience: Experience?
-    var education: Education?
-    var project: Project?
-    var achievement: Achievement?
-    var certification: Certification?
-    var application: JobApplication?
+    // The records this document supports, any number of them; none for general files.
+    // Each used to hold a single record; `originalName` carries existing links over.
+    @Relationship(originalName: "experience") var experiences: [Experience] = []
+    var education: [Education] = []
+    @Relationship(originalName: "project") var projects: [Project] = []
+    @Relationship(originalName: "achievement") var achievements: [Achievement] = []
+    @Relationship(originalName: "certification") var certifications: [Certification] = []
+    @Relationship(originalName: "application") var applications: [JobApplication] = []
 
     var kind: DocumentKind {
         get { DocumentKind(rawValue: kindRaw) ?? .other }
@@ -104,26 +105,47 @@ extension SupportingDocument {
     /// Files above this size ask before they're added.
     static let largeFileSize = 50 * 1_024 * 1_024
 
-    var linkedRecord: (any DocumentHolder)? {
-        experience ?? education ?? project ?? achievement ?? certification ?? application
+    /// Every record this document is attached to, in the Career Profile's order, applications last.
+    var linkedRecords: [any DocumentHolder] {
+        experiences as [any DocumentHolder] + education + projects + achievements + certifications + applications
     }
 
-    /// Links to `record` alone, or to nothing.
-    func link(to record: (any DocumentHolder)?) {
-        experience = nil
-        education = nil
-        project = nil
-        achievement = nil
-        certification = nil
-        application = nil
+    func isLinked(to record: any DocumentHolder) -> Bool {
+        linkedRecords.contains { $0.id == record.id }
+    }
+
+    /// Adds `record` to the ones this document supports. Its other links stay.
+    func attach(to record: any DocumentHolder) {
+        guard !isLinked(to: record) else { return }
         switch record {
-        case let record as Experience: experience = record
-        case let record as Education: education = record
-        case let record as Project: project = record
-        case let record as Achievement: achievement = record
-        case let record as Certification: certification = record
-        case let record as JobApplication: application = record
+        case let record as Experience: experiences.append(record)
+        case let record as Education: education.append(record)
+        case let record as Project: projects.append(record)
+        case let record as Achievement: achievements.append(record)
+        case let record as Certification: certifications.append(record)
+        case let record as JobApplication: applications.append(record)
         default: break
+        }
+    }
+
+    /// Takes the document off `record` only. The document and its other links stay.
+    func detach(from record: any DocumentHolder) {
+        experiences.removeAll { $0.id == record.id }
+        education.removeAll { $0.id == record.id }
+        projects.removeAll { $0.id == record.id }
+        achievements.removeAll { $0.id == record.id }
+        certifications.removeAll { $0.id == record.id }
+        applications.removeAll { $0.id == record.id }
+    }
+
+    /// The delete confirmation's message for any record. A shared document says how many records
+    /// lose it, since deleting it from one place takes it off all of them.
+    static func deleteMessage(for record: some EditableRecord) -> String {
+        let count = (record as? SupportingDocument)?.linkedRecords.count ?? 0
+        return switch count {
+        case 0: String(localized: "This can't be undone.")
+        case 1: String(localized: "It comes off the record it's attached to. This can't be undone.")
+        default: String(localized: "It's attached to \(count) records and comes off all of them. This can't be undone.")
         }
     }
 

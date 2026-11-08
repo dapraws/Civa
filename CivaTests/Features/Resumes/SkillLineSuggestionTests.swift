@@ -91,12 +91,12 @@ struct SkillLineSuggestionTests {
         try context.save()
         #expect(documents.map(\.kind) == [.offerLetter, .coverLetter, .jobPosting])
         #expect(application.documents.count == 3)
-        #expect(documents[0].linkedRecord?.id == application.id)
+        #expect(documents[0].linkedRecords.map(\.id) == [application.id])
 
         context.delete(application)
         try context.save()
         let kept = try context.fetch(FetchDescriptor<SupportingDocument>())
         #expect(kept.count == 3)
-        #expect(kept.allSatisfy { $0.application == nil })
+        #expect(kept.allSatisfy { $0.applications.isEmpty })
     }
 }

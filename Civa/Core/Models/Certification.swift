@@ -25,7 +25,7 @@ nonisolated final class Certification: ProfileRecord {
     var possibleDuplicateOf: UUID?
 
     /// Supporting documents (FR-022). Deleting this record keeps them, unlinked.
-    @Relationship(deleteRule: .nullify, inverse: \SupportingDocument.certification)
+    @Relationship(deleteRule: .nullify, inverse: \SupportingDocument.certifications)
     var documents: [SupportingDocument] = []
     var createdAt = Date.now
     var updatedAt = Date.now

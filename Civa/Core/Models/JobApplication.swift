@@ -47,7 +47,7 @@ nonisolated final class JobApplication: EditableRecord {
     /// The resume sent for this job. Cleared if that resume is deleted.
     var resume: Resume?
     /// Job posting, cover letter, offer letter. Deleting the application keeps them, unlinked.
-    @Relationship(deleteRule: .nullify, inverse: \SupportingDocument.application)
+    @Relationship(deleteRule: .nullify, inverse: \SupportingDocument.applications)
     var documents: [SupportingDocument] = []
     var createdAt = Date.now
     var updatedAt = Date.now

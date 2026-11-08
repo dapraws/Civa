@@ -114,7 +114,7 @@ nonisolated final class Experience: ProfileRecord {
     var possibleDuplicateOf: UUID?
 
     /// Supporting documents (FR-022). Deleting this record keeps them, unlinked.
-    @Relationship(deleteRule: .nullify, inverse: \SupportingDocument.experience)
+    @Relationship(deleteRule: .nullify, inverse: \SupportingDocument.experiences)
     var documents: [SupportingDocument] = []
     var createdAt = Date.now
     var updatedAt = Date.now

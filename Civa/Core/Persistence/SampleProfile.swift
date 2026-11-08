@@ -357,7 +357,7 @@ enum SampleProfile {
             name: "Azure AI Fundamentals certificate", fileName: "Azure AI Fundamentals.pdf",
             data: ResumeRenderer.pdf(for: page), kind: .certificate
         )
-        pdf.certification = certificate
+        pdf.attach(to: certificate)
 
         let image = NSImage(size: CGSize(width: 480, height: 320), flipped: false) { rect in
             NSGradient(colors: [.systemIndigo, .systemTeal])?.draw(in: rect, angle: 35)
@@ -368,14 +368,14 @@ enum SampleProfile {
         }
         let png = image.tiffRepresentation.flatMap { NSBitmapImageRep(data: $0)?.representation(using: .png, properties: [:]) } ?? Data()
         let screens = SupportingDocument(name: "Kirana screens", fileName: "Kirana screens.png", data: png, kind: .portfolio)
-        screens.project = project
+        screens.attach(to: project)
 
         let letter = SupportingDocument(
             name: "Tokopedia recommendation letter", fileName: "Tokopedia recommendation letter.txt",
             data: Data("Raka was one of the strongest interns on our iOS team. He shipped a component six teams adopted.".utf8),
             kind: .other
         )
-        letter.experience = experience
+        letter.attach(to: experience)
         return [pdf, screens, letter]
     }
 
@@ -401,8 +401,8 @@ enum SampleProfile {
             ],
             kind: .coverLetter
         )
-        posting.application = first
-        cover.application = first
+        posting.attach(to: first)
+        cover.attach(to: first)
         var documents = [posting, cover]
         if let offer = applications.first(where: { $0.status == .offer }) {
             let letter = pdf(
@@ -410,7 +410,7 @@ enum SampleProfile {
                 lines: ["Dear Raka,", "We're pleased to offer you the position of \(offer.position) at \(offer.company)."],
                 kind: .offerLetter
             )
-            letter.application = offer
+            letter.attach(to: offer)
             documents.append(letter)
         }
         return documents

@@ -118,7 +118,7 @@ struct RecordGallery<Model: EditableRecord, Card: View, Editor: View>: View {
                     if let deleting { write { context.delete(deleting) } }
                 }
             } message: {
-                Text("This can't be undone.")
+                Text(deleting.map(SupportingDocument.deleteMessage(for:)) ?? "")
             }
             .alert(
                 "Civa Couldn't Save Your Changes",

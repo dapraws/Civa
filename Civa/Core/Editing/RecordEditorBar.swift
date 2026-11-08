@@ -63,7 +63,7 @@ struct RecordEditorBar<Model: EditableRecord>: View {
                 if editor.delete() { onClose() }
             }
         } message: {
-            Text("This can't be undone.")
+            Text(SupportingDocument.deleteMessage(for: editor.record))
         }
         .alert(
             "Civa Couldn't Save Your Changes",

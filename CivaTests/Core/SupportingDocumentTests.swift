@@ -12,17 +12,41 @@ import Testing
 
 @MainActor
 struct SupportingDocumentTests {
-    @Test func linksToOneRecordAtATime() {
-        let document = SupportingDocument(name: "Cert", fileName: "cert.pdf", data: Data())
+    @Test func attachesToManyRecords() {
+        let document = SupportingDocument(name: "Transcript", fileName: "transcript.pdf", data: Data())
         let certification = Certification(name: "AWS")
         let project = Project(name: "Civa")
-        document.link(to: certification)
-        #expect(document.linkedRecord?.id == certification.id)
-        document.link(to: project)
-        #expect(document.certification == nil)
-        #expect(document.linkedRecord?.id == project.id)
-        document.link(to: nil)
-        #expect(document.linkedRecord == nil)
+        document.attach(to: certification)
+        document.attach(to: project)
+        document.attach(to: project)
+        #expect(document.linkedRecords.map(\.id) == [project.id, certification.id])
+
+        document.detach(from: certification)
+        #expect(document.linkedRecords.map(\.id) == [project.id])
+        #expect(!document.isLinked(to: certification))
+    }
+
+    /// One transcript on two applications shows on both; detaching from one leaves the other.
+    @Test func sharedDocumentShowsOnEachRecord() throws {
+        let container = try ModelContainer.civa(inMemory: true)
+        let context = container.mainContext
+        let grab = JobApplication(company: "Grab", position: "iOS Engineer")
+        let gojek = JobApplication(company: "Gojek", position: "iOS Engineer")
+        let transcript = SupportingDocument(name: "Transcript", fileName: "transcript.pdf", data: Data("t".utf8))
+        context.insert(grab)
+        context.insert(gojek)
+        context.insert(transcript)
+        transcript.attach(to: grab)
+        transcript.attach(to: gojek)
+        try context.save()
+        #expect(grab.documents.map(\.name) == ["Transcript"])
+        #expect(gojek.documents.map(\.name) == ["Transcript"])
+
+        transcript.detach(from: grab)
+        try context.save()
+        #expect(grab.documents.isEmpty)
+        #expect(gojek.documents.map(\.name) == ["Transcript"])
+        #expect(try context.fetch(FetchDescriptor<SupportingDocument>()).count == 1)
     }
 
     @Test func deletingARecordKeepsItsDocuments() throws {
@@ -32,7 +56,7 @@ struct SupportingDocumentTests {
         let document = SupportingDocument(name: "Cert", fileName: "cert.pdf", data: Data("pdf".utf8))
         context.insert(certification)
         context.insert(document)
-        document.link(to: certification)
+        document.attach(to: certification)
         try context.save()
         #expect(certification.documents.map(\.name) == ["Cert"])
 
@@ -40,7 +64,7 @@ struct SupportingDocumentTests {
         try context.save()
         let kept = try context.fetch(FetchDescriptor<SupportingDocument>())
         #expect(kept.count == 1)
-        #expect(kept[0].linkedRecord == nil)
+        #expect(kept[0].linkedRecords.isEmpty)
         #expect(kept[0].data == Data("pdf".utf8))
     }
 
