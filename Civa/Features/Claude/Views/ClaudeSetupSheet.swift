@@ -34,6 +34,10 @@ struct ClaudeSetupSheet: View {
                     Label("Civa needs to be open while you use Claude with it.", systemImage: "macwindow")
                 }
 
+                Section("How It Works") {
+                    ClaudeHowItWorks().padding(.vertical, 4)
+                }
+
                 Section {
                     if ClaudeDesktopConfig.isClaudeInstalled {
                         HStack {
@@ -179,48 +183,10 @@ struct ClaudeSettingsSection: View {
     }
 }
 
-/// An optional Dashboard card offering setup once, until it's done or dismissed.
-struct ClaudeSetupCard: View {
-    static let dismissedKey = "ClaudeSetupCardDismissed"
-    @AppStorage(dismissedKey) private var isDismissed = false
-    private var bridge = ClaudeBridge.shared
-    @State private var isSettingUp = false
-
-    var body: some View {
-        if !bridge.isEnabled, !isDismissed {
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: "sparkles")
-                    .font(.title2)
-                    .foregroundStyle(.claude)
-                    .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Get help from Claude (optional)").font(.headline)
-                    Text("Connect Claude Desktop to rewrite bullet points and tailor resumes. You approve every change.")
-                        .foregroundStyle(.secondary)
-                    HStack {
-                        Button("Set Up…") { isSettingUp = true }
-                        Button("Not Now") { isDismissed = true }
-                    }
-                    .padding(.top, 4)
-                }
-                Spacer(minLength: 0)
-            }
-            .padding(14)
-            .background(.background, in: .rect(cornerRadius: 12))
-            .overlay { RoundedRectangle(cornerRadius: 12).strokeBorder(.separator) }
-            .sheet(isPresented: $isSettingUp) { ClaudeSetupSheet() }
-        }
-    }
-}
-
 #Preview("Sheet") {
     ClaudeSetupSheet()
 }
 
 #Preview("Settings") {
     Form { ClaudeSettingsSection() }.formStyle(.grouped).frame(width: 520)
-}
-
-#Preview("Card") {
-    ClaudeSetupCard().padding().frame(width: 600)
 }

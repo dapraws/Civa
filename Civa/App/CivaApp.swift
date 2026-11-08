@@ -40,5 +40,11 @@ struct CivaApp: App {
             }
         }
         .defaultSize(width: 1280, height: 800)
+        .commands {
+            CommandGroup(replacing: .help) {
+                Button("Show Welcome") { Onboarding.shared.request = .welcome }
+                Button("Show Getting Started") { Onboarding.shared.request = .gettingStarted }
+            }
+        }
     }
 }
