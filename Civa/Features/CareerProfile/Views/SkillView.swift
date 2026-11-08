@@ -121,7 +121,6 @@ struct SkillList: View {
 
     private var chips: some View {
         VStack(alignment: .leading, spacing: 10) {
-            TipView(CivaTip.skills)
             HStack {
                 Text(group?.title ?? String(localized: "Skills"))
                     .font(.title3.weight(.semibold))
@@ -268,6 +267,8 @@ struct SkillForm: View {
         Form {
             ReviewBanner(editor: editor)
             Section {
+                // In the form, not above the chips: a TipView in that fixed-height column broke the page layout.
+                TipView(CivaTip.skills)
                 TextField("Name", text: editor.binding(\.name), prompt: Text("Required"))
                 FieldError(editor.error(for: \.name))
                 TextField("Category", text: editor.binding(\.category), prompt: Text("Hard Skills, Soft Skills, Tools"))
