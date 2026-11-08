@@ -329,7 +329,10 @@ nonisolated struct ResumeFormat: Codable, Hashable {
         /// After the MIT CAPD sample resumes: serif, centered header, bold caps headings with a
         /// rule, organization and location first.
         case mit
-        /// After the Harvard College template: centered header and centered bold caps headings.
+        /// After the Harvard Mignone Center's 2025 Word template: bold name over a rule, one
+        /// centered contact line, centered bold headings in title case, organization and
+        /// location first, then the role in bold and the dates. Harvard sets it in Calibri 11,
+        /// which macOS doesn't include; Arial is the closest font every Mac has.
         case harvard
         /// After Jake's Resume, common in tech hiring: small caps headings with a rule, compact.
         case tech
@@ -338,14 +341,15 @@ nonisolated struct ResumeFormat: Codable, Hashable {
             switch self {
             case .classic, .tech: .helveticaNeue
             case .mit: .timesNewRoman
-            case .harvard: .georgia
+            case .harvard: .arial
             }
         }
 
         var defaultFontSize: Double {
             switch self {
             case .classic, .tech: 10
-            case .mit, .harvard: 10.5
+            case .mit: 10.5
+            case .harvard: 11
             }
         }
 
@@ -361,6 +365,11 @@ nonisolated struct ResumeFormat: Codable, Hashable {
         font = template.defaultFont
         fontSize = template.defaultFontSize
         showsDividers = nil
+        if template == .harvard {
+            // Harvard's template uses half-inch margins all round.
+            margins = .narrow
+            sideMargins = nil
+        }
     }
 
     static let fontSizes = 9.0...12.0
