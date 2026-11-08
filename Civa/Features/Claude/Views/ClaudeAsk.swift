@@ -10,7 +10,7 @@ import SwiftData
 import SwiftUI
 import TipKit
 
-/// Queues a request for Claude (FR-072) and says so with a notification that opens AI Activity →
+/// Queues a request for Claude (FR-072) and says so with a banner in Civa that opens AI Activity →
 /// Requests. Claude Desktop opens only from there: MCP can't start Claude from Civa, so the user
 /// sends one short prompt, which "Open Claude" copies to the clipboard.
 enum ClaudeAsk {
