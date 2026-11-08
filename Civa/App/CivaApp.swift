@@ -29,7 +29,7 @@ struct CivaApp: App {
             for key in [Onboarding.welcomeShownKey, Onboarding.checklistHiddenKey] { UserDefaults.standard.removeObject(forKey: key) }
         }
         #endif
-        ClaudeTip.configure()
+        CivaTips.configure()
     }
 
     var body: some Scene {
@@ -51,9 +51,27 @@ struct CivaApp: App {
         .defaultSize(width: 1280, height: 800)
         .commands {
             CommandGroup(replacing: .help) {
-                Button("Show Welcome") { Onboarding.shared.request = .welcome }
-                Button("Show Getting Started") { Onboarding.shared.request = .gettingStarted }
+                HelpMenu()
             }
         }
+
+        Window("Civa Help", id: HelpMenu.windowID) {
+            HelpView()
+        }
+        .defaultSize(width: 860, height: 600)
+    }
+}
+
+/// Help menu items. A view so the button can open the Help window.
+private struct HelpMenu: View {
+    static let windowID = "help"
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Button("Civa Help") { openWindow(id: Self.windowID) }
+            .keyboardShortcut("?")
+        Divider()
+        Button("Show Welcome") { Onboarding.shared.request = .welcome }
+        Button("Show Getting Started") { Onboarding.shared.request = .gettingStarted }
     }
 }
