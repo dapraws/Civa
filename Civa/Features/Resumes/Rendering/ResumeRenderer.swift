@@ -260,20 +260,27 @@ enum ResumeRenderer {
         let header = NSMutableAttributedString()
         let person = document.header.printed
         let alignment: NSTextAlignment = template == .classic ? .left : .center
+        var nameRange: NSRange?
         if !person.fullName.isBlank {
+            let start = header.length
             let name = template == .tech
                 ? style.smallCaps(person.fullName, scale: 2.2, bold: true, color: style.accent, alignment: alignment, after: 2)
-                : style.text(person.fullName, scale: template.nameScale, bold: true, color: style.accent, after: 2, alignment: alignment)
+                : style.text(
+                    person.fullName, scale: template.nameScale, bold: true, color: style.accent,
+                    after: template == .harvard ? 6 + style.format.dividerWidth : 2, alignment: alignment
+                )
             header.append(name)
+            nameRange = NSRange(location: start, length: (person.fullName as NSString).length)
         }
         if !person.headline.isBlank {
-            header.append(style.text(person.headline, scale: 1.1, after: 2, alignment: alignment))
+            // Never larger than the name: Harvard sets the name at body size.
+            header.append(style.text(person.headline, scale: min(1.1, template.nameScale), after: 2, alignment: alignment))
         }
         let contact = ([person.location, person.email, person.phone] + person.links.map(\.url))
             .filter { !$0.isBlank }
-            .joined(separator: template == .tech ? " | " : " · ")
+            .joined(separator: template == .tech ? " | " : template == .harvard ? " • " : " · ")
         if !contact.isEmpty {
-            header.append(style.text(contact, scale: 0.95, color: .darkGray, after: 2, alignment: alignment))
+            header.append(style.text(contact, scale: 0.95, color: template == .harvard ? .black : .darkGray, after: 2, alignment: alignment))
         }
         let summaryHasHeading = style.format.showsSummaryHeading == true
         let summary = document.printedSummary
@@ -285,8 +292,12 @@ enum ResumeRenderer {
         var blocks: [Block] = []
         if header.length > 0 {
             // No rule under the header: the first heading's rule follows right after, as in the
-            // MIT, Harvard, and Jake's samples.
-            blocks.append(Block(text: header))
+            // MIT and Jake's samples. Harvard's template rules off the name instead.
+            var block = Block(text: header)
+            if template == .harvard, let nameRange {
+                block.rules = [style.lineRect(of: nameRange, in: header).maxY + 2 + style.format.dividerWidth / 2]
+            }
+            blocks.append(block)
         }
         if !summary.isBlank, summaryHasHeading {
             let text = NSMutableAttributedString()
@@ -356,9 +367,13 @@ enum ResumeRenderer {
             // MIT and Harvard: organization … location, then title … dates. Tech: organization …
             // dates, then title … location.
             let (right1, right2) = format.layout == .tech ? (dates, location) : (location, dates)
-            text.append(style.text(tabbed(organization, right1), bold: true, rightTab: style.width))
+            // Harvard sets the role in bold and the degree plain, with location and dates plain on
+            // the right; the others set the role in italics.
+            let isHarvard = format.layout == .harvard
+            text.append(style.plainRight(style.text(tabbed(organization, right1), bold: true, rightTab: style.width), right1, when: isHarvard))
             let start = text.length
-            text.append(style.text(tabbed(titleText, right2), italic: true, after: 1, rightTab: style.width))
+            let titleLine = style.text(tabbed(titleText, right2), bold: isHarvard && kind != .education, italic: !isHarvard, after: 1, rightTab: style.width)
+            text.append(style.plainRight(titleLine, right2, when: isHarvard))
             titleRange = NSRange(location: start, length: (titleText as NSString).length)
         } else {
             let start = text.length
@@ -462,7 +477,9 @@ private extension ResumeFormat.Template {
     var nameScale: CGFloat {
         switch self {
         case .classic: 2
-        case .mit, .harvard: 1.6
+        case .mit: 1.6
+        // Harvard's template sets the name at body size, bold, over a rule.
+        case .harvard: 1
         case .tech: 2.2
         }
     }
@@ -523,6 +540,15 @@ private struct Style {
         return rect
     }
 
+    /// The line with the text after its tab set in the regular weight.
+    func plainRight(_ line: NSAttributedString, _ right: String, when condition: Bool) -> NSAttributedString {
+        guard condition, !right.isBlank else { return line }
+        let result = NSMutableAttributedString(attributedString: line)
+        let length = (right as NSString).length
+        result.addAttribute(.font, value: font(scale: 1, bold: false, italic: false), range: NSRange(location: result.length - 1 - length, length: length))
+        return result
+    }
+
     /// A section heading in the template's style. Returns its range.
     func appendHeading(_ title: String, to text: NSMutableAttributedString) -> NSRange {
         let start = text.length
@@ -535,7 +561,7 @@ private struct Style {
         case .mit:
             text.append(self.text(title.uppercased(), bold: true, color: accent, before: before, after: after))
         case .harvard:
-            text.append(self.text(title.uppercased(), bold: true, color: accent, before: before, after: after, alignment: .center))
+            text.append(self.text(title, scale: 1.05, bold: true, color: accent, before: before, after: after, alignment: .center))
         case .tech:
             text.append(smallCaps(title, scale: 1.15, bold: false, color: accent, alignment: .left, before: before, after: after))
         }

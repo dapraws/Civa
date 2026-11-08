@@ -36,7 +36,7 @@ struct ResumeTemplateTests {
     @Test(arguments: ResumeFormat.Template.allCases)
     func templatesReadInOrder(_ template: ResumeFormat.Template) throws {
         let text = try text(document(template))
-        let headings = template == .classic ? ["Experience", "Certifications"] : ["EXPERIENCE", "CERTIFICATIONS"]
+        let headings = template == .classic || template == .harvard ? ["Experience", "Certifications"] : ["EXPERIENCE", "CERTIFICATIONS"]
         // Tech sets the name in small capitals; Classic leads with the role, the others with the organization.
         let name = template == .tech ? "RAKA PRATAMA" : "Raka Pratama"
         let entry = template == .classic ? ["iOS Engineer", "Gojek"] : ["Gojek", "iOS Engineer"]
@@ -77,12 +77,24 @@ struct ResumeTemplateTests {
     }
 
     @Test func summaryHeadingIsOptional() throws {
-        var document = document(.harvard)
+        var document = document(.mit)
         #expect(try !text(document).contains("SUMMARY"))
         document.format.showsSummaryHeading = true
         let text = try text(document)
         #expect(text.contains("SUMMARY"))
         #expect(text.range(of: "SUMMARY")!.lowerBound < text.range(of: "EXPERIENCE")!.lowerBound)
+    }
+
+    @Test func harvardFollowsItsWordTemplate() throws {
+        var format = ResumeFormat()
+        format.margins = .wide
+        format.apply(.harvard)
+        #expect(format.font == .arial && format.fontSize == 11 && format.margins == .narrow && !format.dividers)
+        var document = document(.harvard)
+        document.header.phone = "+62 811 0000 0000"
+        let text = try text(document)
+        #expect(text.contains("raka@example.com • +62 811 0000 0000"))
+        #expect(text.contains("Experience") && !text.contains("EXPERIENCE"))
     }
 
     @Test func applyingATemplateTakesItsFont() {
