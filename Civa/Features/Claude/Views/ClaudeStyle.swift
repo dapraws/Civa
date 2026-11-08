@@ -46,6 +46,38 @@ struct ClaudeCount: View {
     }
 }
 
+/// How a request reaches Claude and comes back, in three plain steps. Claude can't be started
+/// from Civa, so step 2 is the one people miss.
+struct ClaudeHowItWorks: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            step(1, "Ask in Civa", "Press an orange Claude button. Civa saves the request.")
+            step(2, "Tell Claude Desktop", "Send “\(ClaudeAsk.prompt)” Claude reads only what you allowed.")
+            step(3, "Review in Civa", "Claude's suggestions come back here. Nothing changes until you apply one.")
+        }
+    }
+
+    private func step(_ number: Int, _ title: LocalizedStringKey, _ detail: LocalizedStringKey) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Text(number, format: .number)
+                .font(.callout.weight(.bold))
+                .foregroundStyle(.white)
+                .frame(width: 22, height: 22)
+                .background(.claude, in: .circle)
+                .alignmentGuide(.firstTextBaseline) { $0[.bottom] - 6 }
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.headline)
+                Text(detail).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+}
+
+#Preview("How It Works") {
+    ClaudeHowItWorks().padding().frame(width: 420)
+}
+
 #Preview {
     VStack(spacing: 12) {
         ClaudeTag()

@@ -30,7 +30,17 @@ struct AIActivityView: View {
             if tab == .suggestions, proposals.isEmpty {
                 empty("No Suggestions to Review", "What Claude suggests appears here and on the page it's about. Nothing changes until you apply it.")
             } else if tab == .requests, requests.isEmpty {
-                empty("Nothing Asked Yet", "Use the orange Ask Claude buttons on resumes, experience, projects, and applications.")
+                ContentUnavailableView {
+                    Label {
+                        Text("Nothing Asked Yet")
+                    } icon: {
+                        Image(systemName: "sparkles").foregroundStyle(.claude)
+                    }
+                } description: {
+                    Text("Use the orange Claude buttons on resumes, experience, projects, and applications.")
+                } actions: {
+                    ClaudeHowItWorks().frame(maxWidth: 420)
+                }
             } else if tab == .log, activity.isEmpty {
                 empty("No Activity Yet", "Everything Claude reads or suggests is logged here.")
             } else {
@@ -65,6 +75,9 @@ struct AIActivityView: View {
             case .requests:
                 Section {
                     ForEach(requests) { ClaudeRequestRow(request: $0, showsAll: true) }
+                }
+                Section("How It Works") {
+                    ClaudeHowItWorks().padding(.vertical, 4)
                 }
             case .log:
                 let entries = activity.filter { (kind == nil || $0.kind == kind) && (category == nil || $0.category == category) }
@@ -161,6 +174,7 @@ struct ClaudeRequestRow: View {
     var showsAll = false
 
     @Environment(\.modelContext) private var context
+    @State private var showsHelp = false
 
     var body: some View {
         HStack {
@@ -178,8 +192,22 @@ struct ClaudeRequestRow: View {
             }
             switch request.status {
             case .pending:
+                Button("How do I start this?", systemImage: "questionmark.circle") { showsHelp = true }
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.borderless)
+                    .popover(isPresented: $showsHelp, arrowEdge: .bottom) {
+                        VStack(alignment: .leading, spacing: 14) {
+                            ClaudeHowItWorks()
+                            Button("Open Claude") { ClaudeAsk.openClaude() }
+                                .buttonStyle(.borderedProminent)
+                                .tint(.claude)
+                        }
+                        .padding()
+                        .frame(width: 360)
+                    }
                 Button("Cancel") { set(.cancelled) }
                 Button("Open Claude") { ClaudeAsk.openClaude() }
+                    .help("Copies “\(ClaudeAsk.prompt)” and opens Claude Desktop")
             case .failed:
                 Button("Cancel") { set(.cancelled) }
                 Button("Ask Again") {

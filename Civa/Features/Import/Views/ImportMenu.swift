@@ -35,6 +35,12 @@ struct ImportMenu: View {
             if case .success(let url) = result { request = ImportRequest(url: url, kind: kind) }
         }
         .sheet(item: $request) { ImportReviewSheet(request: $0) }
+        // An import picked on the welcome sheet.
+        .onChange(of: Onboarding.shared.importKind, initial: true) { _, picked in
+            guard let picked else { return }
+            Onboarding.shared.importKind = nil
+            choose(picked)
+        }
         #if DEBUG
         // Manual checks: -CivaImportSample YES opens the review on a sample Word CV.
         .onAppear {

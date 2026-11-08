@@ -21,6 +21,9 @@ struct DashboardView: View {
     @Query private var certifications: [Certification]
     @Query private var skills: [Skill]
     @Query private var applications: [JobApplication]
+    @Query(sort: \Resume.updatedAt, order: .reverse) private var resumes: [Resume]
+    @Query(filter: #Predicate<ResumeSnapshot> { $0.reasonRaw == "exported" }) private var exports: [ResumeSnapshot]
+    @State private var isSettingUpClaude = false
 
     var body: some View {
         let summary = DashboardSummary(
@@ -33,31 +36,78 @@ struct DashboardView: View {
             skills: skills,
             applications: applications
         )
-        if summary.isEmpty {
-            ContentUnavailableView {
-                Label("Start Your Career Profile", systemImage: AppSection.careerProfile.systemImage)
-            } description: {
-                Text("Add your details once, then reuse them for every resume. Everything stays on this Mac.")
-            } actions: {
-                ImportMenu()
-                Button("Add Personal Information") { open(.personal) }
-                Button("Add Experience", action: addExperience)
-            }
-        } else {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    quickActions
-                    ClaudeSetupCard()
-                    ClaudeInboxCard()
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 300), alignment: .top)], spacing: 16) {
-                        profileCard(summary)
-                        applicationsCard(summary)
+        Group {
+            if summary.isEmpty {
+                emptyState
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        quickActions
+                        GettingStartedCard(steps: gettingStarted(summary), onShowMe: showMe)
+                        ClaudeInboxCard()
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 300), alignment: .top)], spacing: 16) {
+                            profileCard(summary)
+                            applicationsCard(summary)
+                        }
+                        recentActivityCard(summary)
                     }
-                    recentActivityCard(summary)
+                    .padding(20)
+                    .frame(maxWidth: 960, alignment: .leading)
                 }
-                .padding(20)
-                .frame(maxWidth: 960, alignment: .leading)
             }
+        }
+        .onAppear {
+            // First launch with nothing saved yet.
+            if summary.isEmpty, !UserDefaults.standard.bool(forKey: Onboarding.welcomeShownKey) {
+                Onboarding.shared.showsWelcome = true
+            }
+        }
+        .sheet(isPresented: $isSettingUpClaude) { ClaudeSetupSheet() }
+    }
+
+    private var emptyState: some View {
+        ContentUnavailableView {
+            Label("Start Your Career Profile", systemImage: AppSection.careerProfile.systemImage)
+        } description: {
+            Text("Add your details once, then reuse them for every resume. Everything stays on this Mac.")
+        } actions: {
+            ImportMenu()
+            Button("Add Personal Information") { open(.personal) }
+            Button("Add Experience", action: addExperience)
+        }
+    }
+
+    private func gettingStarted(_ summary: DashboardSummary) -> GettingStarted {
+        GettingStarted(
+            hasNameAndEmail: personalInfo.contains { !$0.fullName.isBlank && !$0.email.isBlank },
+            hasBackground: experiences.contains { !$0.needsReview } || education.contains { !$0.needsReview },
+            needsReview: summary.needsReviewCount,
+            hasResume: !resumes.isEmpty,
+            hasExported: !exports.isEmpty,
+            hasApplication: !applications.isEmpty,
+            claudeConnected: ClaudeBridge.shared.isEnabled
+        )
+    }
+
+    private func showMe(_ step: GettingStarted.Step) {
+        switch step {
+        case .personal: open(.personal)
+        case .background: open(.professional)
+        case .review: openFirstNeedsReview()
+        case .resume: go { navigation.section = .resumes }
+        case .export:
+            // The Master, or the newest resume: Export is in its toolbar.
+            let resume = resumes.first(where: \.isMaster) ?? resumes.first
+            go {
+                navigation.recordToOpen = resume?.id
+                navigation.section = .resumes
+            }
+        case .application:
+            go {
+                navigation.startsNewRecord = true
+                navigation.section = .applications
+            }
+        case .claude: isSettingUpClaude = true
         }
     }
 

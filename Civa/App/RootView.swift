@@ -15,6 +15,8 @@ struct RootView: View {
     @State private var pendingSection: AppSection?
     private var bridge = ClaudeBridge.shared
     private var notice = ClaudeRequestNotice.shared
+    private var onboarding = Onboarding.shared
+    @State private var welcomeChoice: WelcomeSheet.Choice?
     @Query(filter: #Predicate<ClaudeProposal> { $0.statusRaw == "pending" }) private var claudeProposals: [ClaudeProposal]
     /// Waiting and failed requests: both need the user to start them in Claude.
     @Query(filter: #Predicate<ClaudeRequest> { $0.statusRaw == "pending" || $0.statusRaw == "failed" })
@@ -73,6 +75,23 @@ struct RootView: View {
                 navigation.section = .aiActivity
             }
         }
+        .sheet(isPresented: Binding { onboarding.showsWelcome } set: { onboarding.showsWelcome = $0 }, onDismiss: welcomeClosed) {
+            WelcomeSheet { choice in
+                welcomeChoice = choice
+                onboarding.showsWelcome = false
+            }
+        }
+        .onChange(of: onboarding.request) { _, request in
+            guard let request else { return }
+            onboarding.request = nil
+            changes.perform {
+                navigation.section = .dashboard
+                switch request {
+                case .welcome: onboarding.showsWelcome = true
+                case .gettingStarted: UserDefaults.standard.set(false, forKey: Onboarding.checklistHiddenKey)
+                }
+            }
+        }
         .environment(navigation)
         // Wide enough for the Career Profile tabs and the resume editor's three columns at their minimums.
         .frame(minWidth: 1100, minHeight: 640)
@@ -83,6 +102,23 @@ struct RootView: View {
         .unsavedChangesAlert(changes)
         // Closing the window quits; keep it open until edits are saved or reverted.
         .windowDismissBehavior(changes.hasUnsavedChanges ? .disabled : .automatic)
+    }
+
+    /// Acts on the welcome choice once the sheet is gone, so a file panel can open.
+    private func welcomeClosed() {
+        UserDefaults.standard.set(true, forKey: Onboarding.welcomeShownKey)
+        let choice = welcomeChoice
+        welcomeChoice = nil
+        switch choice {
+        case .importCV: onboarding.importKind = .cv
+        case .importLinkedIn: onboarding.importKind = .linkedInExport
+        case .addByHand:
+            changes.perform {
+                navigation.profileCategory = .personal
+                navigation.section = .careerProfile
+            }
+        case .lookAround, nil: break
+        }
     }
 
     @ViewBuilder
