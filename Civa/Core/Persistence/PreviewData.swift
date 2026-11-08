@@ -19,12 +19,34 @@ extension ModelContainer {
 }
 
 /// Which data a debug build runs on. Debug builds start on fresh sample data every launch, so
-/// testing never touches real data; Settings → Developer switches to real data after a restart.
-enum DataMode {
-    static let realDataKey = "CivaUseRealData"
+/// testing never touches real data. Settings → Developer switches mode after a restart.
+nonisolated enum DataMode: String, CaseIterable {
+    /// The fictional sample person, fresh every launch.
+    case sample
+    /// Nothing at all, fresh every launch, with the welcome, checklist, and tips shown again:
+    /// Civa as a new user first sees it.
+    case empty
+    /// The real store.
+    case real
 
-    static let usesSampleData =
-        UserDefaults.standard.bool(forKey: "CivaSampleData") || !UserDefaults.standard.bool(forKey: realDataKey)
+    static let key = "CivaDataMode"
+    /// The old on/off switch, read until a mode is picked.
+    private static let realDataKey = "CivaUseRealData"
+
+    static let current: DataMode = {
+        let defaults = UserDefaults.standard
+        if defaults.bool(forKey: "CivaSampleData") { return .sample }
+        if let mode = defaults.string(forKey: key).flatMap(DataMode.init) { return mode }
+        return defaults.bool(forKey: realDataKey) ? .real : .sample
+    }()
+
+    var title: String {
+        switch self {
+        case .sample: String(localized: "Sample Data")
+        case .empty: String(localized: "Empty, Like a New User")
+        case .real: String(localized: "My Real Data")
+        }
+    }
 }
 
 /// Sample files for manual checks.

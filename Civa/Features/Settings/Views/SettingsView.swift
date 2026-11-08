@@ -11,7 +11,7 @@ import SwiftUI
 struct SettingsView: View {
     @AppStorage(Brandfetch.fetchesLogosKey) private var fetchesLogos = true
     #if DEBUG
-    @AppStorage(DataMode.realDataKey) private var usesRealData = false
+    @AppStorage(DataMode.key) private var dataMode = DataMode.current
     #endif
 
     var body: some View {
@@ -32,11 +32,13 @@ struct SettingsView: View {
             }
             #if DEBUG
             Section {
-                Toggle("Use My Real Data", isOn: $usesRealData)
+                Picker("Data", selection: $dataMode) {
+                    ForEach(DataMode.allCases, id: \.self) { Text($0.title).tag($0) }
+                }
             } header: {
                 Text("Developer")
             } footer: {
-                Text("Debug builds start with fresh sample data every launch, so testing never touches your real data. Turn this on to use your real data instead. Takes effect after you restart Civa.")
+                Text("Sample and Empty start fresh every launch, so testing never touches your real data. Empty also shows the welcome, Getting Started, and tips again. Takes effect after you restart Civa.")
             }
             #endif
         }

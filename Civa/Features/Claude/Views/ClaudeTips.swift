@@ -42,8 +42,8 @@ struct ClaudeTip: Tip {
     /// Call once at launch.
     static func configure() {
         #if DEBUG
-        // Manual checks: -CivaResetTips YES shows every tip again.
-        if UserDefaults.standard.bool(forKey: "CivaResetTips") { try? Tips.resetDatastore() }
+        // Manual checks: -CivaResetTips YES, or the Empty data mode, shows every tip again.
+        if UserDefaults.standard.bool(forKey: "CivaResetTips") || DataMode.current == .empty { try? Tips.resetDatastore() }
         #endif
         try? Tips.configure()
     }

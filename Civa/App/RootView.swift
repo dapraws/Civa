@@ -43,13 +43,13 @@ struct RootView: View {
             .navigationSplitViewColumnWidth(min: 190, ideal: 200)
             #if DEBUG
             .safeAreaInset(edge: .bottom) {
-                if DataMode.usesSampleData {
-                    Label("Sample Data", systemImage: "testtube.2")
+                if DataMode.current != .real {
+                    Label(DataMode.current.title, systemImage: "testtube.2")
                         .font(.callout)
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(12)
-                        .help("Debug builds start with fresh sample data. Switch in Settings → Developer.")
+                        .help("This debug run starts fresh every launch. Switch in Settings → Developer.")
                 }
             }
             #endif
