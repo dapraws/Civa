@@ -187,12 +187,18 @@ struct ApplicationForm: View {
                     }
                 }
                 if let resume = editor.record.resume {
-                    Button("Open Resume") {
-                        changes.perform {
-                            navigation.recordToOpen = resume.id
-                            navigation.section = .resumes
+                    // The resume's first page, as on the Resumes page, so you see which one went out.
+                    HStack(alignment: .bottom, spacing: 14) {
+                        Button { open(resume) } label: {
+                            ResumeCard(resume: resume)
+                                .frame(width: 150)
                         }
+                        .buttonStyle(.plain)
+                        .help("Open this resume")
+                        Button("Open Resume") { open(resume) }
+                        Spacer()
                     }
+                    .padding(.vertical, 4)
                 }
                 AskClaudeButton(
                     title: "Draft a Resume with Claude",
@@ -229,6 +235,13 @@ struct ApplicationForm: View {
             DocumentsSection(editor: editor)
         }
         .formStyle(.grouped)
+    }
+
+    private func open(_ resume: Resume) {
+        changes.perform {
+            navigation.recordToOpen = resume.id
+            navigation.section = .resumes
+        }
     }
 
     /// Turning the date on starts at today; turning it off clears it.

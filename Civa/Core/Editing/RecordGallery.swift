@@ -103,6 +103,11 @@ struct RecordGallery<Model: EditableRecord, Card: View, Editor: View>: View {
                 if UserDefaults.standard.bool(forKey: "CivaOpenFirst"), let first = records.sorted(by: order).first {
                     open(first)
                 }
+                // -CivaOpenTitle Grab opens the first card whose title contains "Grab".
+                if let title = UserDefaults.standard.string(forKey: "CivaOpenTitle"),
+                   let match = records.sorted(by: order).first(where: { $0.displayTitle.localizedCaseInsensitiveContains(title) }) {
+                    open(match)
+                }
                 #endif
             }
             .confirmationDialog(
