@@ -147,7 +147,7 @@ struct HelpTopic: Identifiable {
         ]),
         HelpTopic("applications", String(localized: "Applications and Documents"), "tray.full", [
             (String(localized: "Applications"), String(localized: "Track the jobs you're interested in and where each one stands. Paste the job description and link the resume you sent.")),
-            (String(localized: "Documents"), String(localized: "Keep certificates, transcripts, and other files here, and link them to the records they support. Linking doesn't change the record.")),
+            (String(localized: "Documents"), String(localized: "Keep certificates, transcripts, and other files here once. Attach Document on any record or application picks from them, so you never look for the file again; From Finder adds a new one. One file can go on many records, and linking never changes the record.")),
         ]),
         HelpTopic("claude", String(localized: "Working with Claude"), "sparkles", [
             (String(localized: "Optional"), String(localized: "Civa works fully on its own. If you use Claude Desktop, you can connect it in Settings to write summaries, improve bullets, or draft tailored resumes.")),

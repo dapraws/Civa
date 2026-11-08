@@ -70,7 +70,7 @@ struct DocumentsView: View {
     }
 }
 
-/// A document in the gallery: its thumbnail, name, kind, and the record it supports.
+/// A document in the gallery: its thumbnail, name, kind, and the records it supports.
 struct DocumentCard: View {
     let document: SupportingDocument
 
@@ -84,7 +84,7 @@ struct DocumentCard: View {
                 Text(document.displayTitle)
                     .font(.headline)
                     .lineLimit(1)
-                Text([document.kind.title, document.linkedRecord?.displayTitle].compactMap { $0 }.joined(separator: " · "))
+                Text([document.kind.title, linkedSummary].compactMap { $0 }.joined(separator: " · "))
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -92,9 +92,18 @@ struct DocumentCard: View {
         }
         .accessibilityElement(children: .combine)
     }
+
+    private var linkedSummary: String? {
+        let linked = document.linkedRecords
+        return switch linked.count {
+        case 0: nil
+        case 1: linked[0].displayTitle
+        default: String(localized: "\(linked.count) records")
+        }
+    }
 }
 
-/// A document's preview and details: name, kind, notes, and the record it supports.
+/// A document's preview and details: name, kind, notes, and the records it supports.
 struct DocumentForm: View {
     let editor: RecordEditor<SupportingDocument>
 
@@ -138,8 +147,24 @@ struct DocumentForm: View {
                 Picker("Kind", selection: editor.binding(\.kindRaw)) {
                     ForEach(DocumentKind.allCases) { Text($0.title).tag($0.rawValue) }
                 }
-                Picker("Linked To", selection: linkedRecord) {
-                    Text("None").tag(UUID?.none)
+            }
+            Section {
+                ForEach(document.linkedRecords, id: \.id) { record in
+                    HStack {
+                        Text(record.displayTitle)
+                        Spacer()
+                        Text(Self.recordKind(record))
+                            .foregroundStyle(.secondary)
+                        Button("Unlink", systemImage: "xmark.circle.fill") {
+                            editor.update { $0.detach(from: record) }
+                        }
+                        .labelStyle(.iconOnly)
+                        .buttonStyle(.borderless)
+                        .foregroundStyle(.secondary)
+                        .help("Take the document off this record. The document stays.")
+                    }
+                }
+                Menu("Link to a Record") {
                     recordGroup(String(localized: "Experience"), experiences)
                     recordGroup(String(localized: "Education"), education)
                     recordGroup(String(localized: "Projects"), projects)
@@ -147,8 +172,11 @@ struct DocumentForm: View {
                     recordGroup(String(localized: "Certifications"), certifications)
                     recordGroup(String(localized: "Applications"), applications)
                 }
+                .fixedSize()
+            } header: {
+                Text("Linked To")
             } footer: {
-                Text("Linking shows this document on that record. It doesn't change the record.")
+                Text("One document can go on many records, like a transcript on several applications. Linking doesn't change the record.")
             }
             Section("Notes") {
                 TextField("Notes", text: editor.binding(\.notes), prompt: Text("Where it's from, what it shows"), axis: .vertical)
@@ -161,27 +189,28 @@ struct DocumentForm: View {
         .sheet(item: $importRequest) { ImportReviewSheet(request: $0) }
     }
 
+    /// A submenu of the records of one type that this document isn't on yet.
     @ViewBuilder
     private func recordGroup(_ title: String, _ records: [some DocumentHolder]) -> some View {
-        if !records.isEmpty {
-            Section(title) {
-                ForEach(records, id: \.id) { Text($0.displayTitle).tag(UUID?.some($0.id)) }
+        let open = records.filter { !editor.record.isLinked(to: $0) }
+        if !open.isEmpty {
+            Menu(title) {
+                ForEach(open, id: \.id) { record in
+                    Button(record.displayTitle) { editor.update { $0.attach(to: record) } }
+                }
             }
         }
     }
 
-    private var allRecords: [any DocumentHolder] {
-        experiences as [any DocumentHolder] + education + projects + achievements + certifications + applications
-    }
-
-    private var linkedRecord: Binding<UUID?> {
-        Binding(
-            get: { editor.record.linkedRecord?.id },
-            set: { id in
-                let record = allRecords.first { $0.id == id }
-                editor.update { $0.link(to: record) }
-            }
-        )
+    static func recordKind(_ record: any DocumentHolder) -> String {
+        switch record {
+        case is Experience: String(localized: "Experience")
+        case is Education: String(localized: "Education")
+        case is Project: String(localized: "Project")
+        case is Achievement: String(localized: "Achievement")
+        case is Certification: String(localized: "Certification")
+        default: String(localized: "Application")
+        }
     }
 
     private func canImport(_ document: SupportingDocument) -> Bool {

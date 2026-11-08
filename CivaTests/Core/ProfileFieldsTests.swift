@@ -85,7 +85,7 @@ struct ProfileFieldsTests {
 
         let document = SupportingDocument(name: "Screenshot", fileName: "kirana.png", data: Data([1]))
         context.insert(document)
-        document.link(to: project)
+        document.attach(to: project)
         guard case .document(let found) = project.proof else { Issue.record("Expected the document"); return }
         #expect(found.id == document.id)
 

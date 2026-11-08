@@ -28,7 +28,7 @@ nonisolated final class Project: ProfileRecord {
     var possibleDuplicateOf: UUID?
 
     /// Supporting documents (FR-022). Deleting this record keeps them, unlinked.
-    @Relationship(deleteRule: .nullify, inverse: \SupportingDocument.project)
+    @Relationship(deleteRule: .nullify, inverse: \SupportingDocument.projects)
     var documents: [SupportingDocument] = []
     var createdAt = Date.now
     var updatedAt = Date.now
