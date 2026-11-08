@@ -9,7 +9,6 @@ import AppKit
 import Foundation
 import SwiftData
 import Testing
-import UserNotifications
 @testable import Civa
 
 @MainActor
@@ -154,16 +153,11 @@ struct ClaudeWriteToolsTests {
         #expect(pasteboard.string(forType: .string) == "untouched")
     }
 
-    @Test func noticeNamesTheRequest() {
-        let content = ClaudeRequestNotice.content(for: "Tailor “Stripe Application”")
-        #expect(content.title == "Civa Has a Request for Claude")
-        #expect(content.body == "Tailor “Stripe Application”")
-    }
-
-    /// Clicking a notice or the banner hides the banner and asks RootView to open Requests.
-    @Test func openingTheNoticeGoesToRequests() {
+    /// Posting shows the banner; clicking it hides it and asks RootView to open Requests.
+    @Test func openingTheBannerGoesToRequests() {
         let notice = ClaudeRequestNotice()
-        notice.banner = "Write a summary for “Master”"
+        notice.post("Write a summary for “Master”")
+        #expect(notice.banner == "Write a summary for “Master”")
         notice.open()
         #expect(notice.banner == nil)
         #expect(notice.opensRequests)
