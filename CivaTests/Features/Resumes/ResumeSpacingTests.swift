@@ -104,17 +104,14 @@ struct OrganizationalSectionTests {
     }
 }
 
-/// The Skills page sidebar: hard, then soft, then untyped; categories match loosely.
+/// The Skills page sidebar: categories alphabetically, "No Category" last; they match loosely.
 @MainActor
 struct SkillGroupTests {
     @Test func groupsSortAndMatch() {
-        let groups: [SkillGroup] = [
-            .init(type: nil, category: "Misc"), .init(type: .soft, category: "Soft Skills"),
-            .init(type: .hard, category: ""), .init(type: .hard, category: "Tools"), .init(type: .hard, category: "AI/ML"),
-        ]
-        #expect(groups.sorted().map(\.title) == ["AI/ML", "Tools", "No Category", "Soft Skills", "Misc"])
-        #expect(SkillGroup(type: .hard, category: " tools ") == SkillGroup(type: .hard, category: "Tools"))
-        #expect(SkillGroup(type: .soft, category: "Tools") != SkillGroup(type: .hard, category: "Tools"))
+        let groups: [SkillGroup] = [.init(category: "Tools"), .init(category: ""), .init(category: "Soft Skills"), .init(category: "AI/ML")]
+        #expect(groups.sorted().map(\.title) == ["AI/ML", "Soft Skills", "Tools", "No Category"])
+        #expect(SkillGroup(category: " tools ") == SkillGroup(category: "Tools"))
+        #expect(SkillGroup(category: "Hard Skills") != SkillGroup(category: "Soft Skills"))
     }
 }
 

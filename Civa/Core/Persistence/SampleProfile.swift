@@ -18,9 +18,7 @@ enum SampleProfile {
     static func populate(_ context: ModelContext) {
         // MARK: Skills
         func skill(_ name: String, _ category: String, _ status: ReviewStatus = .confirmed) -> Skill {
-            let skill = Skill(name: name, category: category, status: status)
-            skill.type = category == "Soft Skills" ? .soft : .hard
-            return skill
+            Skill(name: name, category: category, status: status)
         }
         let swift = skill("Swift", "Languages")
         let kotlin = skill("Kotlin", "Languages")
