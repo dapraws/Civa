@@ -10,6 +10,7 @@ import SwiftUI
 
 struct RootView: View {
     @Environment(UnsavedChangesGuard.self) private var changes
+    @Environment(\.openWindow) private var openWindow
     @State private var navigation = AppNavigation()
     /// The section clicked while the unsaved-changes prompt is up.
     @State private var pendingSection: AppSection?
@@ -81,6 +82,10 @@ struct RootView: View {
                 onboarding.showsWelcome = false
             }
         }
+        #if DEBUG
+        // Manual checks: -CivaShowHelp YES
+        .onAppear { if UserDefaults.standard.bool(forKey: "CivaShowHelp") { openWindow(id: "help") } }
+        #endif
         .onChange(of: onboarding.request) { _, request in
             guard let request else { return }
             onboarding.request = nil

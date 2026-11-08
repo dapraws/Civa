@@ -7,6 +7,7 @@
 
 import SwiftData
 import SwiftUI
+import TipKit
 
 /// Skills by category: the categories the user named down the left; the selected category's
 /// skills as chips on the right, with the chosen skill's details below.
@@ -120,6 +121,7 @@ struct SkillList: View {
 
     private var chips: some View {
         VStack(alignment: .leading, spacing: 10) {
+            TipView(CivaTip.skills)
             HStack {
                 Text(group?.title ?? String(localized: "Skills"))
                     .font(.title3.weight(.semibold))

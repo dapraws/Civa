@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import TipKit
 
 /// A Word-style ribbon across the top of the resume editor: grouped controls with a caption
 /// under each group and a line between groups. Everything stays visible; when the window is
@@ -18,6 +19,16 @@ struct ResumeFormatBar: View {
     @Binding var showsGuides: Bool
     /// The pointer entered (true) or left (false) a spacing control.
     var onHoverGuide: (ResumeRenderer.Guide, Bool) -> Void = { _, _ in }
+    /// The ribbon tip first, then Proof Check, one at a time.
+    @State private var tips = TipGroup(.ordered) {
+        CivaTip.ribbon
+        CivaTip.proof
+    }
+
+    /// The tip, while it's the group's turn.
+    private func currentTip(_ tip: CivaTip) -> CivaTip? {
+        (tips.currentTip as? CivaTip)?.id == tip.id ? tip : nil
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
@@ -28,6 +39,7 @@ struct ResumeFormatBar: View {
                     }
                     .labelsHidden()
                     .help("Template: sets the layout, and a font you can still change")
+                    .popoverTip(currentTip(CivaTip.ribbon), arrowEdge: .top)
                 }
                 RibbonGroup("Font") {
                     Picker("Font", selection: $format.font) {
@@ -105,6 +117,7 @@ struct ResumeFormatBar: View {
                     Toggle("Proof Check", isOn: Binding(get: { format.linksProof != false }, set: { format.linksProof = $0 }))
                         .toggleStyle(.checkbox)
                         .help("A small gray check after titles with a proof link; clicking the title opens it from the PDF")
+                        .popoverTip(currentTip(CivaTip.proof), arrowEdge: .top)
                 }
                 RibbonGroup("Page", showsDivider: false) {
                     Picker("Paper", selection: $format.paper) {

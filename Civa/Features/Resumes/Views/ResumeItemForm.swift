@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import TipKit
 
 /// Fields for whatever is selected in the outline. These are the resume's own copies; editing
 /// them never touches the Career Profile (FR-034).
@@ -102,6 +103,7 @@ struct ResumeItemForm: View {
 
     private var headerFields: some View {
         Section {
+            TipView(CivaTip.eye)
             TextField("Full Name", text: $document.header.fullName)
             // Label above, so a long headline isn't cut off in the narrow fields column.
             VStack(alignment: .leading, spacing: 4) {
@@ -274,6 +276,7 @@ private struct EntryFields: View {
 
     var body: some View {
         Section {
+            if kind != .skills { TipView(CivaTip.eye) }
             TextField(kind.titleLabel, text: $entry.title, prompt: Text(kind.titlePrompt))
             if kind.hasOrganization {
                 OrganizationField(title: LocalizedStringKey(kind.subtitleLabel), name: organization, prompt: Text(kind.organizationPrompt))
