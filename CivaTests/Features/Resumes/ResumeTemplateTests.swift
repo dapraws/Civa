@@ -56,6 +56,26 @@ struct ResumeTemplateTests {
         #expect(try text(marked) == text(plain))
     }
 
+    @Test func hiddenPartsStayButDontPrint() throws {
+        var document = document(.classic)
+        let link = ProfileLink(label: "GitHub", url: "github.com/raka")
+        document.header.links = [link]
+        document.header.phone = "+62 811 0000 0000"
+        document.header.setShows(.email, false)
+        document.header.setShows(link, false)
+        document.hidesSummary = true
+        document.sections[0].entries[0].setShows(.dates, false)
+        let text = try text(document)
+        for hidden in ["raka@example.com", "github.com/raka", "iOS engineer.", "2024"] {
+            #expect(!text.contains(hidden), "\(hidden)")
+        }
+        #expect(text.contains("+62 811 0000 0000"))
+        #expect(document.header.email == "raka@example.com")
+        document.header.setShows(.email, true)
+        document.header.setShows(link, true)
+        #expect(document.header.hidden == nil)
+    }
+
     @Test func summaryHeadingIsOptional() throws {
         var document = document(.harvard)
         #expect(try !text(document).contains("SUMMARY"))
