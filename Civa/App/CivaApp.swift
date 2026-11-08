@@ -13,12 +13,22 @@ struct CivaApp: App {
     private let container = Result {
         #if DEBUG
         // Debug builds run on fresh sample data unless Settings → Developer says otherwise.
-        if DataMode.usesSampleData { return ModelContainer.preview }
+        switch DataMode.current {
+        case .sample: return ModelContainer.preview
+        case .empty: return try ModelContainer.civa(inMemory: true)
+        case .real: break
+        }
         #endif
         return try ModelContainer.civa()
     }
 
     init() {
+        #if DEBUG
+        if DataMode.current == .empty {
+            // A new user has seen nothing yet.
+            for key in [Onboarding.welcomeShownKey, Onboarding.checklistHiddenKey] { UserDefaults.standard.removeObject(forKey: key) }
+        }
+        #endif
         ClaudeTip.configure()
     }
 
