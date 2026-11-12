@@ -56,15 +56,7 @@ struct RecordListDetail<Model: EditableRecord, Editor: View>: View {
 
     var body: some View {
         content
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button(action: addRecord) {
-                        Label(addTitle, systemImage: "plus")
-                    }
-                    .keyboardShortcut("n")
-                    .help("\(addTitle) (⌘N)")
-                }
-            }
+            .pageAction(PageAction(id: addTitle, title: addTitle, systemImage: "plus", shortcut: "n", run: addRecord))
             .onChange(of: navigation.recordToOpen) { _, target in
                 guard let target, let record = records.first(where: { AnyHashable($0.id) == target }) else { return }
                 navigation.recordToOpen = nil
@@ -87,53 +79,87 @@ struct RecordListDetail<Model: EditableRecord, Editor: View>: View {
     @ViewBuilder
     private var content: some View {
         if records.isEmpty && editor == nil {
-            ContentUnavailableView {
-                Label(empty.title, systemImage: empty.systemImage)
-            } description: {
-                Text(empty.message)
-            } actions: {
-                Button(addTitle, action: addRecord)
-            }
+            EmptyStateView(
+                symbol: empty.systemImage,
+                title: LocalizedStringKey(empty.title),
+                message: LocalizedStringKey(empty.message),
+                button: (LocalizedStringKey(addTitle), .primary, addRecord)
+            )
+            .padding(.horizontal, Space.xl)
+            .frame(maxHeight: .infinity, alignment: .top)
         } else {
             // A fixed list width keeps the layout inside the window; HSplitView sizes panes by their
             // ideal widths and overflowed with the resume editor.
             HStack(spacing: 0) {
-                List(selection: changes.selection($selection, pending: $pendingSelection, apply: open)) {
-                    ForEach(records.sorted(by: order)) { record in
-                        RecordRow(
-                            title: record.displayTitle,
-                            subtitle: subtitle(record),
-                            needsReview: record.needsReview,
-                            proof: record.proof
-                        )
-                        .tag(record.id)
-                    }
-                }
-                .frame(width: 260)
-
-                Divider()
-
+                list
+                    .frame(width: Size.recordList)
+                    .background(Color.sidebar)
+                    .overlay(alignment: .trailing) { Rectangle().fill(Color.hairline).frame(width: 1) }
                 detail
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color.canvas)
             }
         }
+    }
+
+    /// Rows draw their own selection (DESIGN.md §7.8); arrow keys move it while the list has focus.
+    private var list: some View {
+        let sorted = records.sorted(by: order)
+        let selected = changes.selection($selection, pending: $pendingSelection, apply: open)
+        return ScrollView {
+            LazyVStack(spacing: 1) {
+                ForEach(sorted) { record in
+                    RecordRow(
+                        title: record.displayTitle,
+                        subtitle: subtitle(record),
+                        needsReview: record.needsReview,
+                        proof: record.proof,
+                        isSelected: selected.wrappedValue == record.id
+                    )
+                    .onTapGesture { selected.wrappedValue = record.id }
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityAction { selected.wrappedValue = record.id }
+                }
+            }
+            .padding(Space.s)
+        }
+        .focusable()
+        .focusEffectDisabled()
+        .onKeyPress(.upArrow) { step(-1, in: sorted, selection: selected) }
+        .onKeyPress(.downArrow) { step(1, in: sorted, selection: selected) }
+    }
+
+    private func step(_ offset: Int, in sorted: [Model], selection: Binding<Model.ID?>) -> KeyPress.Result {
+        guard let index = sorted.firstIndex(where: { $0.id == selection.wrappedValue }),
+              sorted.indices.contains(index + offset) else { return .ignored }
+        selection.wrappedValue = sorted[index + offset].id
+        return .handled
     }
 
     @ViewBuilder
     private var detail: some View {
         if let editor {
-            editorView(editor)
-                .safeAreaInset(edge: .bottom, spacing: 0) {
-                    RecordEditorBar(editor: editor, onClose: close)
-                }
-                .startsWithoutFocus(!editor.isNew)
-                .id(editor.record.id)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(editor.title)
+                    .font(.detailTitle)
+                    .foregroundStyle(Color.textPrimary)
+                    .lineLimit(1)
+                    .accessibilityAddTraits(.isHeader)
+                    .padding(.horizontal, Space.xl)
+                    .padding(.top, 20)
+                    .padding(.bottom, Space.s)
+                editorView(editor)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                RecordEditorBar(editor: editor, onClose: close)
+            }
+            .startsWithoutFocus(!editor.isNew)
+            .id(editor.record.id)
         } else {
-            ContentUnavailableView(
-                "No Selection",
-                systemImage: empty.systemImage,
-                description: Text("Select an item from the list.")
-            )
+            EmptyStateView(symbol: empty.systemImage, title: "No Selection", message: "Select an item from the list.")
+                .padding(.horizontal, Space.xl)
+                .frame(maxHeight: .infinity, alignment: .top)
         }
     }
 

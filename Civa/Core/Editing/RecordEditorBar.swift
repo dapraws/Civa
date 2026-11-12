@@ -23,11 +23,11 @@ struct RecordEditorBar<Model: EditableRecord>: View {
         HStack {
             if editor.isDirty {
                 Label("Unsaved Changes", systemImage: "pencil.circle")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.textSecondary)
             } else if let record = editor.record as? any ProfileRecord, !record.sources.isEmpty {
                 Text("Source: \(record.sources.map(\.title).joined(separator: " · "))")
                     .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.textSecondary)
                     .lineLimit(1)
                     .help(record.sources.map(\.title).joined(separator: "\n"))
             }
@@ -37,6 +37,7 @@ struct RecordEditorBar<Model: EditableRecord>: View {
                     // Merging saves straight to the store, so unsaved edits go first.
                     if !editor.isDirty || editor.save() { isMerging = true }
                 }
+                .civaButton(.secondary)
                 .help("Compare with the record this may repeat, then merge or keep both")
                 .sheet(isPresented: $isMerging) {
                     DuplicateMergeSheet(duplicate: duplicate, onMerged: onClose)
@@ -44,17 +45,20 @@ struct RecordEditorBar<Model: EditableRecord>: View {
             }
             if canDelete {
                 Button("Delete…", role: .destructive) { isConfirmingDelete = true }
+                    .civaButton(.destructive)
             }
             Button("Revert", action: revert)
+                .civaButton(.secondary)
                 .disabled(!editor.isDirty)
             Button("Save") { editor.save() }
                 .keyboardShortcut("s")
-                .buttonStyle(.borderedProminent)
+                .civaButton(.primary)
                 .disabled(!editor.isDirty)
         }
-        .padding(.horizontal)
+        .padding(.horizontal, Space.xl)
         .padding(.vertical, 10)
-        .background(.bar)
+        .background(Color.canvas)
+        .overlay(alignment: .top) { Rectangle().fill(Color.hairline).frame(height: 1) }
         .confirmationDialog(
             "Delete “\(editor.title)”?",
             isPresented: $isConfirmingDelete

@@ -52,7 +52,8 @@ struct PageHeader<Actions: View>: View {
     var titleFont: Font = .pageTitle
     @ViewBuilder let actions: Actions
 
-    init(_ title: String, back: (() -> Void)? = nil, titleFont: Font = .pageTitle, @ViewBuilder actions: () -> Actions = { EmptyView() }) {
+    /// `actions` has no default on purpose: with one, a trailing `{ … }` would bind to `back`.
+    init(_ title: String, back: (() -> Void)? = nil, titleFont: Font = .pageTitle, @ViewBuilder actions: () -> Actions) {
         self.title = title
         self.back = back
         self.titleFont = titleFont
@@ -77,6 +78,12 @@ struct PageHeader<Actions: View>: View {
             Spacer(minLength: Space.l)
             actions
         }
+    }
+}
+
+extension PageHeader where Actions == EmptyView {
+    init(_ title: String, back: (() -> Void)? = nil, titleFont: Font = .pageTitle) {
+        self.init(title, back: back, titleFont: titleFont) { EmptyView() }
     }
 }
 
