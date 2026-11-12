@@ -54,7 +54,7 @@ struct ResumeCard: View {
                 if resume.isMaster {
                     Label("Master Resume", systemImage: "crown")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.tint)
+                        .foregroundStyle(Color.accentText)
                 }
                 if resume.isClaudeDraft {
                     Label("Draft from Claude", systemImage: "sparkles")

@@ -95,7 +95,7 @@ struct SkillChip: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 4)
         .foregroundStyle(isSelected ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
-        .background(isSelected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.quaternary.opacity(0.5)), in: Capsule())
+        .background(isSelected ? AnyShapeStyle(Color.accent) : AnyShapeStyle(.quaternary.opacity(0.5)), in: Capsule())
         .overlay {
             Capsule().strokeBorder(skill.needsReview ? Color.orange : Color.secondary.opacity(0.35), lineWidth: 0.5)
         }

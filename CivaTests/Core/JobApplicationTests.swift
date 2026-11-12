@@ -46,4 +46,14 @@ struct JobApplicationTests {
         #expect(application.resume == nil)
         #expect(try context.fetchCount(FetchDescriptor<JobApplication>()) == 1)
     }
+
+    @Test func statusesFollowThePipeline() {
+        #expect(ApplicationStatus.allCases == [.wishlist, .applied, .assessment, .interview, .offer, .rejected, .withdrawn])
+    }
+
+    @Test func rawValuesUnchanged() {
+        for raw in ["wishlist", "applied", "interview", "assessment", "offer", "rejected", "withdrawn"] {
+            #expect(ApplicationStatus(rawValue: raw)?.rawValue == raw)
+        }
+    }
 }

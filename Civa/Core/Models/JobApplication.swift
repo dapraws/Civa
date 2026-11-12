@@ -12,8 +12,8 @@ import SwiftData
 nonisolated enum ApplicationStatus: String, Codable, CaseIterable, Identifiable {
     case wishlist
     case applied
-    case interview
     case assessment
+    case interview
     case offer
     case rejected
     case withdrawn
@@ -24,8 +24,8 @@ nonisolated enum ApplicationStatus: String, Codable, CaseIterable, Identifiable 
         switch self {
         case .wishlist: String(localized: "Wishlist")
         case .applied: String(localized: "Applied")
-        case .interview: String(localized: "Interview")
         case .assessment: String(localized: "Assessment")
+        case .interview: String(localized: "Interview")
         case .offer: String(localized: "Offer")
         case .rejected: String(localized: "Rejected")
         case .withdrawn: String(localized: "Withdrawn")

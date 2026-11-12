@@ -23,6 +23,7 @@ struct CivaApp: App {
     }
 
     init() {
+        CivaFonts.register()
         #if DEBUG
         if DataMode.current == .empty {
             // A new user has seen nothing yet.
@@ -50,6 +51,9 @@ struct CivaApp: App {
         }
         .defaultSize(width: 1280, height: 800)
         .commands {
+            CommandGroup(replacing: .appSettings) {
+                SettingsCommand()
+            }
             CommandGroup(replacing: .help) {
                 HelpMenu()
             }
@@ -57,6 +61,7 @@ struct CivaApp: App {
 
         Window("Civa Help", id: HelpMenu.windowID) {
             HelpView()
+                .civaWindowStyle()
         }
         .defaultSize(width: 860, height: 600)
     }

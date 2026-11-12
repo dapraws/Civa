@@ -18,7 +18,8 @@ struct ClaudeTip: Tip {
     let titleText: LocalizedStringResource
     let messageText: LocalizedStringResource
 
-    var title: Text { Text(titleText).foregroundStyle(.claude) }
+    // Tip requirements are nonisolated; the generated asset symbols are main-actor, so name the set.
+    var title: Text { Text(titleText).foregroundStyle(Color("claudeText")) }
     var message: Text? { Text(messageText) }
     var image: Image? { Image(systemName: "sparkles") }
     var rules: [Rule] { [#Rule(Self.$isConnected) { $0 == true }] }

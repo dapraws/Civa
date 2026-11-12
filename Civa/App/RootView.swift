@@ -98,6 +98,12 @@ struct RootView: View {
             }
         }
         .environment(navigation)
+        .focusedSceneValue(\.openSettings) {
+            // Switching pages under an open sheet would throw away what's in the sheet.
+            guard NSApp.keyWindow?.attachedSheet == nil else { return }
+            changes.perform { navigation.section = .settings }
+        }
+        .civaWindowStyle()
         // Wide enough for the Career Profile tabs and the resume editor's three columns at their minimums.
         .frame(minWidth: 1100, minHeight: 640)
         .onChange(of: bridge.isEnabled, initial: true) { _, enabled in

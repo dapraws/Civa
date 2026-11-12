@@ -113,30 +113,12 @@ struct ApplicationCard: View {
     }
 }
 
+/// Until the Applications list (DESIGN.md §8.7) replaces the gallery, its cards show the status mark.
 struct StatusPill: View {
     let status: ApplicationStatus
 
     var body: some View {
-        Text(status.title)
-            .font(.caption.weight(.medium))
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .foregroundStyle(status.color)
-            .background(status.color.opacity(0.15), in: .capsule)
-    }
-}
-
-extension ApplicationStatus {
-    var color: Color {
-        switch self {
-        case .wishlist: .gray
-        case .applied: .blue
-        case .interview: .purple
-        case .assessment: .orange
-        case .offer: .green
-        case .rejected: .red
-        case .withdrawn: .brown
-        }
+        StatusMark(status).font(.caption)
     }
 }
 
