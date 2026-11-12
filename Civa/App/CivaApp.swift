@@ -47,6 +47,7 @@ struct CivaApp: App {
                     }
             case .failure(let error):
                 StoreErrorView(error: error)
+                    .civaWindowStyle()
             }
         }
         .defaultSize(width: 1280, height: 800)

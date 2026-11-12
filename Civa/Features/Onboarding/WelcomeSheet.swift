@@ -16,7 +16,7 @@ final class Onboarding {
     static let checklistHiddenKey = "GettingStartedHidden"
 
     enum Request {
-        case welcome, gettingStarted
+        case welcome, gettingStarted, settings
     }
 
     /// Set by the Help menu; RootView goes to the Dashboard first, then shows it.

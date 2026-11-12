@@ -25,38 +25,13 @@ struct RootView: View {
 
     var body: some View {
         NavigationSplitView {
-            List(
-                AppSection.visible(claudeEnabled: bridge.isEnabled),
-                selection: Binding(changes.selection($navigation.section, pending: $pendingSection))
-            ) { section in
-                if section == .aiActivity {
-                    let count = claudeProposals.count + openRequests.count
-                    Label {
-                        Text(section.title)
-                    } icon: {
-                        Image(systemName: section.systemImage).foregroundStyle(.claude)
-                    }
-                    .badge(count > 0 ? Text("\(count)").foregroundStyle(.claude).bold() : nil)
-                } else {
-                    Label(section.title, systemImage: section.systemImage)
-                }
-            }
-            .navigationSplitViewColumnWidth(min: 190, ideal: 200)
-            #if DEBUG
-            .safeAreaInset(edge: .bottom) {
-                if DataMode.current != .real {
-                    Label(DataMode.current.title, systemImage: "testtube.2")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(12)
-                        .help("This debug run starts fresh every launch. Switch in Settings → Developer.")
-                }
-            }
-            #endif
+            sidebar
+                .navigationSplitViewColumnWidth(min: 204, ideal: 204, max: 260)
         } detail: {
             detail
-                .navigationTitle(navigation.section.title)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.canvas)
+                .toolbar(removing: .title)
         }
         .overlay(alignment: .top) {
             if let title = notice.banner {
@@ -89,20 +64,18 @@ struct RootView: View {
         .onChange(of: onboarding.request) { _, request in
             guard let request else { return }
             onboarding.request = nil
+            // Switching pages under an open sheet would throw away what's in the sheet.
+            if request == .settings, NSApp.windows.contains(where: { $0.attachedSheet != nil }) { return }
             changes.perform {
                 navigation.section = .dashboard
                 switch request {
                 case .welcome: onboarding.showsWelcome = true
                 case .gettingStarted: UserDefaults.standard.set(false, forKey: Onboarding.checklistHiddenKey)
+                case .settings: navigation.section = .settings
                 }
             }
         }
         .environment(navigation)
-        .focusedSceneValue(\.openSettings) {
-            // Switching pages under an open sheet would throw away what's in the sheet.
-            guard NSApp.keyWindow?.attachedSheet == nil else { return }
-            changes.perform { navigation.section = .settings }
-        }
         .civaWindowStyle()
         // Wide enough for the Career Profile tabs and the resume editor's three columns at their minimums.
         .frame(minWidth: 1100, minHeight: 640)
@@ -113,6 +86,62 @@ struct RootView: View {
         .unsavedChangesAlert(changes)
         // Closing the window quits; keep it open until edits are saved or reverted.
         .windowDismissBehavior(changes.hasUnsavedChanges ? .disabled : .automatic)
+    }
+
+    /// DESIGN.md §8.1: wordmark, the sections, Settings set apart, then Ovi's perch (Plan 3) and,
+    /// in debug builds, the data mode.
+    private var sidebar: some View {
+        let sections = AppSection.visible(claudeEnabled: bridge.isEnabled)
+        let selection = changes.selection($navigation.section, pending: $pendingSection)
+        return VStack(alignment: .leading, spacing: 0) {
+            Text("Civa")
+                .font(.wordmark)
+                .foregroundStyle(Color.textPrimary)
+                .padding(.horizontal, Space.m)
+                .padding(.bottom, Space.m)
+                .accessibilityAddTraits(.isHeader)
+            VStack(alignment: .leading, spacing: 1) {
+                ForEach(sections.filter { $0 != .settings }) { item(for: $0, selection: selection) }
+            }
+            item(for: .settings, selection: selection)
+                .padding(.top, Space.l)
+            Spacer(minLength: Space.l)
+            #if DEBUG
+            if DataMode.current != .real {
+                Label(DataMode.current.title, systemImage: "testtube.2")
+                    .font(.caption)
+                    .foregroundStyle(Color.textTertiary)
+                    .padding(.horizontal, Space.m)
+                    .help("This debug run starts fresh every launch. Switch in Settings → Developer.")
+            }
+            #endif
+        }
+        .padding(.horizontal, 10)
+        .padding(.top, Space.s)
+        .padding(.bottom, Space.m)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(Color.sidebar)
+        .focusable()
+        .focusEffectDisabled()
+        .onKeyPress(.upArrow) { step(-1, in: sections, selection: selection) }
+        .onKeyPress(.downArrow) { step(1, in: sections, selection: selection) }
+    }
+
+    private func item(for section: AppSection, selection: Binding<AppSection>) -> some View {
+        SidebarItem(
+            section,
+            isSelected: selection.wrappedValue == section,
+            badge: section == .aiActivity ? claudeProposals.count + openRequests.count : nil
+        ) {
+            selection.wrappedValue = section
+        }
+    }
+
+    private func step(_ offset: Int, in sections: [AppSection], selection: Binding<AppSection>) -> KeyPress.Result {
+        guard let index = sections.firstIndex(of: selection.wrappedValue),
+              sections.indices.contains(index + offset) else { return .ignored }
+        selection.wrappedValue = sections[index + offset]
+        return .handled
     }
 
     /// Acts on the welcome choice once the sheet is gone, so a file panel can open.
