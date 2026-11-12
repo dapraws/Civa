@@ -174,4 +174,32 @@ struct OviEngineTests {
         ovi.visit(smallFont())
         #expect(ovi.state == .hidden)
     }
+
+    @Test func fontSizeActionSetsTen() {
+        var document = ResumeDocument.blank
+        document.format.fontSize = 9
+        OviAction.setFontSize10.apply(to: &document)
+        #expect(document.format.fontSize == 10)
+    }
+
+    @Test func numericDatesActionSetsShort() {
+        var document = ResumeDocument.blank
+        document.format.dateStyle = .numeric
+        OviAction.useShortDates.apply(to: &document)
+        #expect(document.format.dateStyle == .short)
+    }
+
+    @Test func tailorHandOffClosesWithoutSnooze() {
+        let ovi = engine()
+        let master = Resume(title: "Master")
+        master.isMaster = true
+        let application = JobApplication(company: "Stripe", position: "iOS")
+        application.resume = master
+        ovi.visit(OviContext(screen: .applicationRecord(application.id), application: application))
+        ovi.open()
+        ovi.handedOff()
+        #expect(ovi.state == .neutral)
+        #expect(store.record(.tailor)?.lastOutcome == .acted)
+        #expect(store.record(.tailor)?.snoozedUntil == nil)
+    }
 }

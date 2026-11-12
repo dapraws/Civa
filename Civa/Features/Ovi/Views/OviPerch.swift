@@ -29,7 +29,7 @@ struct OviPerch: View {
                         match: match,
                         act: { action in
                             perform(action)
-                            ovi.took(action)
+                            if case .tailorCopy = action { ovi.handedOff() } else { ovi.took(action) }
                         },
                         close: ovi.close,
                         why: { openWhy(match.tip) },

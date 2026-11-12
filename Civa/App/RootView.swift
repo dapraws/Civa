@@ -11,6 +11,7 @@ import SwiftUI
 struct RootView: View {
     @Environment(UnsavedChangesGuard.self) private var changes
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.modelContext) private var modelContext
     @State private var navigation = AppNavigation()
     /// The section clicked while the unsaved-changes prompt is up.
     @State private var pendingSection: AppSection?
@@ -120,7 +121,7 @@ struct RootView: View {
             item(for: .settings, selection: selection)
                 .padding(.top, Space.l)
             Spacer(minLength: Space.l)
-            OviPerch()
+            OviPerch(perform: performOviAction, openWhy: { _ in openWindow(id: "help") })
                 .padding(.leading, 2)
                 .padding(.bottom, Space.s)
             #if DEBUG
@@ -143,6 +144,25 @@ struct RootView: View {
         .focusEffectDisabled()
         .onKeyPress(.upArrow) { step(-1, in: sections, selection: selection) }
         .onKeyPress(.downArrow) { step(1, in: sections, selection: selection) }
+    }
+
+    /// Ovi's bubble action (tip engine spec §4.4). Resume changes go through the open resume, so
+    /// its editor shows them as unsaved edits that Revert can undo.
+    private func performOviAction(_ action: OviAction) {
+        switch action {
+        case .tailorCopy(let id):
+            changes.perform {
+                navigation.tailorResumeID = id
+                navigation.section = .resumes
+            }
+        case .setFontSize10, .useShortDates:
+            guard let id = navigation.openRecordID,
+                  let resume = try? modelContext.fetch(FetchDescriptor<Resume>(predicate: #Predicate { $0.id == id })).first
+            else { return }
+            var document = resume.document
+            action.apply(to: &document)
+            resume.document = document
+        }
     }
 
     private func item(for section: AppSection, selection: Binding<AppSection>) -> some View {

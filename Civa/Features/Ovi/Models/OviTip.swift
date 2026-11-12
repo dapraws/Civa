@@ -65,6 +65,18 @@ enum OviAction: Equatable {
     }
 }
 
+extension OviAction {
+    /// The change to the resume, for the actions that make one. Through the resume's own editor,
+    /// so Revert undoes it like any edit.
+    func apply(to document: inout ResumeDocument) {
+        switch self {
+        case .setFontSize10: document.format.fontSize = 10
+        case .useShortDates: document.format.dateStyle = .short
+        case .tailorCopy: break
+        }
+    }
+}
+
 /// A tip that matches the current screen, with its copy filled in (spec §4.3).
 struct OviMatch: Equatable {
     let tip: OviTipID

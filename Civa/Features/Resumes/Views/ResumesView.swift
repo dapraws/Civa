@@ -58,6 +58,12 @@ struct ResumesView: View {
             TailorResumeSheet(master: master)
         }
         .onAppear(perform: startTracking)
+        // Ovi's "Tailor a copy".
+        .onChange(of: navigation.tailorResumeID, initial: true) { _, id in
+            guard let id, let resume = masters.first(where: { $0.id == id }) else { return }
+            navigation.tailorResumeID = nil
+            tailoring = resume
+        }
     }
 
     /// Resumes made before Suggested Changes start tracking the profile from now (FR-042).

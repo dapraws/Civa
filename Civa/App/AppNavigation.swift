@@ -27,6 +27,8 @@ final class AppNavigation {
     var justSavedRecordID: UUID?
     /// Bumped when the open editor's changes are reverted, so Ovi closes without Happy.
     var revertCount = 0
+    /// Ovi's "Tailor a copy": the Resumes page opens the Tailor sheet for this resume.
+    var tailorResumeID: UUID?
     /// Career Profile → Other → Skills is showing.
     var isOnSkills = false
     /// Which status Applications shows next, such as after a Dashboard pipeline cell is clicked.

@@ -122,6 +122,13 @@ final class OviEngine {
         showHappy()
     }
 
+    /// The action continues elsewhere (the Tailor sheet): close without snooze or Happy.
+    func handedOff() {
+        guard let match = current else { return }
+        store.update(match.tip) { $0.lastOutcome = .acted }
+        state = .neutral
+    }
+
     func dontShowAgain() {
         guard let match = current else { return }
         store.update(match.tip) { $0.isEnded = true }
