@@ -32,6 +32,8 @@ struct RootView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color.canvas)
                 .toolbar(removing: .title)
+                // The title bar keeps only the window controls and the sidebar toggle (DESIGN.md §2).
+                .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         }
         .overlay(alignment: .top) {
             if let title = notice.banner {

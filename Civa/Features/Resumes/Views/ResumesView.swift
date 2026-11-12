@@ -29,7 +29,7 @@ struct ResumesView: View {
                 systemImage: AppSection.resumes.systemImage
             ),
             order: { ($0.isMaster ? 1 : 0, $0.updatedAt) > ($1.isMaster ? 1 : 0, $1.updatedAt) },
-            cardWidth: 180,
+            cardWidth: 174,
             makeRecord: { Resume(title: "") },
             duplicate: { resume in
                 resume.tailoredCopy(
@@ -46,14 +46,11 @@ struct ResumesView: View {
                 ),
             ],
             showsAddButton: false,
+            editorHasHeader: false,  // Task 8: the Resume Editor draws its own title row
+            headerActions: { newMenu },
             card: { ResumeCard(resume: $0, suggestionCount: SuggestedChanges.suggestions(for: $0.document, from: source).count) },
             editor: { ResumeEditorView(editor: $0) }
         )
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                newMenu
-            }
-        }
         .sheet(isPresented: $isPickingFromProfile) {
             NewResumeFromProfileSheet()
         }
@@ -98,6 +95,9 @@ struct ResumesView: View {
         } label: {
             Label("New Resume", systemImage: "plus")
         }
+        .menuStyle(.button)
+        .civaButton(.primary)
+        .fixedSize()
         .help("New resume")
     }
 }
