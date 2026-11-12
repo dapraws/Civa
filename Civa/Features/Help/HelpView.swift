@@ -7,6 +7,13 @@
 
 import SwiftUI
 
+/// A topic another window asked Help to show, such as Ovi's Why?.
+@Observable
+final class HelpNavigator {
+    static let shared = HelpNavigator()
+    var topic: String?
+}
+
 /// Civa Help: short pages on each part of the app, opened from Help → Civa Help (⌘?).
 struct HelpView: View {
     @State private var selection: HelpTopic.ID? = HelpTopic.all.first?.id
@@ -44,6 +51,12 @@ struct HelpView: View {
             }
         }
         .searchable(text: $query, placement: .sidebar, prompt: "Search Help")
+        .onChange(of: HelpNavigator.shared.topic, initial: true) { _, topic in
+            guard let topic else { return }
+            query = ""
+            selection = topic
+            HelpNavigator.shared.topic = nil
+        }
         .onChange(of: query) {
             if let first = topics.first, !topics.contains(where: { $0.id == selection }) { selection = first.id }
         }
@@ -156,6 +169,21 @@ struct HelpTopic: Identifiable {
             (String(localized: "Optional"), String(localized: "Civa works fully on its own. If you use Claude Desktop, you can connect it in Settings to write summaries, improve bullets, or draft tailored resumes.")),
             (String(localized: "What Claude Can See"), String(localized: "In Settings you choose, per category, whether Claude can read and whether it can suggest changes. Records that still need review are never shared.")),
             (String(localized: "Nothing Changes Without You"), String(localized: "Claude's suggestions wait in AI Activity and on the resume they're for. You pick a version, apply it, or discard it. AI Activity also lists everything Claude read.")),
+        ]),
+        // Draft copy for the user's review before release (tip engine spec §7.3).
+        HelpTopic("ovi", String(localized: "Ovi's Tips"), "lightbulb", [
+            (String(localized: "How Ovi Works"), String(localized: "Ovi sits at the bottom of the sidebar. When it spots something on the screen you're working on, a ! appears; click Ovi to read the tip, or ignore it. Ovi never interrupts your typing, shows at most one tip per screen and three a day, and works offline. Close a tip to quiet it for 14 days, choose Don't Show This Again to end it, or turn Ovi off in Settings.")),
+            (String(localized: "Font Size"), String(localized: "Small text is hard to read on screen and in print, and recruiters skim quickly. MIT's career office says never to go below 10 pt, and 11 pt suits most fonts. Civa still lets you export at any size; it's your call. Ovi brings this up in the resume editor when the font is under 10 pt. Source: MIT CAPD, capd.mit.edu/resources/sample-resumes")),
+            (String(localized: "Where and When"), String(localized: "Recruiters expect each entry to show the role, the organization, the location, and month and year for the dates. A missing location or a year without a month makes an entry look unfinished. Ovi brings this up on an experience that's missing its location or its start month. Source: MIT CAPD, capd.mit.edu/resources/sample-resumes")),
+            (String(localized: "Tailoring"), String(localized: "A resume tailored to a job's wording usually does better than a general one, because recruiters and tracking systems look for the posting's own terms. Keep your Master resume as the full version and make a copy for each job. Ovi brings this up on an application that still uses the Master resume. Source: Harvard Office of Career Services and MIT CAPD")),
+            (String(localized: "Spelled-Out Months"), String(localized: "Numeric dates like 03/04/2024 read as March in the US and April in Indonesia and much of Europe. Spelled-out months, like Mar 2024, read the same everywhere. Ovi brings this up in the resume editor when dates are set to numbers. Source: regional resume guides, such as jobera.com/indonesia-resume-writing-guide")),
+            (String(localized: "High School"), String(localized: "Once you're at university, your high school entry usually takes space that newer work could use. Keep it only if it shows something strong, such as top scores or relevant coursework. Ovi brings this up when a resume lists both high school and a university degree. Source: MIT CAPD, capd.mit.edu")),
+            (String(localized: "Page Count"), String(localized: "For students and new graduates, most employers expect one page; with several years of experience, two pages is normal. Either way, keep the most relevant work on page one. Ovi brings this up once, when a resume first reaches two pages. Source: NACE, and resumego.net/research/how-long-should-a-resume-be")),
+            (String(localized: "Action Verbs"), String(localized: "Lines like “Responsible for” or “Helped with” describe duties, not what you achieved. Starting with an action verb plus the result, like “Built…” or “Led…”, shows impact at a glance. Ovi brings this up when a bullet starts with a duty phrase, in English or Indonesian. Source: MIT CAPD and Harvard")),
+            (String(localized: "Fewer, Stronger Bullets"), String(localized: "Long lists of routine tasks bury your best results. Three to five strong bullets per entry usually read better than six or more. Ovi brings this up when an entry has six or more bullets. Source: MIT CAPD")),
+            (String(localized: "Numbers"), String(localized: "Results with a number stand out, like “cut wait time by 20%” or “served 4,000 users”. An honest estimate is fine to start. Ovi brings this up when an entry has two or more bullets and none has a number. Source: MIT CAPD")),
+            (String(localized: "Soft Skills"), String(localized: "Listing “teamwork” or “leadership” in a skills section is easy to claim and hard to believe. MIT suggests showing them in your bullets instead, through what you did. Keep them in your list if you like. Ovi brings this up once, when it sees a soft-skills category. Source: MIT CAPD")),
+            (String(localized: "Number Log"), String(localized: "Numbers are easiest to collect while you're in a role. Note one a month, such as users, hours saved or sales, so your future bullets have them. Ovi brings this up once, after you add a current role. Source: MIT CAPD")),
         ]),
         HelpTopic("privacy", String(localized: "Privacy"), "lock", [
             (String(localized: "Stays on This Mac"), String(localized: "Your data is stored only on this Mac. Civa has no account and no server.")),

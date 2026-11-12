@@ -58,6 +58,12 @@ enum CivaTips {
         // Manual checks: -CivaResetTips YES, or the Empty data mode, shows every tip again.
         resets = resets || UserDefaults.standard.bool(forKey: "CivaResetTips") || DataMode.current == .empty
         #endif
+        #if DEBUG
+        // -CivaResetOvi YES, or the Empty data mode, shows Ovi's tips again (tip engine spec §6).
+        if UserDefaults.standard.bool(forKey: "CivaResetOvi") || DataMode.current == .empty {
+            OviStore().reset()
+        }
+        #endif
         if resets {
             try? Tips.resetDatastore()
             UserDefaults.standard.removeObject(forKey: resetKey)

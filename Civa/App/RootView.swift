@@ -121,7 +121,10 @@ struct RootView: View {
             item(for: .settings, selection: selection)
                 .padding(.top, Space.l)
             Spacer(minLength: Space.l)
-            OviPerch(perform: performOviAction, openWhy: { _ in openWindow(id: "help") })
+            OviPerch(perform: performOviAction, openWhy: { _ in
+                HelpNavigator.shared.topic = "ovi"
+                openWindow(id: "help")
+            })
                 .padding(.leading, 2)
                 .padding(.bottom, Space.s)
             #if DEBUG
