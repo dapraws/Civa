@@ -75,6 +75,6 @@ struct CompareFields: View {
             incomingTitle: "From cv.pdf"
         )
     }
-    .formStyle(.grouped)
+    .civaForm(maxWidth: nil)
     .frame(width: 560)
 }

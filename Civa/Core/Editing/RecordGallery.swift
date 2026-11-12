@@ -298,7 +298,7 @@ struct RecordGallery<Model: EditableRecord, Card: View, Editor: View, HeaderActi
         Form {
             TextField("Position", text: editor.binding(\.position))
         }
-        .formStyle(.grouped)
+        .civaForm()
     }
     .frame(width: 900, height: 500)
     .previewEnvironment()

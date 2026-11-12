@@ -7,37 +7,43 @@
 
 import SwiftUI
 
-/// Career Profile page: the six categories as tabs in the toolbar.
+/// Career Profile page (DESIGN.md §8.3): the title row, then the six categories as tabs.
 struct CareerProfileView: View {
     @Environment(UnsavedChangesGuard.self) private var changes
     @Environment(AppNavigation.self) private var navigation
     /// The tab clicked while the unsaved-changes prompt is up.
     @State private var pendingCategory: ProfileCategory?
+    /// The current tab's add action, handed up by its record list.
+    @State private var addAction: PageAction?
 
     var body: some View {
-        page
-            .id(navigation.profileCategory)
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Picker(
-                        "Category",
-                        selection: changes.selection(Bindable(navigation).profileCategory, pending: $pendingCategory)
-                    ) {
-                        ForEach(ProfileCategory.allCases) { category in
-                            Text(category.shortTitle)
-                                .accessibilityLabel(category.title)
-                                .tag(category)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                }
-                ToolbarItem(placement: .primaryAction) {
-                    ImportMenu()
-                }
+        VStack(alignment: .leading, spacing: 0) {
+            PageHeader(String(localized: "Career Profile")) {
+                ImportMenu(showsTitle: true)
+                    .menuStyle(.button)
+                    .civaButton(.secondary)
+                    .fixedSize()
+                PageActionButton(action: addAction)
             }
-            // The sidebar already names the page; the tabs need the room at the smallest window size.
-            .toolbar(removing: .title)
+            .padding(.horizontal, Space.xl)
+            .padding(.top, 20)
+            SegmentedTabs(
+                ProfileCategory.allCases,
+                selection: changes.selection(Bindable(navigation).profileCategory, pending: $pendingCategory),
+                title: \.shortTitle
+            )
+            .padding(.horizontal, Space.xl)
+            .padding(.top, Space.m)
+            .padding(.bottom, Space.m)
+            Rectangle().fill(Color.hairline).frame(height: 1)
+            page
+                .id(navigation.profileCategory)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .background(Color.canvas)
+        .onPreferenceChange(PageActionKey.self) { action in
+            MainActor.assumeIsolated { addAction = action }
+        }
     }
 
     @ViewBuilder

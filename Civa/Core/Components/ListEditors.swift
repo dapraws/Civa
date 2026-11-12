@@ -116,10 +116,10 @@ struct AddButton: View {
     @Previewable @State var impacts = ["Cut onboarding time by 30%"]
     @Previewable @State var fields = [CustomField(name: "Team Size", value: "6")]
     Form {
-        Section("Impact") {
+        Section(civa: "Impact") {
             StringListEditor(items: $impacts, prompt: "Result of your work", addTitle: "Add Impact")
         }
-        Section("Custom Fields") {
+        Section(civa: "Custom Fields") {
             PairListEditor(
                 items: $fields,
                 first: \.name,
@@ -130,5 +130,5 @@ struct AddButton: View {
             )
         }
     }
-    .formStyle(.grouped)
+    .civaForm()
 }

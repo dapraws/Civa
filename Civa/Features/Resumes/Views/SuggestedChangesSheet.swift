@@ -44,7 +44,7 @@ struct SuggestedChangesSheet: View {
                         }
                     }
                 }
-                .formStyle(.grouped)
+                .civaForm(maxWidth: nil)
             }
 
             Divider()

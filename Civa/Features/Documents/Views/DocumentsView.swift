@@ -174,17 +174,17 @@ struct DocumentForm: View {
                 }
                 .fixedSize()
             } header: {
-                Text("Linked To")
+                SectionTitle("Linked To")
             } footer: {
                 Text("One document can go on many records, like a transcript on several applications. Linking doesn't change the record.")
             }
-            Section("Notes") {
+            Section(civa: "Notes") {
                 TextField("Notes", text: editor.binding(\.notes), prompt: Text("Where it's from, what it shows"), axis: .vertical)
                     .labelsHidden()
                     .lineLimit(3...8)
             }
         }
-        .formStyle(.grouped)
+        .civaForm()
         .quickLookPreview($previewURL)
         .sheet(item: $importRequest) { ImportReviewSheet(request: $0) }
     }

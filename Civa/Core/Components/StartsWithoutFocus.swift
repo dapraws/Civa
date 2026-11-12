@@ -25,6 +25,6 @@ extension View {
     Form {
         TextField("Full Name", text: .constant("Raka Pratama"))
     }
-    .formStyle(.grouped)
+    .civaForm()
     .startsWithoutFocus()
 }

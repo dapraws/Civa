@@ -82,7 +82,7 @@ struct OrganizationField: View {
     Form {
         OrganizationField(title: "Company", name: $name, prompt: Text("Required"))
     }
-    .formStyle(.grouped)
+    .civaForm()
     .frame(width: 420)
     .previewEnvironment()
 }

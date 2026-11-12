@@ -75,6 +75,6 @@ struct ProofField<Model: DocumentOwner>: View {
         }
         ProofSeal(proof: .link(URL(string: "https://example.com")!), showsTitle: true)
     }
-    .formStyle(.grouped)
+    .civaForm()
     .frame(width: 400, height: 200)
 }

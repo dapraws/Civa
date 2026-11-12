@@ -76,7 +76,7 @@ struct AIActivityView: View {
                 Section {
                     ForEach(requests) { ClaudeRequestRow(request: $0, showsAll: true) }
                 }
-                Section("How It Works") {
+                Section(civa: "How It Works") {
                     ClaudeHowItWorks().padding(.vertical, 4)
                 }
             case .log:
@@ -101,7 +101,7 @@ struct AIActivityView: View {
                 }
             }
         }
-        .formStyle(.grouped)
+        .civaForm()
     }
 
     private func empty(_ title: LocalizedStringKey, _ message: LocalizedStringKey) -> some View {

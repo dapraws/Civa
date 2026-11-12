@@ -59,17 +59,17 @@ struct PersonalInfoForm: View {
                 .labelsHidden()
                 .lineLimit(3...8)
             } header: {
-                Text("Summary")
+                SectionTitle("Summary")
             } footer: {
                 Text("New resumes use this as their summary.")
             }
-            Section("Contact") {
+            Section(civa: "Contact") {
                 TextField("Email", text: editor.binding(\.email), prompt: Text("name@example.com"))
                 FieldError(editor.error(for: \.email))
                 TextField("Phone", text: editor.binding(\.phone))
                 TextField("Location", text: editor.binding(\.location), prompt: Text("City, Country"))
             }
-            Section("Links") {
+            Section(civa: "Links") {
                 PairListEditor(
                     items: editor.binding(\.links),
                     first: \.label,
@@ -81,7 +81,7 @@ struct PersonalInfoForm: View {
             }
             CustomFieldsSection(fields: editor.binding(\.customFields))
         }
-        .formStyle(.grouped)
+        .civaForm()
     }
 }
 

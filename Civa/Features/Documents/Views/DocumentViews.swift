@@ -187,7 +187,7 @@ struct DocumentsSection<Model: DocumentHolder>: View {
                 if library.contains(where: { !$0.isLinked(to: editor.record) }) { showsLibrary = true } else { isChoosing = true }
             }
         } header: {
-            Text("Documents")
+            SectionTitle("Documents")
         } footer: {
             if editor.record is JobApplication {
                 Text("The job posting, your cover letter, a transcript, or an offer letter, from your Documents or a new file. Drop files here too.")

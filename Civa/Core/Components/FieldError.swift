@@ -29,5 +29,5 @@ struct FieldError: View {
         TextField("Role", text: .constant(""))
         FieldError("Enter a role.")
     }
-    .formStyle(.grouped)
+    .civaForm()
 }

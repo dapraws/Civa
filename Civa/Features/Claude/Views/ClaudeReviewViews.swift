@@ -71,7 +71,7 @@ struct ClaudeResumeProposalsSheet: View {
                         }
                     }
                 }
-                .formStyle(.grouped)
+                .civaForm(maxWidth: nil)
             }
             Divider()
             HStack {

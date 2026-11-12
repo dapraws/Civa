@@ -39,7 +39,7 @@ struct CertificationForm: View {
                 FieldError(editor.error(for: \.name))
                 TextField("Issuer", text: editor.binding(\.issuer), prompt: Text("Issuing organization"))
             }
-            Section("Dates") {
+            Section(civa: "Dates") {
                 YearMonthField(title: String(localized: "Issued"), value: editor.binding(\.issued))
                 YearMonthField(title: String(localized: "Expires"), value: editor.binding(\.expires))
                 FieldError(editor.error(for: \.expires))
@@ -48,14 +48,14 @@ struct CertificationForm: View {
                 TextField("Credential ID", text: editor.binding(\.credentialID))
                 ProofField(editor: editor, title: "Credential URL", link: \.credentialURL)
             } header: {
-                Text("Credential")
+                SectionTitle("Credential")
             } footer: {
                 Text("With a credential URL or an attached certificate, this shows a Verified seal.")
             }
             DocumentsSection(editor: editor)
             CustomFieldsSection(fields: editor.binding(\.customFields))
         }
-        .formStyle(.grouped)
+        .civaForm()
     }
 }
 

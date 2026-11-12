@@ -202,7 +202,7 @@ struct RecordListDetail<Model: EditableRecord, Editor: View>: View {
         Form {
             TextField("Name", text: editor.binding(\.name))
         }
-        .formStyle(.grouped)
+        .civaForm()
     }
     .frame(width: 800, height: 500)
     .previewEnvironment()

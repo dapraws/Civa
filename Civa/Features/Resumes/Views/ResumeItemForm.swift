@@ -51,7 +51,7 @@ struct ResumeItemForm: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .formStyle(.grouped)
+        .civaForm(maxWidth: nil)
     }
 
     private var infoFields: some View {
@@ -61,11 +61,11 @@ struct ResumeItemForm: View {
                 FieldError(editor.error(for: \.title))
                 TextField("Target Position", text: editor.binding(\.targetPosition), prompt: Text("iOS Developer"))
             } header: {
-                Text("Resume Info")
+                SectionTitle("Resume Info")
             } footer: {
                 Text("Only you see these. They don't appear on the resume.")
             }
-            Section("Job Description") {
+            Section(civa: "Job Description") {
                 TextField(
                     "Job Description",
                     text: editor.binding(\.jobDescription),
@@ -93,7 +93,7 @@ struct ResumeItemForm: View {
                         .buttonStyle(.link)
                     }
                 } header: {
-                    Text("Sent With")
+                    SectionTitle("Sent With")
                 } footer: {
                     Text("Applications that use this resume. Link one from the application.")
                 }
@@ -140,7 +140,7 @@ struct ResumeItemForm: View {
                 ))
             }
         } header: {
-            Text("Header")
+            SectionTitle("Header")
         } footer: {
             Text("The eye hides a detail on this resume and keeps what you typed.")
         }
@@ -243,7 +243,7 @@ private struct SectionFields: View {
                 selection = .entry(entry.id)
             }
         } header: {
-            Text(section.title)
+            SectionTitle(section.title)
         } footer: {
             Text("Drag sections and entries in the outline to reorder them.")
         }
@@ -311,7 +311,7 @@ private struct EntryFields: View {
             datesSection
         }
         if kind == .education {
-            Section("Academic Details") {
+            Section(civa: "Academic Details") {
                 HStack {
                     TextField("GPA or Score", text: optional(\.grade), prompt: Text("3.86/4.00"))
                     eye(.grade)
@@ -336,7 +336,7 @@ private struct EntryFields: View {
             }
         }
         if kind != .skills {
-            Section("Bullet Points") {
+            Section(civa: "Bullet Points") {
                 StringListEditor(
                     items: $entry.bullets,
                     prompt: String(localized: "What you did and the result"),

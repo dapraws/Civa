@@ -30,18 +30,11 @@ struct OtherInformationView: View {
     @State private var pendingKind: Kind?
 
     var body: some View {
-        VStack(spacing: 0) {
-            Picker("Type", selection: changes.selection($kind, pending: $pendingKind)) {
-                ForEach(Kind.allCases) { kind in
-                    Text(kind.title).tag(kind)
-                }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .fixedSize()
-            .padding(10)
-
-            Divider()
+        VStack(alignment: .leading, spacing: 0) {
+            SegmentedTabs(Kind.allCases, selection: changes.selection($kind, pending: $pendingKind), title: \.title)
+                .padding(.horizontal, Space.xl)
+                .padding(.bottom, Space.m)
+            Rectangle().fill(Color.hairline).frame(height: 1)
 
             Group {
                 switch kind {

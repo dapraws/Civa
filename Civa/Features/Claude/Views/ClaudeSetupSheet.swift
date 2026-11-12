@@ -34,7 +34,7 @@ struct ClaudeSetupSheet: View {
                     Label("Civa needs to be open while you use Claude with it.", systemImage: "macwindow")
                 }
 
-                Section("How It Works") {
+                Section(civa: "How It Works") {
                     ClaudeHowItWorks().padding(.vertical, 4)
                 }
 
@@ -57,7 +57,7 @@ struct ClaudeSetupSheet: View {
                         Button("Get Claude Desktop") { openURL(URL(string: "https://claude.ai/download")!) }
                     }
                 } header: {
-                    Text("1. Connect")
+                    SectionTitle("1. Connect")
                 }
 
                 if isConnected {
@@ -69,7 +69,7 @@ struct ClaudeSetupSheet: View {
                     Button("Open Claude Desktop") { ClaudeDesktopConfig.openClaude() }
                         .disabled(!isConnected)
                 } header: {
-                    Text("2. Restart Claude Desktop")
+                    SectionTitle("2. Restart Claude Desktop")
                 }
 
                 Section {
@@ -85,12 +85,12 @@ struct ClaudeSetupSheet: View {
                     }
                     .opacity(isConnected ? 1 : 0.4)
                 } header: {
-                    Text("3. Test")
+                    SectionTitle("3. Test")
                 } footer: {
                     Text("You can change what Claude may use any time in Settings.")
                 }
             }
-            .formStyle(.grouped)
+            .civaForm(maxWidth: nil)
 
             HStack {
                 Spacer()
@@ -165,7 +165,7 @@ struct ClaudeSettingsSection: View {
             }
             if let error { FieldError(error) }
         } header: {
-            Text("Claude Desktop")
+            SectionTitle("Claude Desktop")
         } footer: {
             Text("Optional. Claude reads only what you allow, and its suggestions wait for your approval. Civa works fully without it.")
         }
@@ -188,5 +188,5 @@ struct ClaudeSettingsSection: View {
 }
 
 #Preview("Settings") {
-    Form { ClaudeSettingsSection() }.formStyle(.grouped).frame(width: 520)
+    Form { ClaudeSettingsSection() }.civaForm(maxWidth: nil).frame(width: 520)
 }

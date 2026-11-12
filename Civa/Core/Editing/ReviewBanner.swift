@@ -39,6 +39,6 @@ struct ReviewBanner<Model: ProfileRecord>: View {
     Form {
         ReviewBanner(editor: RecordEditor<Experience>.preview(needsReview: true))
     }
-    .formStyle(.grouped)
+    .civaForm()
     .previewEnvironment()
 }

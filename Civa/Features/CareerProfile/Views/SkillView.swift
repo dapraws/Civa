@@ -24,15 +24,7 @@ struct SkillList: View {
 
     var body: some View {
         content
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button(action: addSkill) {
-                        Label("Add Skill", systemImage: "plus")
-                    }
-                    .keyboardShortcut("n")
-                    .help("Add Skill (⌘N)")
-                }
-            }
+            .pageAction(PageAction(id: "addSkill", title: String(localized: "Add Skill"), systemImage: "plus", shortcut: "n", run: addSkill))
             .onAppear {
                 if navigation.startsNewRecord {
                     navigation.startsNewRecord = false
@@ -90,7 +82,7 @@ struct SkillList: View {
 
     private var sidebar: some View {
         List(selection: Binding(get: { group }, set: { new in changes.perform { select(new) } })) {
-            Section("Categories") {
+            Section(civa: "Categories") {
                 ForEach(groups, id: \.self) { row in
                     sidebarRow(row)
                         .tag(row)
@@ -294,10 +286,10 @@ struct SkillForm: View {
                     }
                 }
             } header: {
-                Text("Used In")
+                SectionTitle("Used In")
             }
         }
-        .formStyle(.grouped)
+        .civaForm()
     }
 
     /// Categories in use plus a few starters, narrowed to what's typed.

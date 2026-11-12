@@ -27,7 +27,7 @@ struct ResumeOutlineView: View {
                 }
                     .tag(ResumeOutlineItem.header)
             }
-            Section("Sections") {
+            Section(civa: "Sections") {
                 ForEach(document.outlineRows) { row in
                     let section = document.sections[row.section]
                     if let entry = row.entry {

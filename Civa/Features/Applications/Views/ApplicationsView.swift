@@ -204,7 +204,7 @@ struct ApplicationForm: View {
                     )
                 }
             }
-            Section("Job Description") {
+            Section(civa: "Job Description") {
                 TextField(
                     "Job Description",
                     text: editor.binding(\.jobDescription),
@@ -216,7 +216,7 @@ struct ApplicationForm: View {
             }
             DocumentsSection(editor: editor)
         }
-        .formStyle(.grouped)
+        .civaForm()
     }
 
     private func open(_ resume: Resume) {

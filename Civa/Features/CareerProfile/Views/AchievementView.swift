@@ -58,17 +58,17 @@ struct AchievementForm: View {
                 Picker("Related To", selection: source) {
                     Text("Nothing").tag(Source.none)
                     if !experiences.isEmpty {
-                        Section("Experience") {
+                        Section(civa: "Experience") {
                             ForEach(experiences) { Text(label($0)).tag(Source.experience($0.id)) }
                         }
                     }
                     if !projects.isEmpty {
-                        Section("Projects") {
+                        Section(civa: "Projects") {
                             ForEach(projects) { Text($0.displayTitle).tag(Source.project($0.id)) }
                         }
                     }
                     if !education.isEmpty {
-                        Section("Education") {
+                        Section(civa: "Education") {
                             ForEach(education) { Text($0.displayTitle).tag(Source.education($0.id)) }
                         }
                     }
@@ -86,21 +86,21 @@ struct AchievementForm: View {
                 .labelsHidden()
                 .lineLimit(3...10)
             } header: {
-                Text("Description")
+                SectionTitle("Description")
             } footer: {
                 Text("Shown as a bullet under this entry on new resumes. Claude reads it for context.")
             }
             Section {
                 ProofField(editor: editor, title: "Proof Link", link: \.proofURL)
             } header: {
-                Text("Proof")
+                SectionTitle("Proof")
             } footer: {
                 Text("An announcement or certificate. With a link or an attached document, this achievement shows a Verified seal.")
             }
             DocumentsSection(editor: editor)
             CustomFieldsSection(fields: editor.binding(\.customFields))
         }
-        .formStyle(.grouped)
+        .civaForm()
     }
 
     private func label(_ experience: Experience) -> String {

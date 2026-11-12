@@ -105,10 +105,10 @@ struct SkillChip: View {
 
 #Preview {
     Form {
-        Section("Skills") {
+        Section(civa: "Skills") {
             SkillLinksField(editor: RecordEditor<Experience>.preview(), skills: \.skills)
         }
     }
-    .formStyle(.grouped)
+    .civaForm()
     .previewEnvironment()
 }
