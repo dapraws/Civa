@@ -13,6 +13,8 @@ struct RecordEmptyState {
     let title: String
     let message: String
     let systemImage: String
+    /// A filtered list that came up empty has nothing to add from (DESIGN.md §8.7).
+    var showsAddButton = true
 }
 
 /// Records of one type: a list on the left and an inline editor on the right (FR-010).
@@ -35,6 +37,10 @@ struct RecordListDetail<Model: EditableRecord, Editor: View>: View {
     private let subtitle: (Model) -> String
     private let makeRecord: () -> Model
     private let editorView: (RecordEditor<Model>) -> Editor
+    /// Replaces the standard row, such as Applications' logo and status mark.
+    private let row: ((Model, Bool) -> AnyView)?
+    /// Applications draw their own header with the logo and status.
+    private let showsTitle: Bool
 
     init(
         addTitle: String,
@@ -43,8 +49,12 @@ struct RecordListDetail<Model: EditableRecord, Editor: View>: View {
         order: @escaping (Model, Model) -> Bool,
         subtitle: @escaping (Model) -> String,
         makeRecord: @escaping () -> Model,
+        showsTitle: Bool = true,
+        row: ((Model, Bool) -> AnyView)? = nil,
         @ViewBuilder editor: @escaping (RecordEditor<Model>) -> Editor
     ) {
+        self.row = row
+        self.showsTitle = showsTitle
         _records = Query(FetchDescriptor(predicate: filter))
         self.addTitle = addTitle
         self.empty = empty
@@ -83,7 +93,7 @@ struct RecordListDetail<Model: EditableRecord, Editor: View>: View {
                 symbol: empty.systemImage,
                 title: LocalizedStringKey(empty.title),
                 message: LocalizedStringKey(empty.message),
-                button: (LocalizedStringKey(addTitle), .primary, addRecord)
+                button: empty.showsAddButton ? (LocalizedStringKey(addTitle), .primary, addRecord) : nil
             )
             .padding(.horizontal, Space.xl)
             .frame(maxHeight: .infinity, alignment: .top)
@@ -109,13 +119,19 @@ struct RecordListDetail<Model: EditableRecord, Editor: View>: View {
         return ScrollView {
             LazyVStack(spacing: 1) {
                 ForEach(sorted) { record in
-                    RecordRow(
-                        title: record.displayTitle,
-                        subtitle: subtitle(record),
-                        needsReview: record.needsReview,
-                        proof: record.proof,
-                        isSelected: selected.wrappedValue == record.id
-                    )
+                    Group {
+                        if let row {
+                            row(record, selected.wrappedValue == record.id)
+                        } else {
+                            RecordRow(
+                                title: record.displayTitle,
+                                subtitle: subtitle(record),
+                                needsReview: record.needsReview,
+                                proof: record.proof,
+                                isSelected: selected.wrappedValue == record.id
+                            )
+                        }
+                    }
                     .onTapGesture { selected.wrappedValue = record.id }
                     .accessibilityAddTraits(.isButton)
                     .accessibilityAction { selected.wrappedValue = record.id }
@@ -140,14 +156,16 @@ struct RecordListDetail<Model: EditableRecord, Editor: View>: View {
     private var detail: some View {
         if let editor {
             VStack(alignment: .leading, spacing: 0) {
-                Text(editor.title)
-                    .font(.detailTitle)
-                    .foregroundStyle(Color.textPrimary)
-                    .lineLimit(1)
-                    .accessibilityAddTraits(.isHeader)
-                    .padding(.horizontal, Space.xl)
-                    .padding(.top, 20)
-                    .padding(.bottom, Space.s)
+                if showsTitle {
+                    Text(editor.title)
+                        .font(.detailTitle)
+                        .foregroundStyle(Color.textPrimary)
+                        .lineLimit(1)
+                        .accessibilityAddTraits(.isHeader)
+                        .padding(.horizontal, Space.xl)
+                        .padding(.top, 20)
+                        .padding(.bottom, Space.s)
+                }
                 editorView(editor)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }

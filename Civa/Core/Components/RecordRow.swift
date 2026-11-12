@@ -17,6 +17,8 @@ struct RecordRow<Leading: View>: View {
     var needsReview = false
     var proof: Proof?
     var isSelected = false
+    /// Applications add the status mark after the company: "Gojek · ● Applied".
+    var status: ApplicationStatus?
     @ViewBuilder var leading: Leading
 
     @State private var isHovered = false
@@ -32,11 +34,16 @@ struct RecordRow<Leading: View>: View {
                         .lineLimit(1)
                     if let proof { ProofSeal(proof: proof) }
                 }
-                if !subtitle.isEmpty {
-                    Text(subtitle)
-                        .font(.callout)
-                        .foregroundStyle(Color.textSecondary)
-                        .lineLimit(1)
+                if !subtitle.isEmpty || status != nil {
+                    HStack(spacing: Space.xs) {
+                        if !subtitle.isEmpty {
+                            Text(status == nil ? subtitle : "\(subtitle) ·")
+                                .foregroundStyle(Color.textSecondary)
+                                .lineLimit(1)
+                        }
+                        if let status { StatusMark(status) }
+                    }
+                    .font(.callout)
                 }
             }
             Spacer(minLength: 0)
@@ -61,7 +68,7 @@ struct RecordRow<Leading: View>: View {
 
 extension RecordRow where Leading == EmptyView {
     init(title: String, subtitle: String = "", needsReview: Bool = false, proof: Proof? = nil, isSelected: Bool = false) {
-        self.init(title: title, subtitle: subtitle, needsReview: needsReview, proof: proof, isSelected: isSelected) { EmptyView() }
+        self.init(title: title, subtitle: subtitle, needsReview: needsReview, proof: proof, isSelected: isSelected, status: nil) { EmptyView() }
     }
 }
 

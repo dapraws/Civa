@@ -57,6 +57,17 @@ nonisolated final class JobApplication: EditableRecord {
         set { statusRaw = newValue.rawValue }
     }
 
+    /// Applications list order (DESIGN.md §8.7): not yet applied first, then the newest
+    /// application date; newest created breaks ties.
+    static func listOrder(_ a: JobApplication, _ b: JobApplication) -> Bool {
+        switch (a.applicationDate, b.applicationDate) {
+        case (nil, .some): true
+        case (.some, nil): false
+        case let (x?, y?) where x != y: x > y
+        default: a.createdAt > b.createdAt
+        }
+    }
+
     var displayTitle: String {
         [position, company].first { !$0.isBlank } ?? String(localized: "New Application")
     }

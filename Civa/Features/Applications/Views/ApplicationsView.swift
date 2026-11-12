@@ -8,29 +8,52 @@
 import SwiftData
 import SwiftUI
 
-/// Job application tracking (FR-060 to FR-062), filterable by status.
+/// Job application tracking (FR-060 to FR-062): a list plus detail, filterable by status
+/// (DESIGN.md §8.7).
 struct ApplicationsView: View {
     @Environment(UnsavedChangesGuard.self) private var changes
+    @Environment(AppNavigation.self) private var navigation
     /// nil shows every status.
     @State private var status: ApplicationStatus?
     /// The filter picked while the unsaved-changes prompt is up.
     @State private var pendingStatus: ApplicationStatus??
+    @State private var addAction: PageAction?
 
     var body: some View {
-        ApplicationList(status: status)
-            .id(status)
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Picker("Status", selection: changes.selection($status, pending: $pendingStatus)) {
-                        Text("All Statuses").tag(ApplicationStatus?.none)
-                        Divider()
-                        ForEach(ApplicationStatus.allCases) { status in
-                            Text(status.title).tag(ApplicationStatus?.some(status))
-                        }
+        VStack(alignment: .leading, spacing: 0) {
+            PageHeader(String(localized: "Applications")) {
+                CivaMenuPicker(
+                    "Status",
+                    selection: changes.selection($status, pending: $pendingStatus),
+                    value: Text(status?.title ?? String(localized: "All Statuses"))
+                ) {
+                    Text("All Statuses").tag(ApplicationStatus?.none)
+                    Divider()
+                    ForEach(ApplicationStatus.allCases) { status in
+                        Text(status.title).tag(ApplicationStatus?.some(status))
                     }
-                    .help("Show applications with this status")
+                } label: {
+                    if let status { StatusMark(status, emphasized: true) } else { Text("All Statuses") }
                 }
+                .help("Show applications with this status")
+                PageActionButton(action: addAction)
             }
+            .padding(.horizontal, Space.xl)
+            .padding(.top, 20)
+            .padding(.bottom, Space.m)
+            Rectangle().fill(Color.hairline).frame(height: 1)
+            ApplicationList(status: status)
+                .id(status)
+        }
+        .background(Color.canvas)
+        .onPreferenceChange(PageActionKey.self) { action in
+            MainActor.assumeIsolated { addAction = action }
+        }
+        .onChange(of: navigation.applicationStatusFilter, initial: true) { _, next in
+            guard let next else { return }
+            status = next
+            navigation.applicationStatusFilter = nil
+        }
     }
 }
 
@@ -38,87 +61,38 @@ struct ApplicationList: View {
     let status: ApplicationStatus?
 
     var body: some View {
-        RecordGallery(
-            title: String(localized: "Applications"),
+        RecordListDetail(
             addTitle: String(localized: "Add Application"),
             empty: status == nil
                 ? .init(
-                    title: String(localized: "No Applications Yet"),
+                    title: String(localized: "No applications yet"),
                     message: String(localized: "Track the jobs you're interested in and where each one stands."),
                     systemImage: "tray"
                 )
                 : .init(
-                    title: String(localized: "No Applications Here"),
+                    title: String(localized: "No applications here"),
                     message: String(localized: "None of your applications have this status."),
-                    systemImage: "line.3.horizontal.decrease.circle"
+                    systemImage: "line.3.horizontal.decrease.circle",
+                    showsAddButton: false
                 ),
             filter: JobApplication.withStatus(status),
-            order: { ($0.applicationDate ?? .distantFuture) > ($1.applicationDate ?? .distantFuture) },
-            cardWidth: 220,
+            order: JobApplication.listOrder,
+            subtitle: \.company,
             makeRecord: { JobApplication(company: "", position: "", status: status ?? .wishlist) },
-            card: { ApplicationCard(application: $0) },
-            editor: { ApplicationForm(editor: $0) }
-        )
-    }
-}
-
-/// An application in the gallery: logo, status, position, company, date, and the resume sent.
-struct ApplicationCard: View {
-    let application: JobApplication
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top) {
-                OrganizationLogo(name: application.company, size: 44)
-                Spacer()
-                StatusPill(status: application.status)
+            showsTitle: false,
+            row: { application, isSelected in
+                AnyView(RecordRow(
+                    title: application.position.isBlank ? String(localized: "New Application") : application.position,
+                    subtitle: application.company,
+                    isSelected: isSelected,
+                    status: application.status
+                ) {
+                    OrganizationLogo(name: application.company, size: 28)
+                })
             }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(application.position.isBlank ? String(localized: "New Application") : application.position)
-                    .font(.headline)
-                    .lineLimit(1)
-                Text(application.company)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-            HStack(spacing: 8) {
-                Text(application.applicationDate.map { String(localized: "Applied \($0.formatted(date: .abbreviated, time: .omitted))") }
-                    ?? String(localized: "Not applied yet"))
-                    .foregroundStyle(.tertiary)
-                    .fixedSize()
-                Spacer(minLength: 0)
-                if !application.documents.isEmpty {
-                    Label("\(application.documents.count)", systemImage: "paperclip")
-                        .foregroundStyle(.secondary)
-                        .help("Documents attached")
-                        .accessibilityLabel("^[\(application.documents.count) document](inflect: true)")
-                        .fixedSize()
-                }
-                if let resume = application.resume {
-                    Label(resume.displayTitle, systemImage: "doc.text")
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-            }
-            .font(.caption)
+        ) { editor in
+            ApplicationForm(editor: editor)
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.background, in: .rect(cornerRadius: 12))
-        .overlay {
-            RoundedRectangle(cornerRadius: 12).strokeBorder(.separator)
-        }
-        .shadow(color: .black.opacity(0.06), radius: 4, y: 1)
-        .accessibilityElement(children: .combine)
-    }
-}
-
-/// Until the Applications list (DESIGN.md §8.7) replaces the gallery, its cards show the status mark.
-struct StatusPill: View {
-    let status: ApplicationStatus
-
-    var body: some View {
-        StatusMark(status).font(.caption)
     }
 }
 
@@ -130,30 +104,46 @@ struct ApplicationForm: View {
     @Query(sort: \Resume.updatedAt, order: .reverse) private var resumes: [Resume]
 
     var body: some View {
-        Form {
-            Section {
-                HStack(spacing: 14) {
-                    OrganizationLogo(name: editor.record.company, size: 56)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(editor.record.displayTitle)
-                            .font(.title3.weight(.semibold))
-                        Text(editor.record.company)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    // The status lives here, in its color, instead of repeating as a row below.
-                    Picker("Status", selection: editor.binding(\.status)) {
-                        ForEach(ApplicationStatus.allCases) { status in
-                            Text(status.title).tag(status)
-                        }
-                    }
-                    .labelsHidden()
-                    .fixedSize()
-                    .tint(editor.record.status.color)
-                    .help("Status")
+        VStack(alignment: .leading, spacing: 0) {
+            header
+            form
+        }
+    }
+
+    /// Logo, position, company and status (DESIGN.md §8.7); the form below doesn't repeat them.
+    private var header: some View {
+        HStack(spacing: Space.m) {
+            OrganizationLogo(name: editor.record.company, size: 56)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(editor.record.displayTitle)
+                    .font(.detailTitle)
+                    .foregroundStyle(Color.textPrimary)
+                    .lineLimit(1)
+                    .accessibilityAddTraits(.isHeader)
+                if !editor.record.company.isBlank {
+                    Text(editor.record.company)
+                        .foregroundStyle(Color.textSecondary)
+                        .lineLimit(1)
                 }
-                .padding(.vertical, 4)
             }
+            Spacer(minLength: Space.l)
+            CivaMenuPicker("Status", selection: editor.binding(\.status), value: Text(editor.record.status.title)) {
+                ForEach(ApplicationStatus.allCases) { status in
+                    Text(status.title).tag(status)
+                }
+            } label: {
+                StatusMark(editor.record.status, emphasized: true)
+            }
+            .help("Status")
+        }
+        .frame(maxWidth: Size.formMaxWidth, alignment: .leading)
+        .padding(.horizontal, Space.xl)
+        .padding(.top, 20)
+        .padding(.bottom, Space.s)
+    }
+
+    private var form: some View {
+        Form {
             Section {
                 TextField("Position", text: editor.binding(\.position), prompt: Text("Required"))
                 FieldError(editor.error(for: \.position))
@@ -178,6 +168,7 @@ struct ApplicationForm: View {
                         .buttonStyle(.plain)
                         .help("Open this resume")
                         Button("Open Resume") { open(resume) }
+                            .civaButton(.secondary)
                         Spacer()
                     }
                     .padding(.vertical, 4)
@@ -236,18 +227,9 @@ struct ApplicationForm: View {
 }
 
 #Preview("Applications") {
-    NavigationStack {
-        ApplicationsView()
-    }
+    ApplicationsView()
     .frame(width: 1000, height: 640)
     .previewEnvironment()
-}
-
-#Preview("Card") {
-    ApplicationCard(application: JobApplication(company: "Apple", position: "iOS Engineer", applicationDate: .now, status: .interview))
-        .frame(width: 240)
-        .padding()
-        .previewEnvironment()
 }
 
 #Preview("Form") {
