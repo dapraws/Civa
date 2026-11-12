@@ -9,32 +9,28 @@ import SwiftUI
 
 // Orange marks Claude, and only Claude: the `claude*` color sets in Assets.xcassets.
 
-/// "Claude" in a small orange capsule: on text Claude wrote, until you edit it.
+/// The "Claude" tag on text Claude wrote, until you edit it.
 struct ClaudeTag: View {
     var title: LocalizedStringKey = "Claude"
 
     var body: some View {
-        Label(title, systemImage: "sparkles")
-            .font(.caption.weight(.semibold))
-            .padding(.horizontal, 7)
-            .padding(.vertical, 2)
-            .foregroundStyle(.claude)
-            .background(.claude.opacity(0.14), in: .capsule)
+        CivaTag(.claude, title: title)
             .help("Written by Claude. The tag goes away when you edit it.")
     }
 }
 
-/// An orange count of things from Claude waiting for you.
+/// A count of things from Claude waiting for you. Tinted, never a solid orange fill.
 struct ClaudeCount: View {
     let count: Int
 
     var body: some View {
         Label("\(count)", systemImage: "sparkles")
             .font(.caption.weight(.semibold))
-            .padding(.horizontal, 7)
-            .padding(.vertical, 3)
-            .foregroundStyle(.white)
-            .background(.claude, in: .capsule)
+            .monospacedDigit()
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .foregroundStyle(Color.claudeText)
+            .background(Color.claudeTint, in: .rect(cornerRadius: Radius.tag))
             .help("^[\(count) suggestion](inflect: true) from Claude to review")
     }
 }
@@ -54,9 +50,9 @@ struct ClaudeHowItWorks: View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
             Text(number, format: .number)
                 .font(.callout.weight(.bold))
-                .foregroundStyle(.white)
+                .foregroundStyle(Color.claudeText)
                 .frame(width: 22, height: 22)
-                .background(.claude, in: .circle)
+                .background(Color.claudeTint, in: .circle)
                 .alignmentGuide(.firstTextBaseline) { $0[.bottom] - 6 }
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {

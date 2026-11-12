@@ -15,14 +15,17 @@ struct CivaButtonStyle: ButtonStyle {
 
     let kind: Kind
     var size: ControlSize = .regular
+    /// Only for `.textLink`: the label color when it isn't `accentText`, such as `claudeText`.
+    var color: Color?
 
-    init(_ kind: Kind, size: ControlSize = .regular) {
+    init(_ kind: Kind, size: ControlSize = .regular, color: Color? = nil) {
         self.kind = kind
         self.size = size
+        self.color = color
     }
 
     func makeBody(configuration: Configuration) -> some View {
-        CivaButton(kind: kind, size: size, configuration: configuration)
+        CivaButton(kind: kind, size: size, linkColor: color ?? .accentText, configuration: configuration)
     }
 }
 
@@ -39,6 +42,7 @@ extension ButtonStyle where Self == CivaButtonStyle {
 private struct CivaButton: View {
     let kind: CivaButtonStyle.Kind
     let size: ControlSize
+    let linkColor: Color
     let configuration: ButtonStyleConfiguration
 
     @Environment(\.isEnabled) private var isEnabled
@@ -61,7 +65,7 @@ private struct CivaButton: View {
         Group {
             if kind == .textLink {
                 configuration.label
-                    .foregroundStyle(Color.accentText)
+                    .foregroundStyle(linkColor)
                     .underline(hovers)
                     .opacity(isPressed ? 0.7 : 1)
                     .frame(minHeight: Size.minTarget)
