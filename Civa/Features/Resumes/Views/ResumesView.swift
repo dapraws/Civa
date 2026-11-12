@@ -17,6 +17,7 @@ struct ResumesView: View {
     @Query(filter: #Predicate<Resume> { $0.isMaster }) private var masters: [Resume]
     @State private var isPickingFromProfile = false
     @State private var tailoring: Resume?
+    @State private var tailoringApplication: UUID?
 
     var body: some View {
         let source = ProfileSource.current(in: context)
@@ -55,9 +56,17 @@ struct ResumesView: View {
             NewResumeFromProfileSheet()
         }
         .sheet(item: $tailoring) { master in
-            TailorResumeSheet(master: master)
+            TailorResumeSheet(master: master, preselected: tailoringApplication)
         }
         .onAppear(perform: startTracking)
+        // Ovi's "Tailor a copy".
+        .onChange(of: navigation.tailorResumeID, initial: true) { _, id in
+            guard let id, let resume = masters.first(where: { $0.id == id }) else { return }
+            navigation.tailorResumeID = nil
+            tailoringApplication = navigation.tailorApplicationID
+            navigation.tailorApplicationID = nil
+            tailoring = resume
+        }
     }
 
     /// Resumes made before Suggested Changes start tracking the profile from now (FR-042).

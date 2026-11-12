@@ -11,6 +11,7 @@ import SwiftUI
 struct RootView: View {
     @Environment(UnsavedChangesGuard.self) private var changes
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.modelContext) private var modelContext
     @State private var navigation = AppNavigation()
     /// The section clicked while the unsaved-changes prompt is up.
     @State private var pendingSection: AppSection?
@@ -19,13 +20,15 @@ struct RootView: View {
     private var onboarding = Onboarding.shared
     @State private var welcomeChoice: WelcomeSheet.Choice?
     @FocusState private var isSidebarFocused: Bool
+    @State private var ovi = OviEngine()
+    @State private var columnVisibility = NavigationSplitViewVisibility.all
     @Query(filter: #Predicate<ClaudeProposal> { $0.statusRaw == "pending" }) private var claudeProposals: [ClaudeProposal]
     /// Waiting and failed requests: both need the user to start them in Claude.
     @Query(filter: #Predicate<ClaudeRequest> { $0.statusRaw == "pending" || $0.statusRaw == "failed" })
     private var openRequests: [ClaudeRequest]
 
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
             sidebar
                 .navigationSplitViewColumnWidth(min: 204, ideal: 204, max: 260)
         } detail: {
@@ -78,7 +81,16 @@ struct RootView: View {
                 }
             }
         }
+        .background { OviWatcher(isSidebarCollapsed: columnVisibility == .detailOnly) }
+        #if DEBUG
+        .onAppear {
+            if let raw = UserDefaults.standard.string(forKey: "CivaOviPreview"), let tip = OviTipID(rawValue: raw) {
+                ovi.showPreview(tip, open: UserDefaults.standard.bool(forKey: "CivaOviOpen"))
+            }
+        }
+        #endif
         .environment(navigation)
+        .environment(ovi)
         .civaWindowStyle()
         // Wide enough for the Career Profile tabs and the resume editor's three columns at their minimums.
         .frame(minWidth: 1100, minHeight: 640)
@@ -109,6 +121,12 @@ struct RootView: View {
             item(for: .settings, selection: selection)
                 .padding(.top, Space.l)
             Spacer(minLength: Space.l)
+            OviPerch(perform: performOviAction, openWhy: { _ in
+                HelpNavigator.shared.topic = "ovi"
+                openWindow(id: "help")
+            })
+                .padding(.leading, 2)
+                .padding(.bottom, Space.s)
             #if DEBUG
             if DataMode.current != .real {
                 Label(DataMode.current.title, systemImage: "testtube.2")
@@ -129,6 +147,23 @@ struct RootView: View {
         .focusEffectDisabled()
         .onKeyPress(.upArrow) { step(-1, in: sections, selection: selection) }
         .onKeyPress(.downArrow) { step(1, in: sections, selection: selection) }
+    }
+
+    /// Ovi's bubble action (tip engine spec §4.4). Resume changes go through the open resume, so
+    /// its editor shows them as unsaved edits that Revert can undo.
+    private func performOviAction(_ action: OviAction) {
+        switch action {
+        case .tailorCopy(let id):
+            let application = navigation.openRecordID
+            changes.perform {
+                navigation.tailorApplicationID = application
+                navigation.tailorResumeID = id
+                navigation.section = .resumes
+            }
+        case .setFontSize10, .useShortDates:
+            guard let editor = changes.active as? RecordEditor<Resume> else { return }
+            action.apply(to: editor)
+        }
     }
 
     private func item(for section: AppSection, selection: Binding<AppSection>) -> some View {

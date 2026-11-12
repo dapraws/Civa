@@ -11,6 +11,9 @@ import SwiftUI
 struct SettingsView: View {
     @AppStorage(Brandfetch.fetchesLogosKey) private var fetchesLogos = true
     @AppStorage(Appearance.key) private var appearance = Appearance.system
+    @AppStorage(OviStore.isShownKey) private var showsOvi = true
+    @Environment(OviEngine.self) private var ovi
+    @State private var didResetOvi = false
     #if DEBUG
     @AppStorage(DataMode.key) private var dataMode = DataMode.current
     #endif
@@ -30,6 +33,17 @@ struct SettingsView: View {
             Section(civa: "General") {
                 LabeledContent("Appearance") {
                     SegmentedTabs(Appearance.allCases, selection: $appearance, title: \.title)
+                }
+                Toggle("Show Ovi", isOn: $showsOvi)
+                    .onChange(of: showsOvi) { ovi.refresh() }
+                LabeledContent("Ovi's tips") {
+                    Button(didResetOvi ? "Tips Reset" : "Reset Ovi's Tips") {
+                        OviStore().reset()
+                        didResetOvi = true
+                    }
+                    .civaButton(.textLink)
+                    .disabled(didResetOvi)
+                    .help("Ovi can show every tip again, including ones you closed or turned off")
                 }
             }
             ClaudeSettingsSection()
@@ -64,5 +78,6 @@ struct SettingsView: View {
 
 #Preview {
     SettingsView()
+        .environment(OviEngine())
         .frame(width: 700, height: 400)
 }

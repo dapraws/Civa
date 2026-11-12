@@ -11,6 +11,8 @@ import SwiftUI
 /// Start a tailored resume as a copy of the Master Resume (FR-040, FR-041), optionally for an application.
 struct TailorResumeSheet: View {
     let master: Resume
+    /// Picked when the sheet opens, such as from Ovi's "Tailor a copy" on an application.
+    var preselected: UUID?
 
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
@@ -64,6 +66,11 @@ struct TailorResumeSheet: View {
             .padding()
         }
         .frame(width: 520, height: 520)
+        .onAppear {
+            if let preselected, application == nil {
+                application = applications.first { $0.id == preselected }
+            }
+        }
         .onChange(of: application) { _, application in
             // Picking an application fills in what's still empty.
             guard let application else { return }

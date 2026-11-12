@@ -13,6 +13,7 @@ import Testing
 struct UnsavedChangesGuardTests {
     final class FakeSession: EditSession {
         let title = "Acme"
+        let isNew = false
         var isDirty = true
         var saveSucceeds = true
         private(set) var saves = 0

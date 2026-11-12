@@ -12,6 +12,8 @@ import SwiftUI
 /// What the unsaved-changes guard needs from whichever editor is active.
 protocol EditSession: AnyObject {
     var title: String { get }
+    /// Not saved yet.
+    var isNew: Bool { get }
     var isDirty: Bool { get }
     /// Validates and saves. Returns false, keeping the edits, when that fails.
     func save() -> Bool

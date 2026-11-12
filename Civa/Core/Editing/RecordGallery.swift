@@ -81,6 +81,11 @@ struct RecordGallery<Model: EditableRecord, Card: View, Editor: View, HeaderActi
 
     var body: some View {
         content
+            // Tells Ovi which record is open.
+            .onChange(of: editor.flatMap { $0.record.id as? UUID }, initial: true) { _, id in
+                navigation.openRecordID = id
+            }
+            .onDisappear { navigation.openRecordID = nil }
             .onChange(of: navigation.recordToOpen) { openRequestedRecord() }
             // A page's own New menu asks for a blank record this way.
             .onChange(of: navigation.startsNewRecord) { _, starts in
