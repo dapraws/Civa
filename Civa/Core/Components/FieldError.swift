@@ -19,7 +19,7 @@ struct FieldError: View {
         if let message {
             Label(message, systemImage: "exclamationmark.circle")
                 .font(.callout)
-                .foregroundStyle(.red)
+                .foregroundStyle(Color.danger)
         }
     }
 }

@@ -78,7 +78,7 @@ struct SkillChip: View {
         HStack(spacing: 4) {
             if skill.needsReview {
                 Image(systemName: "exclamationmark.triangle")
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(Color.warning)
                     .help("Needs review")
             }
             Text(skill.displayTitle)
@@ -97,7 +97,7 @@ struct SkillChip: View {
         .foregroundStyle(isSelected ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
         .background(isSelected ? AnyShapeStyle(Color.accent) : AnyShapeStyle(.quaternary.opacity(0.5)), in: Capsule())
         .overlay {
-            Capsule().strokeBorder(skill.needsReview ? Color.orange : Color.secondary.opacity(0.35), lineWidth: 0.5)
+            Capsule().strokeBorder(skill.needsReview ? Color.warning : Color.secondary.opacity(0.35), lineWidth: 0.5)
         }
         .fixedSize()
     }

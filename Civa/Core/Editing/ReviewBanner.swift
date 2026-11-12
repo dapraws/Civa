@@ -19,11 +19,11 @@ struct ReviewBanner<Model: ProfileRecord>: View {
                 HStack(alignment: .center, spacing: 10) {
                     Image(systemName: "exclamationmark.triangle")
                         .font(.title3)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(Color.warning)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Needs Review")
                             .fontWeight(.medium)
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(Color.warning)
                         Text("Confirm this information before it's used in a resume.")
                             .foregroundStyle(.secondary)
                     }

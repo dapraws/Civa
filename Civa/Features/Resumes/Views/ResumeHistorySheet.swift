@@ -46,7 +46,7 @@ struct ResumeHistorySheet: View {
                 }
                 Spacer()
                 Button("Done") { dismiss() }
-                    .keyboardShortcut(.defaultAction)
+                    .keyboardShortcut(.defaultAction).civaButton(.primary)
             }
             .padding()
         }

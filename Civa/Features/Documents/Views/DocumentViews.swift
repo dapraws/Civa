@@ -251,12 +251,12 @@ struct DocumentLibraryPicker: View {
                 Button("From Finder…") { isChoosing = true }
                 Spacer()
                 Button("Cancel", role: .cancel) { dismiss() }
-                    .keyboardShortcut(.cancelAction)
+                    .keyboardShortcut(.cancelAction).civaButton(.secondary)
                 Button(selection.count > 1 ? "Attach \(selection.count)" : "Attach") {
                     onAttach(all.filter { selection.contains($0.id) })
                     dismiss()
                 }
-                .keyboardShortcut(.defaultAction)
+                .keyboardShortcut(.defaultAction).civaButton(.primary)
                 .disabled(selection.isEmpty)
             }
             .padding()

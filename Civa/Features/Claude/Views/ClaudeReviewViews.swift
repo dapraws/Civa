@@ -77,7 +77,7 @@ struct ClaudeResumeProposalsSheet: View {
                 Text("Applied changes stay unsaved until you save the resume. History keeps the version before.")
                     .foregroundStyle(.secondary)
                 Spacer()
-                Button("Done") { dismiss() }.keyboardShortcut(.defaultAction)
+                Button("Done") { dismiss() }.keyboardShortcut(.defaultAction).civaButton(.primary)
             }
             .padding()
         }

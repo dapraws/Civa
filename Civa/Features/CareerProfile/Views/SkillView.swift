@@ -99,7 +99,7 @@ struct SkillList: View {
                 .foregroundStyle(row.category.isBlank ? .secondary : .primary)
             if members.contains(where: \.needsReview) {
                 Image(systemName: "exclamationmark.triangle")
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(Color.warning)
                     .help("Some of these need review")
             }
             Spacer()
@@ -115,7 +115,7 @@ struct SkillList: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text(group?.title ?? String(localized: "Skills"))
-                    .font(.title3.weight(.semibold))
+                    .font(.sectionTitle)
                 Spacer()
                 Button("Add Skill", systemImage: "plus", action: addSkill)
             }

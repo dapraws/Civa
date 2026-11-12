@@ -23,8 +23,8 @@ struct ClaudeSetupSheet: View {
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
                         Label("Connect Claude Desktop", systemImage: "sparkles")
-                            .font(.title2.weight(.semibold))
-                            .foregroundStyle(.claude)
+                            .font(.detailTitle)
+                            .foregroundStyle(Color.claudeText)
                         Text("Claude can help you rewrite bullet points, write a summary, and tailor a resume to a job. Civa works fully without it.")
                             .foregroundStyle(.secondary)
                     }
@@ -44,11 +44,11 @@ struct ClaudeSetupSheet: View {
                             Text(isConnected ? "Claude Desktop knows about Civa." : "Civa adds itself to Claude Desktop's settings. You'll be asked to allow it once.")
                             Spacer()
                             if isConnected {
-                                Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                                Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.success)
                                     .accessibilityLabel("Done")
                             } else {
                                 Button("Connect…", action: connect)
-                                    .buttonStyle(.borderedProminent)
+                                    .civaButton(.primary)
                             }
                         }
                         if let error { FieldError(error) }
@@ -77,7 +77,7 @@ struct ClaudeSetupSheet: View {
                     HStack {
                         if let last = bridge.lastConnected, last >= startedAt {
                             Label("Claude Desktop reached Civa \(last.formatted(.relative(presentation: .named)))", systemImage: "checkmark.circle.fill")
-                                .foregroundStyle(.green)
+                                .foregroundStyle(Color.success)
                         } else {
                             ProgressView().controlSize(.small)
                             Text("Waiting for Claude Desktop…").foregroundStyle(.secondary)
@@ -95,7 +95,7 @@ struct ClaudeSetupSheet: View {
             HStack {
                 Spacer()
                 Button(isConnected ? "Done" : "Not Now") { dismiss() }
-                    .keyboardShortcut(.defaultAction)
+                    .keyboardShortcut(.defaultAction).civaButton(.primary)
             }
             .padding()
         }
@@ -144,7 +144,7 @@ struct ClaudeSettingsSection: View {
             if bridge.isEnabled {
                 LabeledContent("Status") {
                     if let problem = bridge.problem {
-                        Text(problem).foregroundStyle(.red)
+                        Text(problem).foregroundStyle(Color.danger)
                     } else if let last = bridge.lastConnected {
                         Text("Connected · last used \(last.formatted(.relative(presentation: .named)))")
                     } else {

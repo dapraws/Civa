@@ -49,9 +49,9 @@ struct DuplicateMergeSheet: View {
                 Button("Keep Both", action: keepBoth)
                 Spacer()
                 Button("Cancel", role: .cancel) { dismiss() }
-                    .keyboardShortcut(.cancelAction)
+                    .keyboardShortcut(.cancelAction).civaButton(.secondary)
                 Button("Merge", action: merge)
-                    .keyboardShortcut(.defaultAction)
+                    .keyboardShortcut(.defaultAction).civaButton(.primary)
                     .disabled(original == nil)
             }
             .padding()

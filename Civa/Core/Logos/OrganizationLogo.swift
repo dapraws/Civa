@@ -58,7 +58,7 @@ struct OrganizationLogo: View {
 
     /// Stable across launches, unlike `hashValue`.
     private static func color(for name: String) -> Color {
-        let colors: [Color] = [.blue, .teal, .indigo, .orange, .pink, .purple, .green, .brown]
+        let colors: [Color] = [.blue, .teal, .indigo, .pink, .purple, .green, .brown]  // no orange: it reads as Claude
         let sum = Organization.key(for: name).unicodeScalars.reduce(0) { $0 &+ Int($1.value) }
         return colors[sum % colors.count]
     }

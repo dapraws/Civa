@@ -79,9 +79,9 @@ struct NewResumeFromProfileSheet: View {
                     .foregroundStyle(.secondary)
                 Spacer()
                 Button("Cancel", role: .cancel) { dismiss() }
-                    .keyboardShortcut(.cancelAction)
+                    .keyboardShortcut(.cancelAction).civaButton(.secondary)
                 Button("Create Resume", action: create)
-                    .keyboardShortcut(.defaultAction)
+                    .keyboardShortcut(.defaultAction).civaButton(.primary)
                     .disabled(title.isBlank)
             }
             .padding()

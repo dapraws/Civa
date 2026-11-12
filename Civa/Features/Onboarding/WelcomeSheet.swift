@@ -45,7 +45,7 @@ struct WelcomeSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("Welcome to Civa").font(.largeTitle.weight(.semibold))
+                Text("Welcome to Civa").font(.pageTitle)
                 Text("Your career details in one place on this Mac. Make tailored resumes from them anytime.")
                     .foregroundStyle(.secondary)
             }
