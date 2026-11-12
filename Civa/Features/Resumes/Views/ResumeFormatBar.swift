@@ -133,22 +133,24 @@ struct ResumeFormatBar: View {
                     .help("How dates print")
                     Text(pageSummary)
                         .monospacedDigit()
-                        .foregroundStyle(pageCount > 1 ? .orange : .secondary)
-                        .help(pageCount > 1 ? "Most recruiters prefer one page" : "Fits on one page")
+                        // Neutral: Ovi's page-count tip carries the advice (DESIGN.md §12).
+                        .foregroundStyle(Color.textSecondary)
+                        .help(Text(pageSummary))
                 }
             }
             Toggle(isOn: $showsGuides) {
                 Label("Guides", systemImage: "ruler")
             }
             .toggleStyle(.button)
+            .focusEffectDisabled()
             .help(showsGuides ? "Hide the distance guides" : "Keep the distance guides on the preview")
             .padding(.top, 6)
             .padding(.trailing, 10)
         }
         .pickerStyle(.menu)
         .controlSize(.small)
-        .padding(.vertical, 5)
-        .background(.bar)
+        .padding(.vertical, 6)
+        .background(Color.canvas)
     }
 
     private var marginsTitle: String {
@@ -186,12 +188,13 @@ private struct RibbonGroup<Content: View>: View {
                     // Same height for every group, so the captions line up.
                     .frame(height: 34, alignment: .bottom)
                 Text(title)
-                    .font(.caption2.weight(.medium))
-                    .foregroundStyle(.tertiary)
-                    .textCase(.uppercase)
+                    .font(.caption)
+                    .foregroundStyle(Color.textSecondary)
             }
             .padding(.horizontal, 10)
-            if showsDivider { Divider().padding(.vertical, 4) }
+            if showsDivider {
+                Rectangle().fill(Color.hairline).frame(width: 1).padding(.vertical, Space.s)
+            }
         }
         .fixedSize()
     }
@@ -219,8 +222,8 @@ private struct RibbonItem<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
             Text(title)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+                .font(.caption)
+                .foregroundStyle(Color.textSecondary)
             content
         }
         .contentShape(Rectangle())

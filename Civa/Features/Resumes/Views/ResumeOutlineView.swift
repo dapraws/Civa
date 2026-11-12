@@ -27,7 +27,7 @@ struct ResumeOutlineView: View {
                 }
                     .tag(ResumeOutlineItem.header)
             }
-            Section(civa: "Sections") {
+            Section(caption: "Sections") {
                 ForEach(document.outlineRows) { row in
                     let section = document.sections[row.section]
                     if let entry = row.entry {
@@ -39,6 +39,8 @@ struct ResumeOutlineView: View {
                 .onMove { document.moveOutlineRow(from: $0, to: $1) }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(Color.sidebar)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             addSectionBar
         }

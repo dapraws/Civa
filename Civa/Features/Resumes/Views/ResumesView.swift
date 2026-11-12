@@ -46,7 +46,7 @@ struct ResumesView: View {
                 ),
             ],
             showsAddButton: false,
-            editorHasHeader: false,  // Task 8: the Resume Editor draws its own title row
+            editorHasHeader: true,
             headerActions: { newMenu },
             card: { ResumeCard(resume: $0, suggestionCount: SuggestedChanges.suggestions(for: $0.document, from: source).count) },
             editor: { ResumeEditorView(editor: $0) }

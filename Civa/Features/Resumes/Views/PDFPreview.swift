@@ -18,7 +18,7 @@ struct PDFPreview: NSViewRepresentable {
         view.autoScales = true
         view.displayMode = .singlePageContinuous
         view.displaysPageBreaks = true
-        view.backgroundColor = .underPageBackgroundColor
+        view.backgroundColor = NSColor(named: "desk") ?? .underPageBackgroundColor
         return view
     }
 

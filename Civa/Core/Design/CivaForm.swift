@@ -50,6 +50,25 @@ extension Section where Parent == SectionTitle, Footer == EmptyView, Content: Vi
     }
 }
 
+/// A small heading for compact lists, such as the Resume Editor's outline (DESIGN.md §8.6).
+struct CaptionTitle: View {
+    let title: LocalizedStringKey
+
+    var body: some View {
+        Text(title)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(Color.textSecondary)
+            .textCase(nil)
+            .accessibilityAddTraits(.isHeader)
+    }
+}
+
+extension Section where Parent == CaptionTitle, Footer == EmptyView, Content: View {
+    init(caption title: LocalizedStringKey, @ViewBuilder content: () -> Content) {
+        self.init(content: content, header: { CaptionTitle(title: title) })
+    }
+}
+
 #Preview {
     Form {
         Section(civa: "Contact") {
