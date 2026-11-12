@@ -81,6 +81,13 @@ struct RootView: View {
             }
         }
         .background { OviWatcher(isSidebarCollapsed: columnVisibility == .detailOnly) }
+        #if DEBUG
+        .onAppear {
+            if let raw = UserDefaults.standard.string(forKey: "CivaOviPreview"), let tip = OviTipID(rawValue: raw) {
+                ovi.showPreview(tip, open: UserDefaults.standard.bool(forKey: "CivaOviOpen"))
+            }
+        }
+        #endif
         .environment(navigation)
         .environment(ovi)
         .civaWindowStyle()
@@ -113,6 +120,9 @@ struct RootView: View {
             item(for: .settings, selection: selection)
                 .padding(.top, Space.l)
             Spacer(minLength: Space.l)
+            OviPerch()
+                .padding(.leading, 2)
+                .padding(.bottom, Space.s)
             #if DEBUG
             if DataMode.current != .real {
                 Label(DataMode.current.title, systemImage: "testtube.2")

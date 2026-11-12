@@ -141,6 +141,15 @@ final class OviEngine {
         }
     }
 
+    #if DEBUG
+    /// Manual checks and screenshots: -CivaOviPreview fontSize shows that tip's "!",
+    /// and -CivaOviOpen YES opens its bubble.
+    func showPreview(_ tip: OviTipID, open: Bool) {
+        guard let match = OviRules.longestVariants.first(where: { $0.tip == tip }) else { return }
+        state = open ? .waving(match) : .noticing(match)
+    }
+    #endif
+
     // MARK: Checking (spec §5)
 
     private func check() {
