@@ -27,7 +27,9 @@ struct SkillList: View {
     var body: some View {
         content
             .pageAction(PageAction(id: "addSkill#\(actionToken)", title: String(localized: "Add Skill"), systemImage: "plus", shortcut: "n", run: addSkill))
+            .onDisappear { navigation.isOnSkills = false }
             .onAppear {
+                navigation.isOnSkills = true
                 if navigation.startsNewRecord {
                     navigation.startsNewRecord = false
                     addSkill()

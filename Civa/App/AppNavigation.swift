@@ -21,6 +21,14 @@ final class AppNavigation {
     var otherKind: String?
     /// Which AI Activity tab shows next, such as Requests after a request notice is clicked.
     var aiActivityTab: AIActivityView.Tab?
+    /// The record open in an editor, for Ovi to know which screen this is.
+    var openRecordID: UUID?
+    /// The record whose first save just succeeded (Ovi's `numberLog`).
+    var justSavedRecordID: UUID?
+    /// Bumped when the open editor's changes are reverted, so Ovi closes without Happy.
+    var revertCount = 0
+    /// Career Profile → Other → Skills is showing.
+    var isOnSkills = false
     /// Which status Applications shows next, such as after a Dashboard pipeline cell is clicked.
     var applicationStatusFilter: ApplicationStatus?
 

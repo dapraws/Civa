@@ -16,6 +16,7 @@ struct RecordEditorBar<Model: EditableRecord>: View {
     /// Called when the record goes away (deleted, or a new record reverted).
     let onClose: () -> Void
 
+    @Environment(AppNavigation.self) private var navigation
     @State private var isConfirmingDelete = false
     @State private var isMerging = false
 
@@ -50,7 +51,10 @@ struct RecordEditorBar<Model: EditableRecord>: View {
             Button("Revert", action: revert)
                 .civaButton(.secondary)
                 .disabled(!editor.isDirty)
-            Button("Save") { editor.save() }
+            Button("Save") {
+                let wasNew = editor.isNew
+                if editor.save(), wasNew { navigation.justSavedRecordID = editor.record.id as? UUID }
+            }
                 .keyboardShortcut("s")
                 .civaButton(.primary)
                 .disabled(!editor.isDirty)
@@ -83,6 +87,7 @@ struct RecordEditorBar<Model: EditableRecord>: View {
     }
 
     private func revert() {
+        navigation.revertCount += 1
         editor.discard()
         if editor.isNew { onClose() }  // the record never existed
     }

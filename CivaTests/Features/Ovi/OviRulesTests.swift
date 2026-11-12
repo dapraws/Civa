@@ -166,4 +166,15 @@ struct OviRulesTests {
         }
         #expect(Set(OviRules.longestVariants.map(\.tip)) == Set(OviTipID.allCases))
     }
+
+    @Test func yearsOfExperienceSumsProfessionalSpans() {
+        let now = try! Date("2026-11-15T00:00:00Z", strategy: .iso8601)
+        let records = [
+            Experience(kind: .professional, organization: "A", role: "R", start: YearMonth(year: 2024, month: 11), isCurrent: true),
+            Experience(kind: .professional, organization: "B", role: "R", start: YearMonth(year: 2022, month: 1), end: YearMonth(year: 2023, month: 1)),
+            Experience(kind: .organizational, organization: "Club", role: "Lead", start: YearMonth(year: 2015, month: 1), isCurrent: true),
+            Experience(kind: .professional, organization: "C", role: "R"),
+        ]
+        #expect(OviContextBuilder.yearsOfExperience(records, now: now) == 3)
+    }
 }

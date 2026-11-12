@@ -19,13 +19,15 @@ struct RootView: View {
     private var onboarding = Onboarding.shared
     @State private var welcomeChoice: WelcomeSheet.Choice?
     @FocusState private var isSidebarFocused: Bool
+    @State private var ovi = OviEngine()
+    @State private var columnVisibility = NavigationSplitViewVisibility.all
     @Query(filter: #Predicate<ClaudeProposal> { $0.statusRaw == "pending" }) private var claudeProposals: [ClaudeProposal]
     /// Waiting and failed requests: both need the user to start them in Claude.
     @Query(filter: #Predicate<ClaudeRequest> { $0.statusRaw == "pending" || $0.statusRaw == "failed" })
     private var openRequests: [ClaudeRequest]
 
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
             sidebar
                 .navigationSplitViewColumnWidth(min: 204, ideal: 204, max: 260)
         } detail: {
@@ -78,7 +80,9 @@ struct RootView: View {
                 }
             }
         }
+        .background { OviWatcher(isSidebarCollapsed: columnVisibility == .detailOnly) }
         .environment(navigation)
+        .environment(ovi)
         .civaWindowStyle()
         // Wide enough for the Career Profile tabs and the resume editor's three columns at their minimums.
         .frame(minWidth: 1100, minHeight: 640)

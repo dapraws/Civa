@@ -71,6 +71,11 @@ struct RecordListDetail<Model: EditableRecord, Editor: View>: View {
     var body: some View {
         content
             .pageAction(PageAction(id: "\(addTitle)#\(actionToken)", title: addTitle, systemImage: "plus", shortcut: "n", run: addRecord))
+            // Tells Ovi which record is open.
+            .onChange(of: editor.flatMap { $0.record.id as? UUID }, initial: true) { _, id in
+                navigation.openRecordID = id
+            }
+            .onDisappear { navigation.openRecordID = nil }
             .onChange(of: navigation.recordToOpen) { _, target in
                 guard let target, let record = records.first(where: { AnyHashable($0.id) == target }) else { return }
                 navigation.recordToOpen = nil
