@@ -23,7 +23,7 @@ struct ResumeCard: View {
         let document = resume.document
         let paper = document.format.paper.size
         VStack(alignment: .leading, spacing: 10) {
-            thumbnail(document)
+            Self.thumbnail(document)
                 .resizable()
                 .aspectRatio(paper.width / paper.height, contentMode: .fit)
                 .background(.white)
@@ -68,7 +68,7 @@ struct ResumeCard: View {
     }
 
     // ponytail: renders the PDF on every redraw (~5 ms each); cache by updatedAt if galleries get large.
-    private func thumbnail(_ document: ResumeDocument) -> Image {
+    static func thumbnail(_ document: ResumeDocument) -> Image {
         let size = document.format.paper.size
         // Keep the document alive while its page draws.
         let pdf = PDFDocument(data: ResumeRenderer.pdf(for: document))

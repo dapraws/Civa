@@ -335,27 +335,3 @@ struct ClaudeRecordProposalsSection<Model: ClaudeEditable>: View {
 }
 
 /// On the Dashboard: requests waiting for Claude and suggestions waiting for the user (FR-072, FR-073).
-struct ClaudeInboxCard: View {
-    @Query(sort: \ClaudeRequest.createdAt, order: .reverse) private var requests: [ClaudeRequest]
-    @Query(filter: #Predicate<ClaudeProposal> { $0.statusRaw == "pending" }, sort: \ClaudeProposal.createdAt, order: .reverse)
-    private var proposals: [ClaudeProposal]
-
-    var body: some View {
-        let waiting = requests.filter { $0.status == .pending || $0.status == .failed }
-        if !waiting.isEmpty || !proposals.isEmpty {
-            VStack(alignment: .leading, spacing: 10) {
-                Label("Claude", systemImage: "sparkles").font(.headline).foregroundStyle(.claude)
-                ForEach(proposals) { ClaudeProposalRow(proposal: $0) }
-                ForEach(waiting) { ClaudeRequestRow(request: $0) }
-            }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.background, in: .rect(cornerRadius: 12))
-            .overlay { RoundedRectangle(cornerRadius: 12).strokeBorder(.claude.opacity(0.5)) }
-        }
-    }
-}
-
-#Preview("Inbox") {
-    ClaudeInboxCard().padding().frame(width: 600).previewEnvironment()
-}
