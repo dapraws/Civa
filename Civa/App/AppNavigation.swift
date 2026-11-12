@@ -29,6 +29,8 @@ final class AppNavigation {
     var revertCount = 0
     /// Ovi's "Tailor a copy": the Resumes page opens the Tailor sheet for this resume.
     var tailorResumeID: UUID?
+    /// The application the Tailor sheet starts with.
+    var tailorApplicationID: UUID?
     /// Career Profile → Other → Skills is showing.
     var isOnSkills = false
     /// Which status Applications shows next, such as after a Dashboard pipeline cell is clicked.

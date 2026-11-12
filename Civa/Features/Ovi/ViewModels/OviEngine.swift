@@ -36,6 +36,9 @@ final class OviEngine {
     private var wasDiscarded = false
     /// Checked with every check: an open sheet or marked (IME) text. Set by the app.
     var externalBlocker: () -> Bool = { false }
+    /// Builds the full context at check time (the resume's page count needs a PDF render), so it
+    /// runs after the debounce, not on every keystroke. Set by the app; tests pass contexts.
+    var contextProvider: (() -> OviContext?)?
 
     /// The debounced check after a change, awaited by tests.
     private(set) var pendingCheck: Task<Void, Never>?
@@ -63,6 +66,10 @@ final class OviEngine {
         wasDiscarded = false
         if case .noticing = state { state = .neutral }
         if case .waving = state { state = .neutral }
+        if state == .happy {
+            pendingHappy?.cancel()
+            state = .neutral
+        }
         check()
     }
 
@@ -122,10 +129,14 @@ final class OviEngine {
         showHappy()
     }
 
-    /// The action continues elsewhere (the Tailor sheet): close without snooze or Happy.
+    /// The action continues elsewhere (the Tailor sheet): close without snooze or Happy, and rest
+    /// for a day, since the application may still link the Master after tailoring.
     func handedOff() {
         guard let match = current else { return }
-        store.update(match.tip) { $0.lastOutcome = .acted }
+        store.update(match.tip) {
+            $0.lastShown = now()
+            $0.lastOutcome = .shown
+        }
         state = .neutral
     }
 
@@ -161,7 +172,7 @@ final class OviEngine {
 
     private func check() {
         guard store.isShown else { return state = .hidden }
-        let matches = context.map(OviRules.matches(in:)) ?? []
+        let matches = (contextProvider?() ?? context).map(OviRules.matches(in:)) ?? []
         if let shown = current {
             if let updated = matches.first(where: { $0.tip == shown.tip }) {
                 // Keep the copy current, such as a new font size.

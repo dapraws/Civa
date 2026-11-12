@@ -33,6 +33,8 @@ struct OviBubble: View {
                     .foregroundStyle(Color.textSecondary)
                     .frame(width: Size.minTarget, height: Size.minTarget)
                     .contentShape(.rect)
+                    // Focusable even without Full Keyboard Access, so focus lands in the bubble.
+                    .focusable()
                     .focused($isFocused)
                     .help("Close")
             }

@@ -154,17 +154,15 @@ struct RootView: View {
     private func performOviAction(_ action: OviAction) {
         switch action {
         case .tailorCopy(let id):
+            let application = navigation.openRecordID
             changes.perform {
+                navigation.tailorApplicationID = application
                 navigation.tailorResumeID = id
                 navigation.section = .resumes
             }
         case .setFontSize10, .useShortDates:
-            guard let id = navigation.openRecordID,
-                  let resume = try? modelContext.fetch(FetchDescriptor<Resume>(predicate: #Predicate { $0.id == id })).first
-            else { return }
-            var document = resume.document
-            action.apply(to: &document)
-            resume.document = document
+            guard let editor = changes.active as? RecordEditor<Resume> else { return }
+            action.apply(to: editor)
         }
     }
 

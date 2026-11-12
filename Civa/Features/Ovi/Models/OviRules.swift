@@ -22,6 +22,8 @@ struct OviContext {
     var yearsOfExperience: Double = 0
     /// A new current Experience was just saved for the first time (`numberLog`).
     var justSavedNewCurrentExperience = false
+    /// The open record hasn't been saved yet: skipped until its first save (spec §5.1).
+    var isNewRecord = false
 }
 
 /// The tip rules of spec §4.2 and their copy (§4.3).
@@ -30,7 +32,8 @@ enum OviRules {
 
     /// Every tip that matches the screen, in priority order.
     static func matches(in context: OviContext) -> [OviMatch] {
-        OviTipID.allCases
+        guard !context.isNewRecord else { return [] }
+        return OviTipID.allCases
             .filter { $0.screens.contains(context.screen.kind) }
             .compactMap { match($0, in: context) }
     }

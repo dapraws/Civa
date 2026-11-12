@@ -13,8 +13,11 @@ import SwiftUI
 /// Builds what Ovi's rules read from the screen the user is on (tip engine spec §4.1).
 enum OviContextBuilder {
     /// The context, plus a signature of everything the rules read, which changes with any edit.
-    static func make(navigation: AppNavigation, in context: ModelContext) -> (context: OviContext, signature: Int)? {
+    /// `full: false` skips the costly parts (the PDF page count, education levels, years), for
+    /// the per-keystroke signature; the engine builds the full context only when it checks.
+    static func make(navigation: AppNavigation, in context: ModelContext, isNewRecord: Bool, full: Bool = true) -> (context: OviContext, signature: Int)? {
         var hasher = Hasher()
+        hasher.combine(isNewRecord)
         let built: OviContext?
         switch navigation.section {
         case .careerProfile:
@@ -27,6 +30,7 @@ enum OviContextBuilder {
                 hasher.combine(record.start)
                 hasher.combine(record.impacts)
                 hasher.combine(record.isCurrent)
+                hasher.combine(navigation.justSavedRecordID == id)
                 built = OviContext(
                     screen: .experienceRecord(id),
                     experience: record,
@@ -51,11 +55,15 @@ enum OviContextBuilder {
             else { return nil }
             let document = resume.document
             hasher.combine(document)
+            guard full else {
+                built = OviContext(screen: .resumeEditor(id), resume: document)
+                break
+            }
             let levels = Dictionary(
                 fetch(Education.self, nil, in: context).compactMap { education in education.degreeLevel.map { (education.id, $0) } },
                 uniquingKeysWith: { first, _ in first }
             )
-            // ponytail: renders the PDF on each check (a few ms); checks are debounced, so it stays rare.
+            // Rendered only when the engine checks (after the 1.5 s debounce), not per keystroke.
             let pages = PDFDocument(data: ResumeRenderer.pdf(for: document))?.pageCount ?? 1
             built = OviContext(
                 screen: .resumeEditor(id),
@@ -74,7 +82,8 @@ enum OviContextBuilder {
         default:
             built = nil
         }
-        guard let built else { return nil }
+        guard var built else { return nil }
+        built.isNewRecord = isNewRecord
         return (built, hasher.finalize())
     }
 
@@ -108,6 +117,7 @@ struct OviWatcher: View {
     @Environment(AppNavigation.self) private var navigation
     @Environment(\.modelContext) private var context
     @Environment(OviEngine.self) private var ovi
+    @Environment(UnsavedChangesGuard.self) private var changes
 
     private struct Visit: Equatable {
         let section: AppSection
@@ -118,7 +128,8 @@ struct OviWatcher: View {
 
     var body: some View {
         // Reading the records here makes this view update whenever they change (Observation).
-        let built = OviContextBuilder.make(navigation: navigation, in: context)
+        let isNew = changes.active?.isNew ?? false
+        let built = OviContextBuilder.make(navigation: navigation, in: context, isNewRecord: isNew, full: false)
         Color.clear
             .frame(width: 0, height: 0)
             .accessibilityHidden(true)
@@ -126,6 +137,8 @@ struct OviWatcher: View {
                 of: Visit(section: navigation.section, category: navigation.profileCategory, record: navigation.openRecordID, isOnSkills: navigation.isOnSkills),
                 initial: true
             ) {
+                // A first save only counts for the record it was made on.
+                if navigation.justSavedRecordID != navigation.openRecordID { navigation.justSavedRecordID = nil }
                 ovi.visit(built?.context)
             }
             .onChange(of: built?.signature) {
@@ -138,6 +151,9 @@ struct OviWatcher: View {
                 ovi.setBlocked(collapsed)
             }
             .onAppear {
+                ovi.contextProvider = { [navigation, context, changes] in
+                    OviContextBuilder.make(navigation: navigation, in: context, isNewRecord: changes.active?.isNew ?? false)?.context
+                }
                 ovi.externalBlocker = {
                     NSApp.windows.contains { $0.attachedSheet != nil }
                         || ((NSApp.keyWindow?.firstResponder as? NSTextView)?.hasMarkedText() ?? false)

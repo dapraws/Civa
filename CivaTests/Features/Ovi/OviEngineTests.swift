@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftData
 import Testing
 @testable import Civa
 
@@ -199,7 +200,36 @@ struct OviEngineTests {
         ovi.open()
         ovi.handedOff()
         #expect(ovi.state == .neutral)
-        #expect(store.record(.tailor)?.lastOutcome == .acted)
+        // After tailoring, the application may still link the Master; rest instead of asking again at once.
+        #expect(!OviScheduler.isEligible(.tailor, store: store, now: now.addingTimeInterval(3600)))
         #expect(store.record(.tailor)?.snoozedUntil == nil)
+    }
+
+    @Test func resumeActionGoesThroughTheEditor() throws {
+        let container = try ModelContainer.civa(inMemory: true)
+        let context = container.mainContext
+        var document = ResumeDocument.blank
+        document.format.fontSize = 9
+        let resume = Resume(title: "Master", document: document)
+        context.insert(resume)
+        try context.save()
+        let editor = RecordEditor(record: resume, context: context)
+        OviAction.setFontSize10.apply(to: editor)
+        #expect(editor.isDirty)
+        #expect(resume.document.format.fontSize == 10)
+    }
+
+    @Test func visitDuringHappyStillChecks() {
+        let ovi = OviEngine(store: store, now: { [now] in now }) { duration in
+            if duration == OviEngine.happyHold { try await Task.sleep(for: .seconds(3600)) }
+        }
+        ovi.visit(smallFont())
+        ovi.open()
+        ovi.took(.setFontSize10)
+        var dates = ResumeDocument.blank
+        dates.format.dateStyle = .numeric
+        ovi.visit(OviContext(screen: .resumeEditor(UUID()), resume: dates))
+        #expect(noticing(ovi)?.tip == .numericDates)
+        ovi.pendingHappy?.cancel()
     }
 }

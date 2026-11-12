@@ -177,4 +177,10 @@ struct OviRulesTests {
         ]
         #expect(OviContextBuilder.yearsOfExperience(records, now: now) == 3)
     }
+
+    @Test func newRecordsAreSkipped() {
+        var context = onExperience(experience(location: ""))
+        context.isNewRecord = true
+        #expect(ids(context).isEmpty)
+    }
 }

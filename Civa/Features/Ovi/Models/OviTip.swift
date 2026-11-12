@@ -77,6 +77,18 @@ extension OviAction {
     }
 }
 
+extension OviAction {
+    /// Applies the change through the resume's editor, so it shows as an unsaved edit that
+    /// Save keeps and Revert undoes.
+    func apply(to editor: RecordEditor<Resume>) {
+        editor.update { resume in
+            var document = resume.document
+            apply(to: &document)
+            resume.document = document
+        }
+    }
+}
+
 /// A tip that matches the current screen, with its copy filled in (spec §4.3).
 struct OviMatch: Equatable {
     let tip: OviTipID

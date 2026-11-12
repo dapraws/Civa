@@ -48,6 +48,10 @@ struct OviPerch: View {
                 }
             }
             .animation(reduceMotion ? nil : Motion.emphasis, value: ovi.state)
+            // Esc closes the bubble wherever focus is in the sidebar, even after a mouse click on Ovi.
+            .onExitCommand {
+                if case .waving = ovi.state { ovi.close() }
+            }
             .onChange(of: ovi.current?.tip) { old, new in
                 if old == nil, new != nil, case .noticing = ovi.state {
                     AccessibilityNotification.Announcement("Ovi has a tip").post()
