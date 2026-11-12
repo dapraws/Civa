@@ -36,4 +36,31 @@ struct PageHeaderTests {
         #expect(a == b)
         #expect(a != c)
     }
+
+    /// Applications rebuilds its list when the status filter changes (`.id(status)`). Each list
+    /// must publish its own action, or the title row keeps the discarded list's Add.
+    @Test func eachListPublishesItsOwnAddAction() {
+        func publishedAction() -> PageAction? {
+            let box = Box()
+            let view = RecordListDetail<Skill, _>(
+                addTitle: "Add Skill",
+                empty: .init(title: "No Skills", message: "", systemImage: "star"),
+                order: { $0.name < $1.name },
+                subtitle: \.category,
+                makeRecord: { Skill(name: "") }
+            ) { _ in EmptyView() }
+                .onPreferenceChange(PageActionKey.self) { value in
+                    MainActor.assumeIsolated { box.action = value }
+                }
+                .previewEnvironment()
+            let host = NSHostingView(rootView: view)
+            host.frame = CGRect(x: 0, y: 0, width: 800, height: 400)
+            host.layout()
+            return box.action
+        }
+        let first = publishedAction()
+        let second = publishedAction()
+        #expect(first != nil)
+        #expect(first != second)
+    }
 }

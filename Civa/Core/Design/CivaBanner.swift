@@ -42,7 +42,7 @@ struct CivaBanner: View {
                 .foregroundStyle(Color.textPrimary)
                 .frame(maxWidth: .infinity, alignment: .leading)
             Button(actionTitle, action: action)
-                .buttonStyle(CivaButtonStyle(.textLink, color: isClaude ? .claudeText : nil))
+                .civaButton(.textLink, color: isClaude ? .claudeText : nil)
             Button("Close", systemImage: "xmark", action: onClose)
                 .labelStyle(.iconOnly)
                 .buttonStyle(.plain)

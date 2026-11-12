@@ -49,7 +49,7 @@ struct EmptyStateView: View {
                 .padding(.top, 6)
             if let button {
                 Button(button.title, action: button.action)
-                    .buttonStyle(CivaButtonStyle(button.kind, size: .large))
+                    .civaButton(button.kind, size: .large)
                     .padding(.top, Space.l)
             }
         }

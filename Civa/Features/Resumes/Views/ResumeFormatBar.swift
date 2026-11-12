@@ -142,7 +142,6 @@ struct ResumeFormatBar: View {
                 Label("Guides", systemImage: "ruler")
             }
             .toggleStyle(.button)
-            .focusEffectDisabled()
             .help(showsGuides ? "Hide the distance guides" : "Keep the distance guides on the preview")
             .padding(.top, 6)
             .padding(.trailing, 10)

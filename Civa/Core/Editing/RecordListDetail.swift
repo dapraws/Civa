@@ -30,6 +30,10 @@ struct RecordListDetail<Model: EditableRecord, Editor: View>: View {
     /// The row clicked while the unsaved-changes prompt is up.
     @State private var pendingSelection: Model.ID??
     @State private var editor: RecordEditor<Model>?
+    /// Makes this list's Add action unique, so a rebuilt list (Applications' `.id(status)`)
+    /// replaces the title row's button instead of leaving the old list's.
+    @State private var actionToken = UUID()
+    @FocusState private var isListFocused: Bool
 
     private let addTitle: String
     private let empty: EmptyState
@@ -66,7 +70,7 @@ struct RecordListDetail<Model: EditableRecord, Editor: View>: View {
 
     var body: some View {
         content
-            .pageAction(PageAction(id: addTitle, title: addTitle, systemImage: "plus", shortcut: "n", run: addRecord))
+            .pageAction(PageAction(id: "\(addTitle)#\(actionToken)", title: addTitle, systemImage: "plus", shortcut: "n", run: addRecord))
             .onChange(of: navigation.recordToOpen) { _, target in
                 guard let target, let record = records.first(where: { AnyHashable($0.id) == target }) else { return }
                 navigation.recordToOpen = nil
@@ -112,43 +116,60 @@ struct RecordListDetail<Model: EditableRecord, Editor: View>: View {
         }
     }
 
-    /// Rows draw their own selection (DESIGN.md §7.8); arrow keys move it while the list has focus.
+    /// Rows draw their own selection (DESIGN.md §7.8). The list takes focus on click or Tab; arrow
+    /// keys move the selection and keep it in view, and keyboard focus shows the ring on that row.
     private var list: some View {
         let sorted = records.sorted(by: order)
         let selected = changes.selection($selection, pending: $pendingSelection, apply: open)
-        return ScrollView {
-            LazyVStack(spacing: 1) {
-                ForEach(sorted) { record in
-                    Group {
-                        if let row {
-                            row(record, selected.wrappedValue == record.id)
-                        } else {
-                            RecordRow(
-                                title: record.displayTitle,
-                                subtitle: subtitle(record),
-                                needsReview: record.needsReview,
-                                proof: record.proof,
-                                isSelected: selected.wrappedValue == record.id
-                            )
+        return ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 1) {
+                    ForEach(sorted) { record in
+                        let isSelected = selected.wrappedValue == record.id
+                        Group {
+                            if let row {
+                                row(record, isSelected)
+                            } else {
+                                RecordRow(
+                                    title: record.displayTitle,
+                                    subtitle: subtitle(record),
+                                    needsReview: record.needsReview,
+                                    proof: record.proof,
+                                    isSelected: isSelected
+                                )
+                            }
                         }
+                        .civaFocusRing(RoundedRectangle(cornerRadius: Radius.control), isFocused: isListFocused && isSelected)
+                        .id(record.id)
+                        .onTapGesture {
+                            isListFocused = true
+                            selected.wrappedValue = record.id
+                        }
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityAction { selected.wrappedValue = record.id }
                     }
-                    .onTapGesture { selected.wrappedValue = record.id }
-                    .accessibilityAddTraits(.isButton)
-                    .accessibilityAction { selected.wrappedValue = record.id }
                 }
+                .padding(Space.s)
             }
-            .padding(Space.s)
+            .focusable()
+            .focused($isListFocused)
+            .focusEffectDisabled()
+            .onKeyPress(.upArrow) { step(-1, in: sorted, selection: selected, proxy: proxy) }
+            .onKeyPress(.downArrow) { step(1, in: sorted, selection: selected, proxy: proxy) }
         }
-        .focusable()
-        .focusEffectDisabled()
-        .onKeyPress(.upArrow) { step(-1, in: sorted, selection: selected) }
-        .onKeyPress(.downArrow) { step(1, in: sorted, selection: selected) }
     }
 
-    private func step(_ offset: Int, in sorted: [Model], selection: Binding<Model.ID?>) -> KeyPress.Result {
-        guard let index = sorted.firstIndex(where: { $0.id == selection.wrappedValue }),
-              sorted.indices.contains(index + offset) else { return .ignored }
-        selection.wrappedValue = sorted[index + offset].id
+    private func step(_ offset: Int, in sorted: [Model], selection: Binding<Model.ID?>, proxy: ScrollViewProxy) -> KeyPress.Result {
+        let next: Model?
+        if let index = sorted.firstIndex(where: { $0.id == selection.wrappedValue }) {
+            guard sorted.indices.contains(index + offset) else { return .handled }
+            next = sorted[index + offset]
+        } else {
+            next = offset > 0 ? sorted.first : sorted.last
+        }
+        guard let next else { return .ignored }
+        selection.wrappedValue = next.id
+        proxy.scrollTo(next.id)
         return .handled
     }
 

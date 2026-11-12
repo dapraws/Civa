@@ -116,8 +116,9 @@ struct DashboardSummary {
         rows += open
             .filter { $0.resume?.isMaster == true }
             .map { .usesMaster(applicationID: $0.id, company: $0.company) }
+        // One row per application: Tailor matters more than "not applied yet".
         rows += open
-            .filter { $0.status == .wishlist && $0.applicationDate == nil }
+            .filter { $0.status == .wishlist && $0.applicationDate == nil && $0.resume?.isMaster != true }
             .map { .notApplied(applicationID: $0.id, company: $0.company) }
         needsYou = rows
     }

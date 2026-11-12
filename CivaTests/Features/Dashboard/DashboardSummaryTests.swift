@@ -130,4 +130,14 @@ struct DashboardSummaryTests {
         #expect(summary(resumes: [old, new]).continueResume?.title == "New")
         #expect(summary().continueResume == nil)
     }
+
+    @Test func oneApplicationAppearsOnceInNeedsYou() {
+        let master = Resume(title: "Master")
+        master.isMaster = true
+        let app = JobApplication(company: "Gojek", position: "P", status: .wishlist)
+        app.resume = master
+        #expect(summary(applications: [app], resumes: [master]).needsYou == [
+            .usesMaster(applicationID: app.id, company: "Gojek"),
+        ])
+    }
 }

@@ -21,10 +21,12 @@ struct SkillList: View {
     @State private var group: SkillGroup?
     @State private var editor: RecordEditor<Skill>?
     @State private var moveError: String?
+    /// See `RecordListDetail.actionToken`.
+    @State private var actionToken = UUID()
 
     var body: some View {
         content
-            .pageAction(PageAction(id: "addSkill", title: String(localized: "Add Skill"), systemImage: "plus", shortcut: "n", run: addSkill))
+            .pageAction(PageAction(id: "addSkill#\(actionToken)", title: String(localized: "Add Skill"), systemImage: "plus", shortcut: "n", run: addSkill))
             .onAppear {
                 if navigation.startsNewRecord {
                     navigation.startsNewRecord = false
@@ -56,13 +58,14 @@ struct SkillList: View {
     @ViewBuilder
     private var content: some View {
         if skills.isEmpty && editor == nil {
-            ContentUnavailableView {
-                Label("No Skills Yet", systemImage: "star")
-            } description: {
-                Text("Add skills here, or link them from an experience or project.")
-            } actions: {
-                Button("Add Skill", action: addSkill)
-            }
+            EmptyStateView(
+                symbol: "star",
+                title: "No skills yet",
+                message: "Add skills here, or link them from an experience or project.",
+                button: ("Add Skill", .primary, addSkill)
+            )
+            .padding(.horizontal, Space.xl)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         } else {
             HStack(spacing: 0) {
                 sidebar
@@ -114,10 +117,12 @@ struct SkillList: View {
     private var chips: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
+                // Add Skill is the page's title-row button (⌘N).
                 Text(group?.title ?? String(localized: "Skills"))
                     .font(.sectionTitle)
+                    .foregroundStyle(Color.textPrimary)
+                    .accessibilityAddTraits(.isHeader)
                 Spacer()
-                Button("Add Skill", systemImage: "plus", action: addSkill)
             }
             ScrollView {
                 FlowLayout(spacing: 6, rowSpacing: 6) {

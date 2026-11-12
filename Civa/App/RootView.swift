@@ -18,6 +18,7 @@ struct RootView: View {
     private var notice = ClaudeRequestNotice.shared
     private var onboarding = Onboarding.shared
     @State private var welcomeChoice: WelcomeSheet.Choice?
+    @FocusState private var isSidebarFocused: Bool
     @Query(filter: #Predicate<ClaudeProposal> { $0.statusRaw == "pending" }) private var claudeProposals: [ClaudeProposal]
     /// Waiting and failed requests: both need the user to start them in Claude.
     @Query(filter: #Predicate<ClaudeRequest> { $0.statusRaw == "pending" || $0.statusRaw == "failed" })
@@ -124,6 +125,7 @@ struct RootView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color.sidebar)
         .focusable()
+        .focused($isSidebarFocused)
         .focusEffectDisabled()
         .onKeyPress(.upArrow) { step(-1, in: sections, selection: selection) }
         .onKeyPress(.downArrow) { step(1, in: sections, selection: selection) }
@@ -135,8 +137,10 @@ struct RootView: View {
             isSelected: selection.wrappedValue == section,
             badge: section == .aiActivity ? claudeProposals.count + openRequests.count : nil
         ) {
+            isSidebarFocused = true
             selection.wrappedValue = section
         }
+        .civaFocusRing(RoundedRectangle(cornerRadius: Radius.control), isFocused: isSidebarFocused && selection.wrappedValue == section)
     }
 
     private func step(_ offset: Int, in sections: [AppSection], selection: Binding<AppSection>) -> KeyPress.Result {

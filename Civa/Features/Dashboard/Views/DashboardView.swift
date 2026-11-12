@@ -40,7 +40,8 @@ struct DashboardView: View {
             skills: skills,
             applications: applications,
             resumes: resumes,
-            pendingClaude: claudeProposals.count + claudeRequests.count
+            // AI Activity only exists while Claude Desktop is set up.
+            pendingClaude: ClaudeBridge.shared.isEnabled ? claudeProposals.count + claudeRequests.count : 0
         )
         ScrollView {
             PageFrame(maxWidth: Size.dashboardMaxWidth) {
