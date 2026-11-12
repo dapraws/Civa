@@ -14,11 +14,12 @@ struct CivaButtonStyle: ButtonStyle {
     }
 
     let kind: Kind
-    var size: ControlSize = .regular
+    /// nil follows the surrounding `.controlSize`.
+    var size: ControlSize?
     /// Only for `.textLink`: the label color when it isn't `accentText`, such as `claudeText`.
     var color: Color?
 
-    init(_ kind: Kind, size: ControlSize = .regular, color: Color? = nil) {
+    init(_ kind: Kind, size: ControlSize? = nil, color: Color? = nil) {
         self.kind = kind
         self.size = size
         self.color = color
@@ -26,6 +27,14 @@ struct CivaButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         CivaButton(kind: kind, size: size, linkColor: color ?? .accentText, configuration: configuration)
+    }
+}
+
+extension View {
+    /// A Civa button style without the system focus ring, which draws in the macOS accent
+    /// color beside Civa's own ring. Use this instead of `.buttonStyle(CivaButtonStyle(…))`.
+    func civaButton(_ kind: CivaButtonStyle.Kind, size: ControlSize? = nil, color: Color? = nil) -> some View {
+        buttonStyle(CivaButtonStyle(kind, size: size, color: color)).focusEffectDisabled()
     }
 }
 
@@ -41,16 +50,17 @@ extension ButtonStyle where Self == CivaButtonStyle {
 
 private struct CivaButton: View {
     let kind: CivaButtonStyle.Kind
-    let size: ControlSize
+    let size: ControlSize?
     let linkColor: Color
     let configuration: ButtonStyleConfiguration
 
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.controlSize) private var controlSize
     @Environment(\.isFocused) private var isFocused
     @State private var isHovered = false
 
     private var height: CGFloat {
-        switch size {
+        switch size ?? controlSize {
         case .small, .mini: Size.controlSmall
         case .large, .extraLarge: Size.controlLarge
         default: Size.control
@@ -99,7 +109,7 @@ private struct CivaButton: View {
         case .secondary: .textPrimary
         case .destructive: .danger
         case .claude: .claudeText
-        case .textLink: .accentText
+        case .textLink: linkColor
         }
     }
 
