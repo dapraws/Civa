@@ -7,14 +7,7 @@
 
 import SwiftUI
 
-/// Orange marks Claude, and only Claude, so its features and its writing stand out.
-extension Color {
-    nonisolated static let claude = Color(.sRGB, red: 0.85, green: 0.47, blue: 0.34)
-}
-
-extension ShapeStyle where Self == Color {
-    nonisolated static var claude: Color { .claude }
-}
+// Orange marks Claude, and only Claude: the `claude*` color sets in Assets.xcassets.
 
 /// "Claude" in a small orange capsule: on text Claude wrote, until you edit it.
 struct ClaudeTag: View {
