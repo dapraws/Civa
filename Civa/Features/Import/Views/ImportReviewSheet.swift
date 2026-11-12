@@ -393,7 +393,7 @@ private struct ImportTag: View {
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
             .foregroundStyle(color)
-            .background(color.opacity(0.15), in: .capsule)
+            .background(color.opacity(0.15), in: .rect(cornerRadius: Radius.tag))
     }
 }
 

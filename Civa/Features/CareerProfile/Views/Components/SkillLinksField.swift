@@ -94,10 +94,11 @@ struct SkillChip: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 4)
-        .foregroundStyle(isSelected ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
-        .background(isSelected ? AnyShapeStyle(Color.accent) : AnyShapeStyle(.quaternary.opacity(0.5)), in: Capsule())
+        .foregroundStyle(isSelected ? Color.onAccent : Color.textPrimary)
+        .background(isSelected ? Color.accent : Color.surface, in: .rect(cornerRadius: Radius.control))
         .overlay {
-            Capsule().strokeBorder(skill.needsReview ? Color.warning : Color.secondary.opacity(0.35), lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: Radius.control)
+                .strokeBorder(skill.needsReview ? Color.warning : Color.fieldBorder, lineWidth: 1)
         }
         .fixedSize()
     }
