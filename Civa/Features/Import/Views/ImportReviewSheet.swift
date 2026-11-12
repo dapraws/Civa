@@ -70,7 +70,7 @@ struct ImportReviewSheet: View {
                 HStack {
                     Spacer()
                     Button("Close") { dismiss() }
-                        .keyboardShortcut(.defaultAction)
+                        .keyboardShortcut(.defaultAction).civaButton(.primary)
                 }
                 .padding()
             } else {
@@ -198,9 +198,9 @@ struct ImportReviewSheet: View {
                 .foregroundStyle(.secondary)
             Spacer()
             Button("Cancel", role: .cancel) { dismiss() }
-                .keyboardShortcut(.cancelAction)
+                .keyboardShortcut(.cancelAction).civaButton(.secondary)
             Button("Add \(draft.includedCount) to Career Profile", action: add)
-                .keyboardShortcut(.defaultAction)
+                .keyboardShortcut(.defaultAction).civaButton(.primary)
                 .disabled(draft.includedCount == 0)
         }
         .padding()
@@ -380,10 +380,10 @@ private struct ImportTag: View {
         if item.isIdentical {
             tag(String(localized: "Already in Profile"), color: .secondary)
         } else if item.matchID != nil {
-            tag(String(localized: "Possible Match"), color: .orange)
+            tag(String(localized: "Possible Match"), color: Color.warning)
                 .help(item.category.matchReason)
         } else if item.needsCheck {
-            tag(String(localized: "Check"), color: .orange)
+            tag(String(localized: "Check"), color: Color.warning)
         }
     }
 
@@ -393,7 +393,7 @@ private struct ImportTag: View {
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
             .foregroundStyle(color)
-            .background(color.opacity(0.15), in: .capsule)
+            .background(color.opacity(0.15), in: .rect(cornerRadius: Radius.tag))
     }
 }
 

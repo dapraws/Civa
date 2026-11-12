@@ -33,7 +33,7 @@ struct DuplicateMergeSheet: View {
                             incomingTitle: String(localized: "This Record")
                         )
                     } header: {
-                        Text("Compare With “\(original.displayTitle)”")
+                        SectionTitle("Compare With “\(original.displayTitle)”")
                     } footer: {
                         Text("Merge copies the values you pick and any new details into “\(original.displayTitle)”, then deletes this record. Keep Both marks them as different.")
                     }
@@ -42,16 +42,16 @@ struct DuplicateMergeSheet: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .formStyle(.grouped)
+            .civaForm(maxWidth: nil)
 
             Divider()
             HStack {
                 Button("Keep Both", action: keepBoth)
                 Spacer()
                 Button("Cancel", role: .cancel) { dismiss() }
-                    .keyboardShortcut(.cancelAction)
+                    .keyboardShortcut(.cancelAction).civaButton(.secondary)
                 Button("Merge", action: merge)
-                    .keyboardShortcut(.defaultAction)
+                    .keyboardShortcut(.defaultAction).civaButton(.primary)
                     .disabled(original == nil)
             }
             .padding()

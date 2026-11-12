@@ -72,8 +72,7 @@ struct ClaudeHowItWorks: View {
         ClaudeTag()
         ClaudeCount(count: 3)
         Button("Improve with Claude", systemImage: "sparkles") {}
-            .buttonStyle(.bordered)
-            .tint(.claude)
+            .civaButton(.claude)
     }
     .padding()
 }

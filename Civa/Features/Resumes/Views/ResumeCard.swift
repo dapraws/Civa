@@ -9,7 +9,8 @@ import PDFKit
 import SwiftData
 import SwiftUI
 
-/// A resume in the gallery: its first page, name, and target position. The Master is outlined.
+/// A resume in the gallery (DESIGN.md §7.9): its first page, name, and target position. The
+/// Master carries the Master tag.
 struct ResumeCard: View {
     let resume: Resume
     /// Career Profile changes this resume doesn't have yet (FR-042).
@@ -22,16 +23,11 @@ struct ResumeCard: View {
         let document = resume.document
         let paper = document.format.paper.size
         VStack(alignment: .leading, spacing: 10) {
-            thumbnail(document)
+            Self.thumbnail(document)
                 .resizable()
                 .aspectRatio(paper.width / paper.height, contentMode: .fit)
                 .background(.white)
-                .clipShape(.rect(cornerRadius: 6))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 6)
-                        .strokeBorder(resume.isMaster ? AnyShapeStyle(.tint) : AnyShapeStyle(.separator), lineWidth: resume.isMaster ? 2 : 1)
-                }
-                .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
+                .paperCard()
                 .overlay(alignment: .topTrailing) {
                     HStack(spacing: 4) {
                         let claudeCount = claudeProposals.filter { $0.targetID == resume.id }.count
@@ -39,34 +35,27 @@ struct ResumeCard: View {
                             ClaudeCount(count: claudeCount)
                         }
                         if suggestionCount > 0 {
-                            Label("\(suggestionCount)", systemImage: "arrow.triangle.2.circlepath")
-                                .font(.caption.weight(.semibold))
-                                .padding(.horizontal, 7)
-                                .padding(.vertical, 3)
-                                .foregroundStyle(.white)
-                                .background(.tint, in: .capsule)
+                            CountTag(count: suggestionCount, systemImage: "arrow.triangle.2.circlepath")
                                 .help("\(suggestionCount) suggested changes from your Career Profile")
                         }
                     }
                     .padding(6)
                 }
             VStack(alignment: .leading, spacing: 2) {
-                if resume.isMaster {
-                    Label("Master Resume", systemImage: "crown")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color.accentText)
-                }
-                if resume.isClaudeDraft {
-                    Label("Draft from Claude", systemImage: "sparkles")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.claude)
+                if resume.isMaster || resume.isClaudeDraft {
+                    HStack(spacing: Space.xs) {
+                        if resume.isMaster { CivaTag(.master) }
+                        if resume.isClaudeDraft { CivaTag(.claude, title: "Draft from Claude") }
+                    }
+                    .padding(.bottom, 2)
                 }
                 Text(resume.displayTitle)
-                    .font(.headline)
+                    .font(.bodyEmphasis)
+                    .foregroundStyle(Color.textPrimary)
                     .lineLimit(1)
                 Text(subtitle)
                     .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.textSecondary)
                     .lineLimit(1)
             }
         }
@@ -79,7 +68,7 @@ struct ResumeCard: View {
     }
 
     // ponytail: renders the PDF on every redraw (~5 ms each); cache by updatedAt if galleries get large.
-    private func thumbnail(_ document: ResumeDocument) -> Image {
+    static func thumbnail(_ document: ResumeDocument) -> Image {
         let size = document.format.paper.size
         // Keep the document alive while its page draws.
         let pdf = PDFDocument(data: ResumeRenderer.pdf(for: document))

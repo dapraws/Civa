@@ -17,12 +17,15 @@ struct HelpView: View {
         NavigationSplitView {
             List(topics, selection: $selection) { topic in
                 Label(topic.title, systemImage: topic.symbol)
-                    .foregroundStyle(topic.id == "claude" ? Color.claude : .primary)
+                    .foregroundStyle(topic.id == "claude" ? Color.claudeText : Color.textPrimary)
             }
+            .scrollContentBackground(.hidden)
+            .background(Color.sidebar)
             .navigationSplitViewColumnWidth(min: 200, ideal: 220)
             .safeAreaInset(edge: .bottom) {
                 VStack(alignment: .leading, spacing: 4) {
                     Button("Show All Tips Again") { resetsTips = true }
+                        .civaButton(.secondary)
                         .disabled(resetsTips)
                     if resetsTips {
                         Text("Tips show again the next time you open Civa.")
@@ -58,27 +61,27 @@ private struct HelpPage: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 Label(topic.title, systemImage: topic.symbol)
-                    .font(.largeTitle.weight(.semibold))
-                    .foregroundStyle(topic.id == "claude" ? Color.claude : .primary)
+                    .font(.pageTitle)
+                    .foregroundStyle(topic.id == "claude" ? Color.claudeText : Color.textPrimary)
                 if topic.id == "claude" {
                     ClaudeHowItWorks()
                         .padding(14)
-                        .background(Color.claude.opacity(0.08), in: .rect(cornerRadius: 10))
+                        .background(Color.claudeTint, in: .rect(cornerRadius: Radius.card))
                 }
                 ForEach(topic.sections, id: \.heading) { section in
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(section.heading).font(.title3.weight(.semibold))
+                        Text(section.heading).font(.sectionTitle)
                         Text(section.text)
                             .fixedSize(horizontal: false, vertical: true)
                             .textSelection(.enabled)
                     }
                 }
             }
-            .frame(maxWidth: 620, alignment: .leading)
-            .padding(28)
+            .frame(maxWidth: Size.readingWidth, alignment: .leading)
+            .padding(Space.xl)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .navigationTitle(topic.title)
+        .background(Color.canvas)
     }
 }
 

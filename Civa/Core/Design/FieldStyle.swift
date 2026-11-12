@@ -92,7 +92,7 @@ struct CivaMenuPicker<Value: Hashable, Items: View, Label: View>: View {
         }
         .menuStyle(.button)
         .menuIndicator(.hidden)
-        .buttonStyle(.secondary)
+        .civaButton(.secondary)
         .fixedSize()
         .accessibilityLabel(Text(title))
         .accessibilityValue(value)

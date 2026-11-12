@@ -187,7 +187,7 @@ struct DocumentsSection<Model: DocumentHolder>: View {
                 if library.contains(where: { !$0.isLinked(to: editor.record) }) { showsLibrary = true } else { isChoosing = true }
             }
         } header: {
-            Text("Documents")
+            SectionTitle("Documents")
         } footer: {
             if editor.record is JobApplication {
                 Text("The job posting, your cover letter, a transcript, or an offer letter, from your Documents or a new file. Drop files here too.")
@@ -251,12 +251,12 @@ struct DocumentLibraryPicker: View {
                 Button("From Finder…") { isChoosing = true }
                 Spacer()
                 Button("Cancel", role: .cancel) { dismiss() }
-                    .keyboardShortcut(.cancelAction)
+                    .keyboardShortcut(.cancelAction).civaButton(.secondary)
                 Button(selection.count > 1 ? "Attach \(selection.count)" : "Attach") {
                     onAttach(all.filter { selection.contains($0.id) })
                     dismiss()
                 }
-                .keyboardShortcut(.defaultAction)
+                .keyboardShortcut(.defaultAction).civaButton(.primary)
                 .disabled(selection.isEmpty)
             }
             .padding()

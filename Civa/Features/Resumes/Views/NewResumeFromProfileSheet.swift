@@ -48,7 +48,7 @@ struct NewResumeFromProfileSheet: View {
                     }
                 }
                 if let person = personalInfo.first {
-                    Section("Personal Information") {
+                    Section(civa: "Personal Information") {
                         Toggle(isOn: $includesPersonalInfo) {
                             RecordRow(title: person.displayTitle, subtitle: person.email, needsReview: person.needsReview)
                         }
@@ -71,7 +71,7 @@ struct NewResumeFromProfileSheet: View {
                 picker(String(localized: "Certifications"), certifications) { [$0.issuer] }
                 picker(String(localized: "Skills"), skills) { [$0.category] }
             }
-            .formStyle(.grouped)
+            .civaForm(maxWidth: nil)
 
             Divider()
             HStack {
@@ -79,9 +79,9 @@ struct NewResumeFromProfileSheet: View {
                     .foregroundStyle(.secondary)
                 Spacer()
                 Button("Cancel", role: .cancel) { dismiss() }
-                    .keyboardShortcut(.cancelAction)
+                    .keyboardShortcut(.cancelAction).civaButton(.secondary)
                 Button("Create Resume", action: create)
-                    .keyboardShortcut(.defaultAction)
+                    .keyboardShortcut(.defaultAction).civaButton(.primary)
                     .disabled(title.isBlank)
             }
             .padding()

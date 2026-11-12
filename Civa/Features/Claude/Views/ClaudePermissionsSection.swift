@@ -25,7 +25,7 @@ struct ClaudePermissionsSection: View {
                 .tint(.claude)
             }
         } header: {
-            Text("What Claude May Use")
+            SectionTitle("What Claude May Use")
         } footer: {
             Text("Read lets Claude see confirmed records in that category. Suggest lets it propose changes, which wait for your approval. Records that still need review are never shared.")
         }
@@ -64,7 +64,7 @@ struct ClaudeRecentActivitySection: View {
 
     var body: some View {
         if !activity.isEmpty {
-            Section("Recent Claude Activity") {
+            Section(civa: "Recent Claude Activity") {
                 ForEach(activity.prefix(5)) { ClaudeActivityRow(entry: $0) }
             }
         }
@@ -76,7 +76,7 @@ struct ClaudeRecentActivitySection: View {
         ClaudePermissionsSection()
         ClaudeRecentActivitySection()
     }
-    .formStyle(.grouped)
+    .civaForm()
     .frame(width: 560, height: 600)
     .previewEnvironment()
 }

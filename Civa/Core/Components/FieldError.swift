@@ -19,7 +19,7 @@ struct FieldError: View {
         if let message {
             Label(message, systemImage: "exclamationmark.circle")
                 .font(.callout)
-                .foregroundStyle(.red)
+                .foregroundStyle(Color.danger)
         }
     }
 }
@@ -29,5 +29,5 @@ struct FieldError: View {
         TextField("Role", text: .constant(""))
         FieldError("Enter a role.")
     }
-    .formStyle(.grouped)
+    .civaForm()
 }

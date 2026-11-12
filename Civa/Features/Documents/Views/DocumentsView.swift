@@ -31,24 +31,28 @@ struct DocumentsView: View {
             ),
             filter: kind.map { raw in #Predicate<SupportingDocument> { $0.kindRaw == raw.rawValue } },
             order: SupportingDocument.galleryOrder,
-            cardWidth: 170,
+            cardWidth: 144,
             makeRecord: { SupportingDocument(name: "", fileName: "", data: Data()) },
             section: { $0.kind.groupTitle },
             onAdd: { isChoosing = true },
+            headerActions: {
+                CivaMenuPicker(
+                    "Kind",
+                    selection: changes.selection($kind, pending: $pendingKind),
+                    value: Text(kind?.title ?? String(localized: "All Kinds"))
+                ) {
+                    Text("All Kinds").tag(DocumentKind?.none)
+                    Divider()
+                    ForEach(DocumentKind.allCases) { Text($0.title).tag(DocumentKind?.some($0)) }
+                } label: {
+                    Text(kind?.title ?? String(localized: "All Kinds"))
+                }
+                .help("Show documents of this kind")
+            },
             card: { DocumentCard(document: $0) },
             editor: { DocumentForm(editor: $0) }
         )
         .id(kind)
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Picker("Kind", selection: changes.selection($kind, pending: $pendingKind)) {
-                    Text("All Kinds").tag(DocumentKind?.none)
-                    Divider()
-                    ForEach(DocumentKind.allCases) { Text($0.title).tag(DocumentKind?.some($0)) }
-                }
-                .help("Show documents of this kind")
-            }
-        }
         .documentAdder(isChoosing: $isChoosing) { files in
             guard changes.active == nil else { return }  // an open editor saves its own changes
             DocumentFiles.insert(files, linkedTo: nil, in: context)
@@ -78,15 +82,15 @@ struct DocumentCard: View {
         VStack(alignment: .leading, spacing: 8) {
             DocumentThumbnail(document: document)
                 .aspectRatio(1, contentMode: .fit)
-                .clipShape(.rect(cornerRadius: 8))
-                .overlay { RoundedRectangle(cornerRadius: 8).strokeBorder(.separator) }
+                .paperCard()
             VStack(alignment: .leading, spacing: 2) {
                 Text(document.displayTitle)
-                    .font(.headline)
+                    .font(.bodyEmphasis)
+                    .foregroundStyle(Color.textPrimary)
                     .lineLimit(1)
                 Text([document.kind.title, linkedSummary].compactMap { $0 }.joined(separator: " · "))
                     .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.textSecondary)
                     .lineLimit(1)
             }
         }
@@ -174,17 +178,17 @@ struct DocumentForm: View {
                 }
                 .fixedSize()
             } header: {
-                Text("Linked To")
+                SectionTitle("Linked To")
             } footer: {
                 Text("One document can go on many records, like a transcript on several applications. Linking doesn't change the record.")
             }
-            Section("Notes") {
+            Section(civa: "Notes") {
                 TextField("Notes", text: editor.binding(\.notes), prompt: Text("Where it's from, what it shows"), axis: .vertical)
                     .labelsHidden()
                     .lineLimit(3...8)
             }
         }
-        .formStyle(.grouped)
+        .civaForm()
         .quickLookPreview($previewURL)
         .sheet(item: $importRequest) { ImportReviewSheet(request: $0) }
     }

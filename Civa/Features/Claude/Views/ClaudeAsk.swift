@@ -217,9 +217,7 @@ struct AskClaudeButton: View {
                     Image(systemName: "sparkles").foregroundStyle(.claude)
                 }
             }
-            .buttonStyle(.bordered)
-            .tint(unavailable == nil ? .claude : .gray)
-            .foregroundStyle(unavailable == nil ? AnyShapeStyle(.claude) : AnyShapeStyle(.secondary))
+            .civaButton(.claude)
             .disabled(unavailable != nil)
             .help(unavailable ?? String(localized: "Queue this for Claude; start it from AI Activity → Requests and review the result in Civa"))
             // Outside the orange style, so the tip's text keeps its normal color.

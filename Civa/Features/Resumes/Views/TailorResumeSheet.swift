@@ -39,7 +39,7 @@ struct TailorResumeSheet: View {
                 } footer: {
                     Text("Starts as a copy of “\(master.displayTitle)”. Later changes to either one don't affect the other.")
                 }
-                Section("Job Description") {
+                Section(civa: "Job Description") {
                     TextField(
                         "Job Description",
                         text: $jobDescription,
@@ -50,15 +50,15 @@ struct TailorResumeSheet: View {
                     .lineLimit(6...12)
                 }
             }
-            .formStyle(.grouped)
+            .civaForm(maxWidth: nil)
 
             Divider()
             HStack {
                 Spacer()
                 Button("Cancel", role: .cancel) { dismiss() }
-                    .keyboardShortcut(.cancelAction)
+                    .keyboardShortcut(.cancelAction).civaButton(.secondary)
                 Button("Create Resume", action: create)
-                    .keyboardShortcut(.defaultAction)
+                    .keyboardShortcut(.defaultAction).civaButton(.primary)
                     .disabled(title.isBlank)
             }
             .padding()

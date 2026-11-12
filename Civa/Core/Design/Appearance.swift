@@ -52,18 +52,15 @@ private struct CivaWindowStyle: ViewModifier {
     }
 }
 
-extension FocusedValues {
-    /// Opens the Settings page, through the unsaved-changes guard. Set by the main window.
-    @Entry var openSettings: (() -> Void)?
-}
-
-/// App menu → Settings… (⌘,).
+/// App menu → Settings… (⌘,), from any window: brings the main window forward on Settings.
 struct SettingsCommand: View {
-    @FocusedValue(\.openSettings) private var openSettings
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
-        Button("Settings…") { openSettings?() }
-            .keyboardShortcut(",")
-            .disabled(openSettings == nil)
+        Button("Settings…") {
+            Onboarding.shared.request = .settings
+            openWindow(id: "main")
+        }
+        .keyboardShortcut(",")
     }
 }

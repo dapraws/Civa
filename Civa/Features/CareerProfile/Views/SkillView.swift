@@ -21,18 +21,12 @@ struct SkillList: View {
     @State private var group: SkillGroup?
     @State private var editor: RecordEditor<Skill>?
     @State private var moveError: String?
+    /// See `RecordListDetail.actionToken`.
+    @State private var actionToken = UUID()
 
     var body: some View {
         content
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button(action: addSkill) {
-                        Label("Add Skill", systemImage: "plus")
-                    }
-                    .keyboardShortcut("n")
-                    .help("Add Skill (⌘N)")
-                }
-            }
+            .pageAction(PageAction(id: "addSkill#\(actionToken)", title: String(localized: "Add Skill"), systemImage: "plus", shortcut: "n", run: addSkill))
             .onAppear {
                 if navigation.startsNewRecord {
                     navigation.startsNewRecord = false
@@ -64,13 +58,14 @@ struct SkillList: View {
     @ViewBuilder
     private var content: some View {
         if skills.isEmpty && editor == nil {
-            ContentUnavailableView {
-                Label("No Skills Yet", systemImage: "star")
-            } description: {
-                Text("Add skills here, or link them from an experience or project.")
-            } actions: {
-                Button("Add Skill", action: addSkill)
-            }
+            EmptyStateView(
+                symbol: "star",
+                title: "No skills yet",
+                message: "Add skills here, or link them from an experience or project.",
+                button: ("Add Skill", .primary, addSkill)
+            )
+            .padding(.horizontal, Space.xl)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         } else {
             HStack(spacing: 0) {
                 sidebar
@@ -90,7 +85,7 @@ struct SkillList: View {
 
     private var sidebar: some View {
         List(selection: Binding(get: { group }, set: { new in changes.perform { select(new) } })) {
-            Section("Categories") {
+            Section(civa: "Categories") {
                 ForEach(groups, id: \.self) { row in
                     sidebarRow(row)
                         .tag(row)
@@ -107,7 +102,7 @@ struct SkillList: View {
                 .foregroundStyle(row.category.isBlank ? .secondary : .primary)
             if members.contains(where: \.needsReview) {
                 Image(systemName: "exclamationmark.triangle")
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(Color.warning)
                     .help("Some of these need review")
             }
             Spacer()
@@ -122,10 +117,12 @@ struct SkillList: View {
     private var chips: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
+                // Add Skill is the page's title-row button (⌘N).
                 Text(group?.title ?? String(localized: "Skills"))
-                    .font(.title3.weight(.semibold))
+                    .font(.sectionTitle)
+                    .foregroundStyle(Color.textPrimary)
+                    .accessibilityAddTraits(.isHeader)
                 Spacer()
-                Button("Add Skill", systemImage: "plus", action: addSkill)
             }
             ScrollView {
                 FlowLayout(spacing: 6, rowSpacing: 6) {
@@ -294,10 +291,10 @@ struct SkillForm: View {
                     }
                 }
             } header: {
-                Text("Used In")
+                SectionTitle("Used In")
             }
         }
-        .formStyle(.grouped)
+        .civaForm()
     }
 
     /// Categories in use plus a few starters, narrowed to what's typed.

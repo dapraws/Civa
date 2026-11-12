@@ -20,9 +20,9 @@ struct ProofSeal: View {
     var body: some View {
         Button(action: open) {
             if showsTitle {
-                Label("Verified", systemImage: "checkmark.seal.fill").foregroundStyle(.blue)
+                Label("Verified", systemImage: "checkmark.seal.fill").foregroundStyle(Color.success)
             } else {
-                Image(systemName: "checkmark.seal.fill").foregroundStyle(.blue)
+                Image(systemName: "checkmark.seal.fill").foregroundStyle(Color.success)
             }
         }
         .buttonStyle(.borderless)
@@ -75,6 +75,6 @@ struct ProofField<Model: DocumentOwner>: View {
         }
         ProofSeal(proof: .link(URL(string: "https://example.com")!), showsTitle: true)
     }
-    .formStyle(.grouped)
+    .civaForm()
     .frame(width: 400, height: 200)
 }

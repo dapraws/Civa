@@ -37,14 +37,14 @@ struct SuggestedChangesSheet: View {
                                 Button(suggestion.target.isRemoval ? "Remove Entry" : "Apply") {
                                     SuggestedChanges.apply(suggestion, to: &document, from: source)
                                 }
-                                .buttonStyle(.borderedProminent)
+                                .civaButton(.primary)
                             }
                         } header: {
                             Text(suggestion.title)
                         }
                     }
                 }
-                .formStyle(.grouped)
+                .civaForm(maxWidth: nil)
             }
 
             Divider()
@@ -58,7 +58,7 @@ struct SuggestedChangesSheet: View {
                     }
                 }
                 Button("Done") { dismiss() }
-                    .keyboardShortcut(.defaultAction)
+                    .keyboardShortcut(.defaultAction).civaButton(.primary)
             }
             .padding()
         }
@@ -89,14 +89,14 @@ struct SuggestedChangesSheet: View {
                     }
                     if !change.new.isEmpty {
                         Text(change.new)
-                            .foregroundStyle(.green)
+                            .foregroundStyle(Color.success)
                     }
                 }
                 .multilineTextAlignment(.trailing)
                 if change.replacesEdit {
                     Label("Replaces your wording in this resume", systemImage: "exclamationmark.triangle")
                         .font(.caption)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(Color.warning)
                 }
             }
         }

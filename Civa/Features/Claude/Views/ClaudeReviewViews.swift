@@ -60,8 +60,7 @@ struct ClaudeResumeProposalsSheet: View {
                                         }
                                         decide(proposal, .applied, choice: choiceLabels(edit, proposal))
                                     }
-                                    .buttonStyle(.borderedProminent)
-                                    .tint(.claude)
+                                    .civaButton(.claude)
                                     .disabled(chosen.summary == nil && chosen.entries.isEmpty)
                                     .help(chosen.summary == nil && chosen.entries.isEmpty ? "Pick a version first" : "")
                                 }
@@ -71,14 +70,14 @@ struct ClaudeResumeProposalsSheet: View {
                         }
                     }
                 }
-                .formStyle(.grouped)
+                .civaForm(maxWidth: nil)
             }
             Divider()
             HStack {
                 Text("Applied changes stay unsaved until you save the resume. History keeps the version before.")
                     .foregroundStyle(.secondary)
                 Spacer()
-                Button("Done") { dismiss() }.keyboardShortcut(.defaultAction)
+                Button("Done") { dismiss() }.keyboardShortcut(.defaultAction).civaButton(.primary)
             }
             .padding()
         }
@@ -232,7 +231,7 @@ struct ClaudeDraftBanner: View {
             }
             Spacer()
             Button("Discard…") { isConfirmingDiscard = true }
-            Button("Keep Draft", action: keep).buttonStyle(.borderedProminent).tint(.claude)
+            Button("Keep Draft", action: keep).civaButton(.claude)
         }
         .padding(12)
         .background(.claude.opacity(0.12))
@@ -308,8 +307,7 @@ struct ClaudeRecordProposalsSection<Model: ClaudeEditable>: View {
                             )
                         }
                         .disabled(pick == nil)
-                        .buttonStyle(.borderedProminent)
-                        .tint(.claude)
+                        .civaButton(.claude)
                     }
                 } header: {
                     Label("Suggested by Claude", systemImage: "sparkles").foregroundStyle(.claude)
@@ -335,27 +333,3 @@ struct ClaudeRecordProposalsSection<Model: ClaudeEditable>: View {
 }
 
 /// On the Dashboard: requests waiting for Claude and suggestions waiting for the user (FR-072, FR-073).
-struct ClaudeInboxCard: View {
-    @Query(sort: \ClaudeRequest.createdAt, order: .reverse) private var requests: [ClaudeRequest]
-    @Query(filter: #Predicate<ClaudeProposal> { $0.statusRaw == "pending" }, sort: \ClaudeProposal.createdAt, order: .reverse)
-    private var proposals: [ClaudeProposal]
-
-    var body: some View {
-        let waiting = requests.filter { $0.status == .pending || $0.status == .failed }
-        if !waiting.isEmpty || !proposals.isEmpty {
-            VStack(alignment: .leading, spacing: 10) {
-                Label("Claude", systemImage: "sparkles").font(.headline).foregroundStyle(.claude)
-                ForEach(proposals) { ClaudeProposalRow(proposal: $0) }
-                ForEach(waiting) { ClaudeRequestRow(request: $0) }
-            }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.background, in: .rect(cornerRadius: 12))
-            .overlay { RoundedRectangle(cornerRadius: 12).strokeBorder(.claude.opacity(0.5)) }
-        }
-    }
-}
-
-#Preview("Inbox") {
-    ClaudeInboxCard().padding().frame(width: 600).previewEnvironment()
-}

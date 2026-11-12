@@ -81,7 +81,7 @@ struct ExperienceForm: View {
                     Text("Leadership and Volunteer roles get their own sections on new resumes.")
                 }
             }
-            Section("Dates") {
+            Section(civa: "Dates") {
                 YearMonthField(title: String(localized: "Start"), value: editor.binding(\.start))
                 Toggle(
                     editor.record.kind == .professional
@@ -104,7 +104,7 @@ struct ExperienceForm: View {
                 .labelsHidden()
                 .lineLimit(4...12)
             } header: {
-                Text("Description")
+                SectionTitle("Description")
             } footer: {
                 Text("Background on the role. Claude reads it for context. On a resume it becomes the bullet only when there are no Impact lines.")
             }
@@ -131,20 +131,20 @@ struct ExperienceForm: View {
                 ClaudeUnavailableNote(reason: improveUnavailable)
                 Text("Results of your work, like “Cut onboarding time by 30%”. Awards and other formal recognition go in Achievements.")
             }
-            Section("Skills") {
+            Section(civa: "Skills") {
                 SkillLinksField(editor: editor, skills: \.skills)
             }
             Section {
                 ProofField(editor: editor, title: "Proof Link", link: \.proofURL)
             } header: {
-                Text("Proof")
+                SectionTitle("Proof")
             } footer: {
                 Text("A certificate, recommendation, or announcement. With a link or an attached document, this record shows a Verified seal.")
             }
             DocumentsSection(editor: editor)
             CustomFieldsSection(fields: editor.binding(\.customFields))
         }
-        .formStyle(.grouped)
+        .civaForm()
     }
 
     private var improveUnavailable: String? {

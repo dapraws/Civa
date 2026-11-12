@@ -16,19 +16,28 @@ struct SettingsView: View {
     #endif
 
     var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            PageHeader(String(localized: "Settings"))
+                .padding(.horizontal, Space.xl)
+                .padding(.top, 20)
+            form
+        }
+        .background(Color.canvas)
+    }
+
+    private var form: some View {
         Form {
-            Section("General") {
-                Picker("Appearance", selection: $appearance) {
-                    ForEach(Appearance.allCases) { Text($0.title).tag($0) }
+            Section(civa: "General") {
+                LabeledContent("Appearance") {
+                    SegmentedTabs(Appearance.allCases, selection: $appearance, title: \.title)
                 }
-                .pickerStyle(.segmented)
             }
             ClaudeSettingsSection()
             Section {
                 Toggle("Fetch Logos Online", isOn: $fetchesLogos)
                     .disabled(Brandfetch.clientID == nil)
             } header: {
-                Text("Logos")
+                SectionTitle("Logos")
             } footer: {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("When you type a company or school name, Civa looks up matching brands on Brandfetch and shows their logos. Only the names you type are sent. Everything else stays on this Mac, and logos never appear on your resume.")
@@ -43,14 +52,13 @@ struct SettingsView: View {
                     ForEach(DataMode.allCases, id: \.self) { Text($0.title).tag($0) }
                 }
             } header: {
-                Text("Developer")
+                SectionTitle("Developer")
             } footer: {
                 Text("Sample and Empty start fresh every launch, so testing never touches your real data. Empty also shows the welcome, Getting Started, and tips again. Takes effect after you restart Civa.")
             }
             #endif
         }
-        .formStyle(.grouped)
-        .frame(maxWidth: 640)
+        .civaForm()
     }
 }
 

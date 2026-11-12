@@ -17,51 +17,50 @@ struct GettingStartedCard: View {
 
     var body: some View {
         if !isHidden {
-            GroupBox {
-                VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: Space.s) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(steps.isComplete ? "Getting started" : "Getting started · \(steps.doneCount) of \(steps.requiredCount)")
+                        .font(.sectionTitle)
+                        .foregroundStyle(Color.textPrimary)
+                        .accessibilityAddTraits(.isHeader)
+                    Spacer()
+                    Button("Hide") { isHidden = true }
+                        .civaButton(.textLink)
+                        .help("Hide this list. Help → Show Getting Started brings it back.")
+                }
+                CivaSection {
                     if steps.isComplete {
                         Label("You're all set. Everything Civa does is now one click away.", systemImage: "checkmark.seal.fill")
-                            .foregroundStyle(.green)
-                    } else {
-                        ProgressView(value: Double(steps.doneCount), total: Double(steps.requiredCount)) {
-                            Text("\(steps.doneCount) of \(steps.requiredCount) done")
-                        }
+                            .foregroundStyle(Color.success)
+                            .padding(.horizontal, Space.m)
+                            .frame(maxWidth: .infinity, minHeight: Size.sectionRow, alignment: .leading)
                     }
                     ForEach(steps.items) { item in
                         row(item)
                     }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(6)
-            } label: {
-                HStack {
-                    Label("Getting Started", systemImage: "flag.checkered")
-                    Spacer()
-                    Button("Hide") { isHidden = true }
-                        .buttonStyle(.link)
-                        .help("Hide this list. Help → Show Getting Started brings it back.")
                 }
             }
         }
     }
 
     private func row(_ item: GettingStarted.Item) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Space.s) {
             Image(systemName: item.isDone ? "checkmark.circle.fill" : item.isOptional ? "sparkles" : "circle")
-                .foregroundStyle(item.isDone ? AnyShapeStyle(.green) : item.isOptional ? AnyShapeStyle(Color.claude) : AnyShapeStyle(.secondary))
+                .foregroundStyle(item.isDone ? Color.success : item.isOptional ? Color.claude : Color.textTertiary)
                 .accessibilityLabel(item.isDone ? "Done" : "Not done")
             Text(title(item.step))
-                .foregroundStyle(item.isDone ? .secondary : .primary)
-                .strikethrough(item.isDone)
+                .foregroundStyle(item.isDone ? Color.textSecondary : Color.textPrimary)
             if item.isOptional {
-                Text("Optional").font(.caption).foregroundStyle(.secondary)
+                Text("Optional").font(.caption).foregroundStyle(Color.textSecondary)
             }
             Spacer()
             if !item.isDone {
-                Button("Show Me") { onShowMe(item.step) }
-                    .buttonStyle(.link)
+                Button("Start") { onShowMe(item.step) }
+                    .civaButton(.textLink)
             }
         }
+        .padding(.horizontal, Space.m)
+        .frame(maxWidth: .infinity, minHeight: Size.sectionRow, alignment: .leading)
     }
 
     private func title(_ step: GettingStarted.Step) -> LocalizedStringKey {

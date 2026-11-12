@@ -16,6 +16,8 @@ struct DashboardSummaryTests {
         experiences: [Experience] = [],
         skills: [Skill] = [],
         applications: [JobApplication] = [],
+        resumes: [Resume] = [],
+        pendingClaude: Int = 0,
         recentLimit: Int = 5
     ) -> DashboardSummary {
         DashboardSummary(
@@ -27,6 +29,8 @@ struct DashboardSummaryTests {
             certifications: [],
             skills: skills,
             applications: applications,
+            resumes: resumes,
+            pendingClaude: pendingClaude,
             recentLimit: recentLimit
         )
     }
@@ -81,5 +85,59 @@ struct DashboardSummaryTests {
         #expect(result.applicationTotal == 3)
         #expect(result.applicationCounts.map(\.status) == ApplicationStatus.allCases)
         #expect(result.applicationCounts.first { $0.status == .applied }?.count == 2)
+    }
+
+    @Test func pipelineSkipsClosedStatuses() {
+        let apps = [
+            JobApplication(company: "A", position: "P", status: .applied),
+            JobApplication(company: "B", position: "P", status: .applied),
+            JobApplication(company: "C", position: "P", status: .rejected),
+            JobApplication(company: "D", position: "P", status: .offer),
+        ]
+        let pipeline = summary(applications: apps).pipeline
+        #expect(pipeline.map(\.status) == [.wishlist, .applied, .assessment, .interview, .offer])
+        #expect(pipeline.map(\.count) == [0, 2, 0, 0, 1])
+    }
+
+    @Test func needsYouOrder() {
+        let master = Resume(title: "Master")
+        master.isMaster = true
+        let usesMaster = JobApplication(company: "Stripe", position: "P", status: .applied)
+        usesMaster.resume = master
+        usesMaster.applicationDate = .now
+        let notApplied = JobApplication(company: "Traveloka", position: "P", status: .wishlist)
+        let review = Skill(name: "Swift", status: .needsReview)
+        let result = summary(skills: [review], applications: [notApplied, usesMaster], resumes: [master], pendingClaude: 2)
+        #expect(result.needsYou == [
+            .claude(count: 2),
+            .review(count: 1),
+            .usesMaster(applicationID: usesMaster.id, company: "Stripe"),
+            .notApplied(applicationID: notApplied.id, company: "Traveloka"),
+        ])
+        #expect(summary().needsYou.isEmpty)
+    }
+
+    @Test func needsYouListsEveryRowBeyondTheLimit() {
+        let apps = (1...8).map { JobApplication(company: "Co \($0)", position: "P", status: .wishlist) }
+        #expect(summary(applications: apps).needsYou.count == 8)
+        #expect(DashboardSummary.needsYouLimit == 5)
+    }
+
+    @Test func continueResumeIsMostRecent() {
+        let old = Resume(title: "Old")
+        old.updatedAt = .now.addingTimeInterval(-3600)
+        let new = Resume(title: "New")
+        #expect(summary(resumes: [old, new]).continueResume?.title == "New")
+        #expect(summary().continueResume == nil)
+    }
+
+    @Test func oneApplicationAppearsOnceInNeedsYou() {
+        let master = Resume(title: "Master")
+        master.isMaster = true
+        let app = JobApplication(company: "Gojek", position: "P", status: .wishlist)
+        app.resume = master
+        #expect(summary(applications: [app], resumes: [master]).needsYou == [
+            .usesMaster(applicationID: app.id, company: "Gojek"),
+        ])
     }
 }

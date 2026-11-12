@@ -64,5 +64,5 @@ struct YearMonthField: View {
         YearMonthField(title: "Start", value: $start)
         YearMonthField(title: "End", value: $end)
     }
-    .formStyle(.grouped)
+    .civaForm()
 }

@@ -21,6 +21,8 @@ final class AppNavigation {
     var otherKind: String?
     /// Which AI Activity tab shows next, such as Requests after a request notice is clicked.
     var aiActivityTab: AIActivityView.Tab?
+    /// Which status Applications shows next, such as after a Dashboard pipeline cell is clicked.
+    var applicationStatusFilter: ApplicationStatus?
 
     init() {
         #if DEBUG

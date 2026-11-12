@@ -53,11 +53,11 @@ struct ProjectForm: View {
                 }
                 FieldError(editor.error(for: \.repositoryURL))
             } header: {
-                Text("Links")
+                SectionTitle("Links")
             } footer: {
                 Text("With a link or an attached document, this project shows a Verified seal.")
             }
-            Section("Dates") {
+            Section(civa: "Dates") {
                 YearMonthField(title: String(localized: "Start"), value: editor.binding(\.start))
                 YearMonthField(title: String(localized: "End"), value: editor.binding(\.end), emptyTitle: String(localized: "Ongoing"))
                 FieldError(editor.error(for: \.end))
@@ -72,7 +72,7 @@ struct ProjectForm: View {
                 .labelsHidden()
                 .lineLimit(4...12)
             } header: {
-                Text("Description")
+                SectionTitle("Description")
             } footer: {
                 Text("Background on the project. Claude reads it for context. On a resume it becomes the bullet only when there are no Impact lines.")
             }
@@ -99,13 +99,13 @@ struct ProjectForm: View {
                 ClaudeUnavailableNote(reason: improveUnavailable)
                 Text("Results of the project, like users reached or time saved.")
             }
-            Section("Skills") {
+            Section(civa: "Skills") {
                 SkillLinksField(editor: editor, skills: \.skills)
             }
             DocumentsSection(editor: editor)
             CustomFieldsSection(fields: editor.binding(\.customFields))
         }
-        .formStyle(.grouped)
+        .civaForm()
     }
 
     private var improveUnavailable: String? {

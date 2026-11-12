@@ -14,7 +14,7 @@ struct CivaTipViewStyle: TipViewStyle {
     func makeBody(configuration: Configuration) -> some View {
         HStack(alignment: .top, spacing: Space.m) {
             configuration.image?
-                .foregroundStyle(Color.accent)
+                .foregroundStyle(.tint)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: Space.xs) {
                 configuration.title

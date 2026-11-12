@@ -22,7 +22,7 @@ struct CustomFieldsSection: View {
                 makeItem: { CustomField(name: "", value: "") }
             )
         } header: {
-            Text("Custom Fields")
+            SectionTitle("Custom Fields")
         } footer: {
             Text("Custom fields stay in your profile. They aren't added to resumes automatically.")
         }
@@ -34,5 +34,5 @@ struct CustomFieldsSection: View {
     Form {
         CustomFieldsSection(fields: $fields)
     }
-    .formStyle(.grouped)
+    .civaForm()
 }

@@ -5,6 +5,7 @@
 //  Created by Muhammad Darrel Prawira on 06/11/26.
 //
 
+import Foundation
 import SwiftData
 import Testing
 @testable import Civa
@@ -55,5 +56,21 @@ struct JobApplicationTests {
         for raw in ["wishlist", "applied", "interview", "assessment", "offer", "rejected", "withdrawn"] {
             #expect(ApplicationStatus(rawValue: raw)?.rawValue == raw)
         }
+    }
+
+    @Test func applicationsSortNotAppliedFirst() {
+        func app(_ name: String, applied: String?, created: String) -> JobApplication {
+            let a = JobApplication(company: name, position: "Intern")
+            a.applicationDate = applied.map { try! Date($0, strategy: .iso8601) }
+            a.createdAt = try! Date(created, strategy: .iso8601)
+            return a
+        }
+        let apps = [
+            app("Nov01", applied: "2026-11-01T00:00:00Z", created: "2026-10-01T00:00:00Z"),
+            app("NilEarlier", applied: nil, created: "2026-10-02T00:00:00Z"),
+            app("Nov05", applied: "2026-11-05T00:00:00Z", created: "2026-10-03T00:00:00Z"),
+            app("NilLater", applied: nil, created: "2026-10-04T00:00:00Z"),
+        ]
+        #expect(apps.sorted(by: JobApplication.listOrder).map(\.company) == ["NilLater", "NilEarlier", "Nov05", "Nov01"])
     }
 }

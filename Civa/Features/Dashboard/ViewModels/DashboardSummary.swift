@@ -23,6 +23,25 @@ struct DashboardSummary {
     let recentActivity: [Activity]
     /// Every status in pipeline order, with how many applications have it.
     let applicationCounts: [(status: ApplicationStatus, count: Int)]
+    /// The resume edited most recently, for "Continue where you left off".
+    let continueResume: Resume?
+
+    /// Something on the Dashboard's Needs you list (DESIGN.md §8.2), in the order shown.
+    enum NeedsYou: Equatable {
+        case claude(count: Int)
+        case review(count: Int)
+        case usesMaster(applicationID: UUID, company: String)
+        case notApplied(applicationID: UUID, company: String)
+    }
+
+    let needsYou: [NeedsYou]
+    /// Rows shown before "Show all".
+    static let needsYouLimit = 5
+
+    /// The open part of the pipeline: Rejected and Withdrawn aren't shown on the Dashboard.
+    var pipeline: [(status: ApplicationStatus, count: Int)] {
+        applicationCounts.filter { ![.rejected, .withdrawn].contains($0.status) }
+    }
 
     var missingCategories: [ProfileCategory] {
         ProfileCategory.allCases.filter { !filledCategories.contains($0) }
@@ -45,6 +64,8 @@ struct DashboardSummary {
         certifications: [Certification],
         skills: [Skill],
         applications: [JobApplication],
+        resumes: [Resume] = [],
+        pendingClaude: Int = 0,
         recentLimit: Int = 5
     ) {
         let professional = experiences.filter { $0.kind == .professional }
@@ -83,5 +104,22 @@ struct DashboardSummary {
         applicationCounts = ApplicationStatus.allCases.map { status in
             (status, applications.count(where: { $0.status == status }))
         }
+
+        continueResume = resumes.max { $0.updatedAt < $1.updatedAt }
+
+        let open = applications
+            .filter { ![.rejected, .withdrawn, .offer].contains($0.status) }
+            .sorted(by: JobApplication.listOrder)
+        var rows: [NeedsYou] = []
+        if pendingClaude > 0 { rows.append(.claude(count: pendingClaude)) }
+        if needsReviewCount > 0 { rows.append(.review(count: needsReviewCount)) }
+        rows += open
+            .filter { $0.resume?.isMaster == true }
+            .map { .usesMaster(applicationID: $0.id, company: $0.company) }
+        // One row per application: Tailor matters more than "not applied yet".
+        rows += open
+            .filter { $0.status == .wishlist && $0.applicationDate == nil && $0.resume?.isMaster != true }
+            .map { .notApplied(applicationID: $0.id, company: $0.company) }
+        needsYou = rows
     }
 }

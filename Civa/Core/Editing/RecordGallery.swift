@@ -16,7 +16,7 @@ struct GalleryAction<Model> {
 
 /// Records of one type as a grid of cards. Opening a card fills the page with its editor, and the
 /// back button returns to the grid. Leaving the editor goes through the unsaved-changes guard.
-struct RecordGallery<Model: EditableRecord, Card: View, Editor: View>: View {
+struct RecordGallery<Model: EditableRecord, Card: View, Editor: View, HeaderActions: View>: View {
     @Environment(\.modelContext) private var context
     @Environment(UnsavedChangesGuard.self) private var changes
     @Environment(AppNavigation.self) private var navigation
@@ -39,6 +39,9 @@ struct RecordGallery<Model: EditableRecord, Card: View, Editor: View>: View {
     private let onAdd: (() -> Void)?
     private let card: (Model) -> Card
     private let editorView: (RecordEditor<Model>) -> Editor
+    private let headerActions: HeaderActions
+    /// The Resume Editor draws its own title row; other editors get Back plus the record's name.
+    private let editorHasHeader: Bool
 
     init(
         title: String,
@@ -53,9 +56,13 @@ struct RecordGallery<Model: EditableRecord, Card: View, Editor: View>: View {
         actions: [GalleryAction<Model>] = [],
         showsAddButton: Bool = true,
         onAdd: (() -> Void)? = nil,
+        editorHasHeader: Bool = false,
+        @ViewBuilder headerActions: () -> HeaderActions = { EmptyView() },
         @ViewBuilder card: @escaping (Model) -> Card,
         @ViewBuilder editor: @escaping (RecordEditor<Model>) -> Editor
     ) {
+        self.headerActions = headerActions()
+        self.editorHasHeader = editorHasHeader
         _records = Query(FetchDescriptor(predicate: filter))
         self.title = title
         self.addTitle = addTitle
@@ -74,17 +81,6 @@ struct RecordGallery<Model: EditableRecord, Card: View, Editor: View>: View {
 
     var body: some View {
         content
-            .toolbar {
-                if showsAddButton {
-                    ToolbarItem(placement: .primaryAction) {
-                        Button(action: addRecord) {
-                            Label(addTitle, systemImage: "plus")
-                        }
-                        .keyboardShortcut("n")
-                        .help("\(addTitle) (⌘N)")
-                    }
-                }
-            }
             .onChange(of: navigation.recordToOpen) { openRequestedRecord() }
             // A page's own New menu asks for a blank record this way.
             .onChange(of: navigation.startsNewRecord) { _, starts in
@@ -133,55 +129,74 @@ struct RecordGallery<Model: EditableRecord, Card: View, Editor: View>: View {
     @ViewBuilder
     private var content: some View {
         if let editor {
-            editorView(editor)
-                .environment(\.closeRecordEditor, close)
-                .safeAreaInset(edge: .bottom, spacing: 0) {
-                    RecordEditorBar(editor: editor, onClose: close)
+            VStack(alignment: .leading, spacing: 0) {
+                if !editorHasHeader {
+                    PageHeader(editor.title, back: { changes.perform(close) }, titleFont: .detailTitle)
+                        .padding(.horizontal, Space.xl)
+                        .padding(.top, 20)
+                        .padding(.bottom, Space.s)
                 }
-                .startsWithoutFocus(!editor.isNew)
-                .id(editor.record.id)
-                .navigationTitle(editor.title)
-                .toolbar {
-                    ToolbarItem(placement: .navigation) {
-                        Button {
-                            changes.perform(close)
-                        } label: {
-                            Label(title, systemImage: "chevron.backward")
-                        }
-                        .help("Back to \(title)")
-                    }
-                }
-        } else if records.isEmpty {
-            ContentUnavailableView {
-                Label(empty.title, systemImage: empty.systemImage)
-            } description: {
-                Text(empty.message)
-            } actions: {
-                Button(addTitle, action: addRecord)
+                editorView(editor)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
+            .background(Color.canvas)
+            .environment(\.closeRecordEditor, close)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                RecordEditorBar(editor: editor, onClose: close)
+            }
+            .startsWithoutFocus(!editor.isNew)
+            .id(editor.record.id)
         } else {
-            ScrollView {
-                LazyVGrid(
-                    columns: [GridItem(.adaptive(minimum: cardWidth, maximum: cardWidth * 1.4), spacing: 20, alignment: .top)],
-                    spacing: 24
-                ) {
-                    ForEach(groups, id: \.title) { group in
-                        Section {
-                            ForEach(group.records) { record in
-                                cardButton(record)
-                            }
-                        } header: {
-                            if let title = group.title {
-                                Text(title)
-                                    .font(.title3.weight(.semibold))
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.top, 4)
-                            }
-                        }
+            VStack(alignment: .leading, spacing: 0) {
+                PageHeader(title) {
+                    headerActions
+                    if showsAddButton {
+                        PageActionButton(action: PageAction(id: addTitle, title: addTitle, systemImage: "plus", shortcut: "n", run: addRecord))
                     }
                 }
-                .padding(24)
+                .padding(.horizontal, Space.xl)
+                .padding(.top, 20)
+                if records.isEmpty {
+                    EmptyStateView(
+                        symbol: empty.systemImage,
+                        title: LocalizedStringKey(empty.title),
+                        message: LocalizedStringKey(empty.message),
+                        button: (LocalizedStringKey(addTitle), .primary, addRecord)
+                    )
+                    .padding(.horizontal, Space.xl)
+                    Spacer()
+                } else {
+                    ScrollView {
+                        LazyVGrid(
+                            columns: [GridItem(.adaptive(minimum: cardWidth, maximum: cardWidth * 1.4), spacing: Space.l, alignment: .top)],
+                            alignment: .leading,
+                            spacing: Space.xl
+                        ) {
+                            ForEach(groups, id: \.title) { group in
+                                Section {
+                                    ForEach(group.records) { record in
+                                        cardButton(record)
+                                    }
+                                } header: {
+                                    if let title = group.title {
+                                        Text(title)
+                                            .font(.sectionTitle)
+                                            .foregroundStyle(Color.textPrimary)
+                                            .accessibilityAddTraits(.isHeader)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            .padding(.top, Space.xs)
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.horizontal, Space.xl)
+                        .padding(.top, Space.xl)
+                        .padding(.bottom, Space.xxl)
+                    }
+                }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .background(Color.canvas)
         }
     }
 
@@ -268,7 +283,7 @@ struct RecordGallery<Model: EditableRecord, Card: View, Editor: View>: View {
 }
 
 #Preview {
-    RecordGallery<JobApplication, _, _>(
+    RecordGallery<JobApplication, _, _, EmptyView>(
         title: "Applications",
         addTitle: "Add Application",
         empty: .init(title: "No Applications Yet", message: "Track the jobs you want.", systemImage: "tray"),
@@ -283,7 +298,7 @@ struct RecordGallery<Model: EditableRecord, Card: View, Editor: View>: View {
         Form {
             TextField("Position", text: editor.binding(\.position))
         }
-        .formStyle(.grouped)
+        .civaForm()
     }
     .frame(width: 900, height: 500)
     .previewEnvironment()

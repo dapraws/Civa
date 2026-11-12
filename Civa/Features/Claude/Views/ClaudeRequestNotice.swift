@@ -52,29 +52,13 @@ struct ClaudeRequestBanner: View {
     let onClose: () -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "sparkles")
-                .font(.title2)
-                .foregroundStyle(.claude)
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Civa Has a Request for Claude").font(.headline)
-                Text(title).foregroundStyle(.secondary).lineLimit(1)
-            }
-            Spacer(minLength: 12)
-            Button("View Request", action: onOpen)
-                .buttonStyle(.borderedProminent)
-                .tint(.claude)
-            Button("Close", systemImage: "xmark", action: onClose)
-                .labelStyle(.iconOnly)
-                .buttonStyle(.borderless)
-                .foregroundStyle(.secondary)
-        }
-        .padding(12)
-        .frame(maxWidth: 520)
-        .background(.regularMaterial, in: .rect(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.claude.opacity(0.4)))
-        .shadow(color: .black.opacity(0.15), radius: 10, y: 4)
+        CivaBanner(
+            message: String(localized: "Civa has a request for Claude: \(title)"),
+            isClaude: true,
+            actionTitle: "View Request",
+            action: onOpen,
+            onClose: onClose
+        )
     }
 }
 

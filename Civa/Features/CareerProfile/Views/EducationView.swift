@@ -48,16 +48,16 @@ struct EducationForm: View {
                 TextField("Location", text: editor.binding(\.location), prompt: Text("City, Country"))
             }
             GradeSection(editor: editor)
-            Section("Dates") {
+            Section(civa: "Dates") {
                 YearMonthField(title: String(localized: "Start"), value: editor.binding(\.start))
                 YearMonthField(title: String(localized: "End"), value: editor.binding(\.end))
                 FieldError(editor.error(for: \.end))
             }
-            Section("Academic Work") {
+            Section(civa: "Academic Work") {
                 TextField("Thesis", text: editor.binding(\.thesis), prompt: Text("Title of your thesis or final project"), axis: .vertical)
                 TextField("Honors", text: editor.binding(\.honors), prompt: Text("Cum Laude, Dean's List"))
             }
-            Section("Relevant Coursework") {
+            Section(civa: "Relevant Coursework") {
                 StringListEditor(
                     items: editor.binding(\.coursework),
                     prompt: String(localized: "Course name"),
@@ -74,21 +74,21 @@ struct EducationForm: View {
                 .labelsHidden()
                 .lineLimit(3...10)
             } header: {
-                Text("Description")
+                SectionTitle("Description")
             } footer: {
                 Text("Shown as a bullet under this entry on new resumes, after any honors. Claude reads it for context.")
             }
             Section {
                 ProofField(editor: editor, title: "Proof Link", link: \.proofURL)
             } header: {
-                Text("Proof")
+                SectionTitle("Proof")
             } footer: {
                 Text("A diploma or transcript. With a link or an attached document, this record shows a Verified seal.")
             }
             DocumentsSection(editor: editor)
             CustomFieldsSection(fields: editor.binding(\.customFields))
         }
-        .formStyle(.grouped)
+        .civaForm()
     }
 }
 
@@ -124,7 +124,7 @@ private struct GradeSection: View {
                 }
             }
         } header: {
-            Text("Grade")
+            SectionTitle("Grade")
         } footer: {
             if !education.grade.isBlank {
                 Text("Civa couldn't read the typed grade as a number. Enter it above, then remove the typed one.")
