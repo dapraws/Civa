@@ -58,17 +58,21 @@ private struct CivaField<Field: View>: View {
 struct CivaMenuPicker<Value: Hashable, Items: View, Label: View>: View {
     let title: LocalizedStringKey
     @Binding var selection: Value
+    /// What VoiceOver reads as the current value, such as the selected status's name.
+    let value: Text
     @ViewBuilder let items: Items
     @ViewBuilder let label: Label
 
     init(
         _ title: LocalizedStringKey,
         selection: Binding<Value>,
+        value: Text,
         @ViewBuilder items: () -> Items,
         @ViewBuilder label: () -> Label
     ) {
         self.title = title
         _selection = selection
+        self.value = value
         self.items = items()
         self.label = label()
     }
@@ -91,6 +95,7 @@ struct CivaMenuPicker<Value: Hashable, Items: View, Label: View>: View {
         .buttonStyle(.secondary)
         .fixedSize()
         .accessibilityLabel(Text(title))
+        .accessibilityValue(value)
     }
 }
 
@@ -105,7 +110,7 @@ private struct FieldGallery: View {
             TextField("Company", text: $empty, prompt: Text("Tokopedia")).textFieldStyle(.civa)
             TextField("Position", text: $empty).textFieldStyle(CivaFieldStyle(hasError: true))
             FieldError("Enter a position.")
-            CivaMenuPicker("Status", selection: $status) {
+            CivaMenuPicker("Status", selection: $status, value: Text(status.title)) {
                 ForEach(ApplicationStatus.allCases) { Text($0.title).tag($0) }
             } label: {
                 StatusMark(status)

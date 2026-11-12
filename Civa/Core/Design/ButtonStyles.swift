@@ -47,7 +47,6 @@ private struct CivaButton: View {
 
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.isFocused) private var isFocused
-    @Environment(\.colorScheme) private var colorScheme
     @State private var isHovered = false
 
     private var height: CGFloat {
@@ -113,11 +112,8 @@ private struct CivaButton: View {
         case .destructiveFill:
             AnyShapeStyle(Color.dangerFill.mix(with: .black, by: isPressed || hovers ? 0.08 : 0))
         case .claude:
-            // A wash over the tint: 6% on hover, 12% pressed; black in light, white in dark.
-            AnyShapeStyle(Color.claudeTint.mix(
-                with: colorScheme == .dark ? .white : .black,
-                by: isPressed ? 0.12 : hovers ? 0.06 : 0
-            ))
+            // Hover and pressed tints are color sets so the label keeps 4.5:1 (DesignTokenTests).
+            AnyShapeStyle(isPressed ? Color.claudeTintPressed : hovers ? Color.claudeTintHover : Color.claudeTint)
         case .textLink:
             AnyShapeStyle(Color.clear)
         }

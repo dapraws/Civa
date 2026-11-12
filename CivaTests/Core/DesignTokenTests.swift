@@ -29,6 +29,7 @@ struct DesignTokenTests {
         "statusGreen": ("1F7A4D", "4CC38A"), "statusRed": ("B42318", "F07167"),
         "danger": ("B42318", "F07167"), "dangerFill": ("B42318", "C9372C"),
         "success": ("1F7A4D", "4CC38A"), "warning": ("9A5B00", "E0A33A"),
+        "claudeTintHover": ("F3E6DE", "402B20"), "claudeTintPressed": ("EEE1D9", "47322A"),
     ]
 
     @Test(arguments: tokens.keys.sorted())
@@ -49,8 +50,8 @@ struct DesignTokenTests {
             .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appending(path: "Civa/Assets.xcassets/Colors/\(name).colorset/Contents.json")
         let set = try JSONDecoder().decode(ColorSetFile.self, from: Data(contentsOf: url))
-        let highContrast = set.colors.filter { $0.appearances?.contains { $0.value == "high" } == true }
-        let isDark = { (entry: ColorSetFile.Entry) in entry.appearances?.contains { $0.value == "dark" } == true }
+        let highContrast = set.colors.filter { $0.appearances?.contains { $0.appearance == "contrast" && $0.value == "high" } == true }
+        let isDark = { (entry: ColorSetFile.Entry) in entry.appearances?.contains { $0.appearance == "luminosity" && $0.value == "dark" } == true }
         #expect(highContrast.first { !isDark($0) }?.hex == light)
         #expect(highContrast.first(where: isDark)?.hex == dark)
     }
@@ -66,6 +67,8 @@ struct DesignTokenTests {
         ("danger", "surface", 4.5), ("onAccent", "dangerFill", 4.5),
         ("fieldBorder", "surface", 3.0), ("fieldBorder", "canvas", 3.0),
         ("statusAmber", "selectionFill", 3.0), ("statusNeutral", "selectionFill", 3.0),
+        ("claudeText", "claudeTintHover", 4.5), ("claudeText", "claudeTintPressed", 4.5),
+        ("claudeText", "canvas", 4.5), ("claudeText", "surface", 4.5), ("accentText", "canvas", 4.5),
     ])
     func contrastPairsPassAA(foreground: String, background: String, minimum: Double) throws {
         for appearance in [NSAppearance.Name.aqua, .darkAqua] {
@@ -88,7 +91,7 @@ struct DesignTokenTests {
 
     private struct ColorSetFile: Decodable {
         struct Entry: Decodable {
-            struct Appearance: Decodable { let value: String }
+            struct Appearance: Decodable { let appearance: String; let value: String }
             struct Color: Decodable { let components: [String: String] }
             let appearances: [Appearance]?
             let color: Color

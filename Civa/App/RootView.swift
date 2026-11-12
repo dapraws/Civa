@@ -99,6 +99,8 @@ struct RootView: View {
         }
         .environment(navigation)
         .focusedSceneValue(\.openSettings) {
+            // Switching pages under an open sheet would throw away what's in the sheet.
+            guard NSApp.keyWindow?.attachedSheet == nil else { return }
             changes.perform { navigation.section = .settings }
         }
         .civaWindowStyle()
