@@ -43,8 +43,9 @@ struct EmptyStateView: View {
                 .padding(.top, Space.m)
             Text(message)
                 .foregroundStyle(Color.textSecondary)
+                // No vertical fixedSize: asked for its size at a tiny width, it would wrap per
+                // letter and demand a huge height, which made the window grow (AI Activity).
                 .frame(maxWidth: 420, alignment: .leading)
-                .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 6)
             if let button {
                 Button(button.title, action: button.action)

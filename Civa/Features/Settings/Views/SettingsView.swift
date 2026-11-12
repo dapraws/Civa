@@ -16,12 +16,21 @@ struct SettingsView: View {
     #endif
 
     var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            PageHeader(String(localized: "Settings"))
+                .padding(.horizontal, Space.xl)
+                .padding(.top, 20)
+            form
+        }
+        .background(Color.canvas)
+    }
+
+    private var form: some View {
         Form {
             Section(civa: "General") {
-                Picker("Appearance", selection: $appearance) {
-                    ForEach(Appearance.allCases) { Text($0.title).tag($0) }
+                LabeledContent("Appearance") {
+                    SegmentedTabs(Appearance.allCases, selection: $appearance, title: \.title)
                 }
-                .pickerStyle(.segmented)
             }
             ClaudeSettingsSection()
             Section {
@@ -50,7 +59,6 @@ struct SettingsView: View {
             #endif
         }
         .civaForm()
-        .frame(maxWidth: 640)
     }
 }
 

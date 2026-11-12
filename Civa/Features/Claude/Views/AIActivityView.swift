@@ -11,8 +11,18 @@ import SwiftUI
 /// Everything Claude did in one place: what you asked it, what it suggested, and the full log
 /// of what it read (FR-072, FR-074, FR-075).
 struct AIActivityView: View {
-    enum Tab: Hashable {
+    enum Tab: Hashable, CaseIterable, Identifiable {
         case suggestions, requests, log
+
+        var id: Self { self }
+
+        var title: String {
+            switch self {
+            case .suggestions: String(localized: "Suggestions")
+            case .requests: String(localized: "Requests")
+            case .log: String(localized: "Log")
+            }
+        }
     }
 
     @Environment(AppNavigation.self) private var navigation
@@ -25,43 +35,46 @@ struct AIActivityView: View {
     @Query(sort: \ClaudeActivity.date, order: .reverse) private var activity: [ClaudeActivity]
 
     var body: some View {
-        Group {
-            // Empty tabs fill the page with one centered message instead of a card in a form.
-            if tab == .suggestions, proposals.isEmpty {
-                empty("No Suggestions to Review", "What Claude suggests appears here and on the page it's about. Nothing changes until you apply it.")
-            } else if tab == .requests, requests.isEmpty {
-                ContentUnavailableView {
-                    Label {
-                        Text("Nothing Asked Yet")
-                    } icon: {
-                        Image(systemName: "sparkles").foregroundStyle(.claude)
-                    }
-                } description: {
-                    Text("Use the orange Claude buttons on resumes, experience, projects, and applications.")
-                } actions: {
-                    ClaudeHowItWorks().frame(maxWidth: 420)
+        VStack(alignment: .leading, spacing: 0) {
+            PageHeader(String(localized: "AI Activity"))
+                .padding(.horizontal, Space.xl)
+                .padding(.top, 20)
+            SegmentedTabs(Tab.allCases, selection: $tab, title: \.title) { tab in
+                switch tab {
+                case .suggestions: proposals.isEmpty ? nil : proposals.count
+                case .requests: requests.isEmpty ? nil : requests.count
+                case .log: nil
                 }
+            }
+            .padding(.horizontal, Space.xl)
+            .padding(.vertical, Space.m)
+            Rectangle().fill(Color.hairline).frame(height: 1)
+            // Empty tabs show one message on the page instead of a card in a form.
+            if tab == .suggestions, proposals.isEmpty {
+                empty("No suggestions to review", "What Claude suggests appears here and on the page it's about. Nothing changes until you apply it.")
+            } else if tab == .requests, requests.isEmpty {
+                VStack(alignment: .leading, spacing: Space.l) {
+                    EmptyStateView(
+                        symbol: "sparkles",
+                        title: "Nothing asked yet",
+                        message: "Use the orange Claude buttons on resumes, experience, projects, and applications.",
+                        symbolColor: .claude
+                    )
+                    ClaudeHowItWorks().frame(maxWidth: 420, alignment: .leading)
+                }
+                .padding(.horizontal, Space.xl)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             } else if tab == .log, activity.isEmpty {
-                empty("No Activity Yet", "Everything Claude reads or suggests is logged here.")
+                empty("No activity yet", "Everything Claude reads or suggests is logged here.")
             } else {
                 list
             }
         }
+        .background(Color.canvas)
         .onChange(of: navigation.aiActivityTab, initial: true) { _, next in
             guard let next else { return }
             tab = next
             navigation.aiActivityTab = nil
-        }
-        .toolbar {
-            ToolbarItem(placement: .principal) {
-                Picker("Show", selection: $tab) {
-                    Text("Suggestions").tag(Tab.suggestions)
-                    Text("Requests").tag(Tab.requests)
-                    Text("Log").tag(Tab.log)
-                }
-                .pickerStyle(.segmented)
-                .fixedSize()
-            }
         }
     }
 
@@ -104,16 +117,11 @@ struct AIActivityView: View {
         .civaForm()
     }
 
+    /// DESIGN.md §8.8: the one empty state with a colored symbol, because this page is Claude's.
     private func empty(_ title: LocalizedStringKey, _ message: LocalizedStringKey) -> some View {
-        ContentUnavailableView {
-            Label {
-                Text(title)
-            } icon: {
-                Image(systemName: "sparkles").foregroundStyle(.claude)
-            }
-        } description: {
-            Text(message)
-        }
+        EmptyStateView(symbol: "sparkles", title: title, message: message, symbolColor: .claude)
+            .padding(.horizontal, Space.xl)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 }
 
@@ -138,7 +146,7 @@ struct ClaudeProposalRow: View {
             if proposal.kind == .profileImport {
                 Button("Dismiss") { ClaudeDecisions.record(proposal.id, .dismissed, container: context.container) }
             }
-            Button("Review", action: open).buttonStyle(.borderedProminent).tint(.claude)
+            Button("Review", action: open).civaButton(.textLink, color: .claudeText)
         }
         .sheet(item: $importRequest) { ImportReviewSheet(request: $0) }
     }
@@ -199,8 +207,7 @@ struct ClaudeRequestRow: View {
                         VStack(alignment: .leading, spacing: 14) {
                             ClaudeHowItWorks()
                             Button("Open Claude") { ClaudeAsk.openClaude() }
-                                .buttonStyle(.borderedProminent)
-                                .tint(.claude)
+                                .civaButton(.claude)
                         }
                         .padding()
                         .frame(width: 360)

@@ -60,8 +60,7 @@ struct ClaudeResumeProposalsSheet: View {
                                         }
                                         decide(proposal, .applied, choice: choiceLabels(edit, proposal))
                                     }
-                                    .buttonStyle(.borderedProminent)
-                                    .tint(.claude)
+                                    .civaButton(.claude)
                                     .disabled(chosen.summary == nil && chosen.entries.isEmpty)
                                     .help(chosen.summary == nil && chosen.entries.isEmpty ? "Pick a version first" : "")
                                 }
@@ -232,7 +231,7 @@ struct ClaudeDraftBanner: View {
             }
             Spacer()
             Button("Discard…") { isConfirmingDiscard = true }
-            Button("Keep Draft", action: keep).buttonStyle(.borderedProminent).tint(.claude)
+            Button("Keep Draft", action: keep).civaButton(.claude)
         }
         .padding(12)
         .background(.claude.opacity(0.12))
@@ -308,8 +307,7 @@ struct ClaudeRecordProposalsSection<Model: ClaudeEditable>: View {
                             )
                         }
                         .disabled(pick == nil)
-                        .buttonStyle(.borderedProminent)
-                        .tint(.claude)
+                        .civaButton(.claude)
                     }
                 } header: {
                     Label("Suggested by Claude", systemImage: "sparkles").foregroundStyle(.claude)
