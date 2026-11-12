@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import SwiftUI
 import Testing
 @testable import Civa
 
@@ -71,6 +72,13 @@ struct DesignTokenTests {
             let ratio = try contrast(foreground, background, appearance)
             #expect(ratio >= minimum, "\(foreground) on \(background) in \(appearance.rawValue): \(ratio)")
         }
+    }
+
+    @Test func appearanceMapsToColorScheme() {
+        #expect(Appearance.system.colorScheme == nil)
+        #expect(Appearance.light.colorScheme == .light)
+        #expect(Appearance.dark.colorScheme == .dark)
+        #expect(Appearance(rawValue: "unknown") == nil)
     }
 
     @Test func youngSerifRegisters() {

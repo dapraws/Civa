@@ -10,12 +10,19 @@ import SwiftUI
 /// Privacy and integration settings (NFR-002).
 struct SettingsView: View {
     @AppStorage(Brandfetch.fetchesLogosKey) private var fetchesLogos = true
+    @AppStorage(Appearance.key) private var appearance = Appearance.system
     #if DEBUG
     @AppStorage(DataMode.key) private var dataMode = DataMode.current
     #endif
 
     var body: some View {
         Form {
+            Section("General") {
+                Picker("Appearance", selection: $appearance) {
+                    ForEach(Appearance.allCases) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+            }
             ClaudeSettingsSection()
             Section {
                 Toggle("Fetch Logos Online", isOn: $fetchesLogos)

@@ -98,6 +98,10 @@ struct RootView: View {
             }
         }
         .environment(navigation)
+        .focusedSceneValue(\.openSettings) {
+            changes.perform { navigation.section = .settings }
+        }
+        .civaWindowStyle()
         // Wide enough for the Career Profile tabs and the resume editor's three columns at their minimums.
         .frame(minWidth: 1100, minHeight: 640)
         .onChange(of: bridge.isEnabled, initial: true) { _, enabled in
