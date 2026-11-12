@@ -73,6 +73,11 @@ struct DesignTokenTests {
         }
     }
 
+    @Test func youngSerifRegisters() {
+        CivaFonts.register()
+        #expect(NSFont(name: "YoungSerif-Regular", size: 26) != nil)
+    }
+
     private struct ColorSetFile: Decodable {
         struct Entry: Decodable {
             struct Appearance: Decodable { let value: String }

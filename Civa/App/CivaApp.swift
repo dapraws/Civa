@@ -23,6 +23,7 @@ struct CivaApp: App {
     }
 
     init() {
+        CivaFonts.register()
         #if DEBUG
         if DataMode.current == .empty {
             // A new user has seen nothing yet.
