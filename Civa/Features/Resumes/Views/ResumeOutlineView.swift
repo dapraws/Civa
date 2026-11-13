@@ -157,7 +157,8 @@ struct ResumeOutlineView: View {
                 Spacer()
             }
             .padding(10)
-            .background(.bar)
+            .background(Color.sidebar)
+            .overlay(alignment: .top) { Rectangle().fill(Color.hairline).frame(height: 1) }
         }
     }
 

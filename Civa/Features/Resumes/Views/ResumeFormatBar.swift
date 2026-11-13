@@ -34,29 +34,26 @@ struct ResumeFormatBar: View {
         HStack(alignment: .top, spacing: 0) {
             FlowLayout(spacing: 0, rowSpacing: 4) {
                 RibbonGroup("Template") {
-                    Picker("Template", selection: Binding(get: { format.layout }, set: { format.apply($0) })) {
+                    RibbonPicker("Template", selection: Binding(get: { format.layout }, set: { format.apply($0) }), value: format.layout.title) {
                         ForEach(ResumeFormat.Template.allCases, id: \.self) { Text($0.title).tag($0) }
                     }
-                    .labelsHidden()
                     .help("Template: sets the layout, and a font you can still change")
                     .popoverTip(currentTip(CivaTip.ribbon), arrowEdge: .top)
                 }
                 RibbonGroup("Font") {
-                    Picker("Font", selection: $format.font) {
+                    RibbonPicker("Font", selection: $format.font, value: format.font.rawValue) {
                         ForEach(ResumeFormat.Font.allCases, id: \.self) { font in
                             Text(font.rawValue).font(.custom(font.rawValue, size: 13)).tag(font)
                         }
                     }
-                    .labelsHidden()
                     .help("Font")
-                    Picker("Font Size", selection: $format.fontSize) {
+                    RibbonPicker("Font Size", selection: $format.fontSize, value: "\(format.fontSize.formatted()) pt") {
                         ForEach(Array(stride(from: ResumeFormat.fontSizes.lowerBound, through: ResumeFormat.fontSizes.upperBound, by: 0.5)), id: \.self) {
                             Text("\($0.formatted()) pt").tag($0)
                         }
                     }
-                    .labelsHidden()
                     .help("Font size")
-                    Picker("Color", selection: $format.accent) {
+                    CivaMenuPicker("Color", selection: $format.accent, value: Text(format.accent.title)) {
                         ForEach(ResumeFormat.Accent.allCases, id: \.self) { accent in
                             Label {
                                 Text(accent.title)
@@ -65,18 +62,21 @@ struct ResumeFormatBar: View {
                             }
                             .tag(accent)
                         }
+                    } label: {
+                        HStack(spacing: 5) {
+                            Circle().fill(format.accent.color).frame(width: 9, height: 9).overlay { Circle().strokeBorder(Color.fieldBorder) }
+                            Text(format.accent.title)
+                        }
                     }
-                    .labelsHidden()
                     .help("Color of your name and section headings")
                 }
                 RibbonGroup("Spacing") {
                     RibbonItem("Lines", guide: .lineSpacing, help: "Space between lines, as a multiple of the font's height", onHover: onHoverGuide) {
-                        Picker("Line Spacing", selection: $format.lineSpacing) {
+                        RibbonPicker("Line Spacing", selection: $format.lineSpacing, value: lineSpacingName(format.lineSpacing)) {
                             ForEach(ResumeFormat.lineSpacings, id: \.self) { value in
                                 Text(lineSpacingName(value)).tag(value)
                             }
                         }
-                        .labelsHidden()
                     }
                     RibbonItem("Sections", guide: .sectionSpacing, help: "Space above each section heading", onHover: onHoverGuide) {
                         ValueStepper(value: $format.sectionSpacing, range: ResumeFormat.sectionSpacings, step: 2)
@@ -88,7 +88,7 @@ struct ResumeFormatBar: View {
                         )
                     }
                     RibbonItem("Margins", guide: .margins, help: "Page margins: top and bottom, then the sides", onHover: onHoverGuide) {
-                        Menu(marginsTitle) {
+                        Menu {
                             Picker("Top and Bottom", selection: $format.margins) {
                                 ForEach(ResumeFormat.Margins.allCases, id: \.self) { Text($0.title).tag($0) }
                             }
@@ -97,7 +97,12 @@ struct ResumeFormatBar: View {
                                 ForEach(ResumeFormat.Margins.allCases, id: \.self) { Text($0.title).tag($0) }
                             }
                             .pickerStyle(.inline)
+                        } label: {
+                            MenuFieldLabel { Text(marginsTitle) }
                         }
+                        .menuStyle(.button)
+                        .menuIndicator(.hidden)
+                        .civaButton(.secondary)
                         .fixedSize()
                     }
                 }
@@ -105,12 +110,11 @@ struct ResumeFormatBar: View {
                     Toggle("Dividers", isOn: Binding(get: { format.dividers }, set: { format.showsDividers = $0 }))
                         .toggleStyle(.checkbox)
                         .help("A line under each section heading")
-                    Picker("Thickness", selection: Binding(get: { format.dividerWidth }, set: { format.dividerWeight = $0 })) {
-                        // "0.5 pt" with a point, like the other spacing values, whatever the Mac's language.
+                    // "0.5 pt" with a point, like the other spacing values, whatever the Mac's language.
+                    RibbonPicker("Thickness", selection: Binding(get: { format.dividerWidth }, set: { format.dividerWeight = $0 }), value: String(format: "%g pt", format.dividerWidth)) {
                         ForEach(ResumeFormat.dividerWeights, id: \.self) { Text(String(format: "%g pt", $0)).tag($0) }
                     }
                     .disabled(!format.dividers)
-                    .labelsHidden()
                     .help("Divider thickness")
                 }
                 RibbonGroup("Proof") {
@@ -120,16 +124,11 @@ struct ResumeFormatBar: View {
                         .popoverTip(currentTip(CivaTip.proof), arrowEdge: .top)
                 }
                 RibbonGroup("Page", showsDivider: false) {
-                    Picker("Paper", selection: $format.paper) {
-                        ForEach(ResumeFormat.Paper.allCases, id: \.self) { Text($0.title).tag($0) }
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .help("Paper size")
-                    Picker("Dates", selection: Binding(get: { format.dateStyle ?? .short }, set: { format.dateStyle = $0 })) {
+                    PaperChoice(selection: $format.paper)
+                        .help("Paper size")
+                    RibbonPicker("Dates", selection: Binding(get: { format.dateStyle ?? .short }, set: { format.dateStyle = $0 }), value: (format.dateStyle ?? .short).title) {
                         ForEach(ResumeFormat.DateStyle.allCases, id: \.self) { Text($0.title).tag($0) }
                     }
-                    .labelsHidden()
                     .help("How dates print")
                     Text(pageSummary)
                         .monospacedDigit()
@@ -138,15 +137,13 @@ struct ResumeFormatBar: View {
                         .help(Text(pageSummary))
                 }
             }
-            Toggle(isOn: $showsGuides) {
-                Label("Guides", systemImage: "ruler")
-            }
-            .toggleStyle(.button)
-            .help(showsGuides ? "Hide the distance guides" : "Keep the distance guides on the preview")
+            Button("Guides", systemImage: "ruler") { showsGuides.toggle() }
+                .civaButton(showsGuides ? .primary : .secondary)
+                .accessibilityAddTraits(showsGuides ? .isSelected : [])
+                .help(showsGuides ? "Hide the distance guides" : "Keep the distance guides on the preview")
             .padding(.top, 6)
             .padding(.trailing, 10)
         }
-        .pickerStyle(.menu)
         .controlSize(.small)
         .padding(.vertical, 6)
         .background(Color.canvas)
@@ -231,7 +228,57 @@ private struct RibbonItem<Content: View>: View {
     }
 }
 
-/// "10 pt" with − and + beside it.
+/// A ribbon menu in a paper field (DESIGN.md §8.5): white fill, hairline border, ink text.
+private struct RibbonPicker<Value: Hashable, Items: View>: View {
+    let title: LocalizedStringKey
+    @Binding var selection: Value
+    let value: String
+    @ViewBuilder let items: Items
+
+    init(_ title: LocalizedStringKey, selection: Binding<Value>, value: String, @ViewBuilder items: () -> Items) {
+        self.title = title
+        _selection = selection
+        self.value = value
+        self.items = items()
+    }
+
+    var body: some View {
+        CivaMenuPicker(title, selection: $selection, value: Text(value)) { items } label: { Text(value) }
+    }
+}
+
+/// A menu's label with the same chevron as `CivaMenuPicker`, for menus that aren't one picker.
+private struct MenuFieldLabel<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        HStack(spacing: 6) {
+            content
+            Image(systemName: "chevron.up.chevron.down")
+                .font(.system(size: 11))
+                .foregroundStyle(Color.textSecondary)
+        }
+    }
+}
+
+/// A4 or US Letter: paper fields side by side, the chosen one cobalt.
+private struct PaperChoice: View {
+    @Binding var selection: ResumeFormat.Paper
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(ResumeFormat.Paper.allCases, id: \.self) { paper in
+                Button(paper.title) { selection = paper }
+                    .civaButton(selection == paper ? .primary : .secondary)
+                    .accessibilityAddTraits(selection == paper ? .isSelected : [])
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Paper")
+    }
+}
+
+/// "10 pt" with − and + beside it, in a paper field.
 private struct ValueStepper: View {
     @Binding var value: Double
     let range: ClosedRange<Double>
@@ -240,11 +287,17 @@ private struct ValueStepper: View {
     var body: some View {
         HStack(spacing: 2) {
             Text("\(value.formatted()) pt")
+                .font(.body.weight(.medium))
                 .monospacedDigit()
                 .frame(minWidth: 32, alignment: .trailing)
             Stepper("Value", value: $value, in: range, step: step)
                 .labelsHidden()
         }
+        .padding(.leading, Space.s)
+        .padding(.trailing, 2)
+        .frame(height: Size.controlSmall)
+        .background(Color.surface, in: .rect(cornerRadius: Radius.control))
+        .overlay { RoundedRectangle(cornerRadius: Radius.control).strokeBorder(Color.fieldBorder) }
     }
 }
 
