@@ -24,9 +24,9 @@ enum OviScheduler {
         return true
     }
 
-    /// The highest-priority eligible match, unless this visit already showed one or today's cap is reached.
-    static func pick(_ matches: [OviMatch], store: OviStore, now: Date, visitHasShown: Bool) -> OviMatch? {
-        guard !visitHasShown, store.shownToday(now: now) < dailyCap else { return nil }
+    /// The highest-priority eligible match, unless today's cap is reached.
+    static func pick(_ matches: [OviMatch], store: OviStore, now: Date) -> OviMatch? {
+        guard store.shownToday(now: now) < dailyCap else { return nil }
         return matches.first { isEligible($0.tip, store: store, now: now) }
     }
 }

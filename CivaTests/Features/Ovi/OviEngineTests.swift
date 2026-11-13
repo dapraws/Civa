@@ -145,7 +145,8 @@ struct OviEngineTests {
         #expect(noticing(ovi)?.tip == .numericDates)
     }
 
-    @Test func oneTipPerVisit() async {
+    /// A new mistake shows without leaving the screen: one tip per visit made you reopen it.
+    @Test func nextMistakeShowsInSameVisit() async {
         let ovi = engine()
         ovi.visit(smallFont())
         ovi.open()
@@ -154,7 +155,7 @@ struct OviEngineTests {
         both.resume?.format.dateStyle = .numeric
         ovi.dataChanged(both)
         await ovi.pendingCheck?.value
-        #expect(ovi.state == .neutral)
+        #expect(noticing(ovi)?.tip == .numericDates)
     }
 
     @Test func dontShowAgainEndsTheTip() {
