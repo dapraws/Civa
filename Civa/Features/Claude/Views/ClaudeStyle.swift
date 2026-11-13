@@ -57,7 +57,7 @@ struct ClaudeHowItWorks: View {
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.headline)
-                Text(detail).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                Text(detail).foregroundStyle(.secondary)
             }
         }
     }
