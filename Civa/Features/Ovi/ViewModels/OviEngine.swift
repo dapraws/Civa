@@ -31,7 +31,6 @@ final class OviEngine {
     private let now: () -> Date
     private let sleep: (Duration) async throws -> Void
     private var context: OviContext?
-    private var visitHasShown = false
     private var isBlocked = false
     private var wasDiscarded = false
     /// Checked with every check: an open sheet or marked (IME) text. Set by the app.
@@ -58,11 +57,10 @@ final class OviEngine {
 
     // MARK: Inputs
 
-    /// A new screen or record: one tip per visit, checked at once.
+    /// A new screen or record, checked at once.
     func visit(_ context: OviContext?) {
         pendingCheck?.cancel()
         self.context = context
-        visitHasShown = false
         wasDiscarded = false
         if case .noticing = state { state = .neutral }
         if case .waving = state { state = .neutral }
@@ -187,9 +185,8 @@ final class OviEngine {
             return
         }
         guard state == .neutral, !isBlocked, !externalBlocker(),
-              let pick = OviScheduler.pick(matches, store: store, now: now(), visitHasShown: visitHasShown)
+              let pick = OviScheduler.pick(matches, store: store, now: now())
         else { return }
-        visitHasShown = true
         store.update(pick.tip) {
             $0.lastShown = now()
             $0.lastOutcome = .shown

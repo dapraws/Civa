@@ -19,7 +19,7 @@ struct OviPerch: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @FocusState private var isFocused: Bool
 
-    static let height: CGFloat = 72
+    static let height: CGFloat = 120
 
     var body: some View {
         if ovi.state != .hidden {

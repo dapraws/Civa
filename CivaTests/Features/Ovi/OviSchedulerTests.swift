@@ -61,14 +61,9 @@ struct OviSchedulerTests {
         #expect(OviScheduler.isEligible(.fontSize, store: store, now: now.addingTimeInterval(60)))
     }
 
-    @Test func visitLimitIsOne() {
-        let picked = OviScheduler.pick([match(.fontSize)], store: store, now: date(noon), visitHasShown: true)
-        #expect(picked == nil)
-    }
-
     @Test func pickSkipsIneligibleAndKeepsPriority() {
         store.update(.fontSize) { $0.isEnded = true }
-        let picked = OviScheduler.pick([match(.fontSize), match(.numericDates)], store: store, now: date(noon), visitHasShown: false)
+        let picked = OviScheduler.pick([match(.fontSize), match(.numericDates)], store: store, now: date(noon))
         #expect(picked?.tip == .numericDates)
     }
 
@@ -76,7 +71,7 @@ struct OviSchedulerTests {
         let now = date(noon)
         for _ in 0..<3 { store.countShown(now: now) }
         #expect(store.shownToday(now: now) == 3)
-        #expect(OviScheduler.pick([match(.fontSize)], store: store, now: now, visitHasShown: false) == nil)
+        #expect(OviScheduler.pick([match(.fontSize)], store: store, now: now) == nil)
     }
 
     @Test func dailyCapResetsAtMidnight() {
@@ -84,7 +79,7 @@ struct OviSchedulerTests {
         let afterMidnight = date("2026-11-12T17:01:00Z")   // 00:01 next day
         for _ in 0..<3 { store.countShown(now: beforeMidnight) }
         #expect(store.shownToday(now: afterMidnight) == 0)
-        #expect(OviScheduler.pick([match(.fontSize)], store: store, now: afterMidnight, visitHasShown: false)?.tip == .fontSize)
+        #expect(OviScheduler.pick([match(.fontSize)], store: store, now: afterMidnight)?.tip == .fontSize)
     }
 
     @Test func unknownAndCorruptStateIsIgnored() {
