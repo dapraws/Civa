@@ -19,6 +19,7 @@ struct CopyPromptButton: View {
     var body: some View {
         Button("Copy Prompt") { prompt = makePrompt() }
             .civaButton(.textLink, color: .textPrimary)
+            .fixedSize()
             .help("A prompt for ChatGPT, Gemini, or another AI, filled with this content")
             .sheet(item: Binding(get: { prompt.map(PromptItem.init) }, set: { prompt = $0?.prompt })) { item in
                 CopyPromptSheet(prompt: item.prompt)

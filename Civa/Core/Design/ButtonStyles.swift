@@ -80,10 +80,10 @@ private struct CivaButton: View {
                     .frame(minHeight: Size.minTarget)
                     .contentShape(.rect)
             } else {
-                configuration.label
+                label
                     .lineLimit(1)
                     .fixedSize()
-                    .font(kind == .secondary || kind == .destructive ? .body.weight(.medium) : .bodyEmphasis)
+                    .font(kind == .primary || kind == .destructiveFill ? .bodyEmphasis : .body.weight(.medium))
                     .foregroundStyle(foreground)
                     .padding(.horizontal, Space.m)
                     .frame(minHeight: height)
@@ -103,12 +103,26 @@ private struct CivaButton: View {
         .animation(Motion.fast, value: isPressed)
     }
 
+    /// Claude buttons look like Secondary with a clay spark in front: the spark alone says
+    /// "Claude", so the toolbar stays calm. A label's own icon is dropped so there's one spark.
+    @ViewBuilder private var label: some View {
+        if kind == .claude {
+            HStack(spacing: Space.xs) {
+                Image(systemName: "sparkles")
+                    .foregroundStyle(Color.claude)
+                    .accessibilityHidden(true)
+                configuration.label.labelStyle(.titleOnly)
+            }
+        } else {
+            configuration.label
+        }
+    }
+
     private var foreground: Color {
         switch kind {
         case .primary, .destructiveFill: .onAccent
-        case .secondary: .textPrimary
+        case .secondary, .claude: .textPrimary
         case .destructive: .danger
-        case .claude: .claudeText
         case .textLink: linkColor
         }
     }
@@ -117,13 +131,10 @@ private struct CivaButton: View {
         switch kind {
         case .primary:
             AnyShapeStyle(isPressed ? Color.accentPressed : hovers ? Color.accentHover : Color.accent)
-        case .secondary, .destructive:
+        case .secondary, .destructive, .claude:
             AnyShapeStyle(isPressed ? Color.selectionFill : hovers ? Color.hover : Color.surface)
         case .destructiveFill:
             AnyShapeStyle(Color.dangerFill.mix(with: .black, by: isPressed || hovers ? 0.08 : 0))
-        case .claude:
-            // Hover and pressed tints are color sets so the label keeps 4.5:1 (DesignTokenTests).
-            AnyShapeStyle(isPressed ? Color.claudeTintPressed : hovers ? Color.claudeTintHover : Color.claudeTint)
         case .textLink:
             AnyShapeStyle(Color.clear)
         }
@@ -131,8 +142,7 @@ private struct CivaButton: View {
 
     private var border: Color? {
         switch kind {
-        case .secondary, .destructive: .fieldBorder
-        case .claude: .claudeBorder
+        case .secondary, .destructive, .claude: .fieldBorder
         default: nil
         }
     }

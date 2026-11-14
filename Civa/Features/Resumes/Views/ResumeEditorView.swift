@@ -165,8 +165,8 @@ extension ResumeEditorView {
                 }
             }
         } label: {
-            Label("Ask Claude", systemImage: "sparkles")
-                .labelStyle(.titleAndIcon)
+            // The Claude button style adds the spark.
+            Text("Ask Claude")
         }
         .menuStyle(.button)
         .civaButton(.claude, size: .small)
