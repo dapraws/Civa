@@ -72,8 +72,7 @@ struct ApplicationList: View {
                 : .init(
                     title: String(localized: "No applications here"),
                     message: String(localized: "None of your applications have this status."),
-                    systemImage: "line.3.horizontal.decrease.circle",
-                    showsAddButton: false
+                    systemImage: "line.3.horizontal.decrease.circle"
                 ),
             filter: JobApplication.withStatus(status),
             order: JobApplication.listOrder,

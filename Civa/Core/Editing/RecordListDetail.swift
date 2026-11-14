@@ -13,8 +13,6 @@ struct RecordEmptyState {
     let title: String
     let message: String
     let systemImage: String
-    /// A filtered list that came up empty has nothing to add from (DESIGN.md §8.7).
-    var showsAddButton = true
 }
 
 /// Records of one type: a list on the left and an inline editor on the right (FR-010).
@@ -101,9 +99,9 @@ struct RecordListDetail<Model: EditableRecord, Editor: View>: View {
             EmptyStateView(
                 symbol: empty.systemImage,
                 title: LocalizedStringKey(empty.title),
-                message: LocalizedStringKey(empty.message),
-                button: empty.showsAddButton ? (LocalizedStringKey(addTitle), .primary, addRecord) : nil
+                message: LocalizedStringKey(empty.message)
             )
+            // No Add here: the title row's Add (⌘N) is the one way to add, empty or not.
             .padding(.horizontal, Space.xl)
             .frame(maxHeight: .infinity, alignment: .top)
         } else {

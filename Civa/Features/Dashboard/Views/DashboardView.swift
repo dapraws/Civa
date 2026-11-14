@@ -5,6 +5,7 @@
 //  Created by Muhammad Darrel Prawira on 06/11/26.
 //
 
+import PDFKit
 import SwiftData
 import SwiftUI
 
@@ -104,6 +105,12 @@ struct DashboardView: View {
     // MARK: Tiles (DESIGN.md §8.2)
 
     @ViewBuilder
+    /// "1 page" or "2 pages", from the rendered PDF (one resume, on the Dashboard only).
+    private func pageText(_ resume: Resume) -> String {
+        let pages = PDFDocument(data: ResumeRenderer.pdf(for: resume.document))?.pageCount ?? 1
+        return pages == 1 ? String(localized: "1 page") : String(localized: "\(pages) pages")
+    }
+
     private func continueTile(_ resume: Resume?) -> some View {
         Group {
             if let resume {
@@ -124,7 +131,7 @@ struct DashboardView: View {
                             .font(.sectionTitle)
                             .foregroundStyle(Color.textPrimary)
                             .lineLimit(1)
-                        Text("Resume · edited \(resume.updatedAt, format: .relative(presentation: .named))")
+                        Text("Resume · \(pageText(resume)) · edited \(resume.updatedAt, format: .relative(presentation: .named))")
                             .font(.callout)
                             .foregroundStyle(Color.textSecondary)
                         Button("Open in Editor") { openResume(resume) }
