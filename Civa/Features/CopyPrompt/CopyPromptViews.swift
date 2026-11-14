@@ -8,7 +8,7 @@
 import AppKit
 import SwiftUI
 
-/// "Copy Prompt": a neutral text link beside the Claude one (not Claude orange: it works with any
+/// "Copy Prompt": a neutral button beside the Claude one (not Claude orange: it works with any
 /// AI). It shows the prompt and what it includes before anything reaches the clipboard.
 struct CopyPromptButton: View {
     /// Built when clicked, from what's on screen now (saved or not).
@@ -17,9 +17,8 @@ struct CopyPromptButton: View {
     @State private var prompt: CopyPrompt?
 
     var body: some View {
-        Button("Copy Prompt") { prompt = makePrompt() }
-            .civaButton(.textLink, color: .textPrimary)
-            .fixedSize()
+        Button("Copy Prompt", systemImage: "doc.on.doc") { prompt = makePrompt() }
+            .civaButton(.secondary, size: .small)
             .help("A prompt for ChatGPT, Gemini, or another AI, filled with this content")
             .sheet(item: Binding(get: { prompt.map(PromptItem.init) }, set: { prompt = $0?.prompt })) { item in
                 CopyPromptSheet(prompt: item.prompt)

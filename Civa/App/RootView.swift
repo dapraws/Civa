@@ -22,6 +22,11 @@ struct RootView: View {
     @FocusState private var isSidebarFocused: Bool
     @State private var ovi = OviEngine()
     @State private var columnVisibility = NavigationSplitViewVisibility.all
+    /// Below `autoHideWidth` the sidebar hides and slides in over the page on hover, so Civa fits
+    /// half of any Mac screen.
+    @State private var isNarrow = false
+    @State private var showsPeek = false
+    private static let autoHideWidth: CGFloat = 1000
     @Query(filter: #Predicate<ClaudeProposal> { $0.statusRaw == "pending" }) private var claudeProposals: [ClaudeProposal]
     /// Waiting and failed requests: both need the user to start them in Claude.
     @Query(filter: #Predicate<ClaudeRequest> { $0.statusRaw == "pending" || $0.statusRaw == "failed" })
@@ -39,6 +44,17 @@ struct RootView: View {
                 // The title bar keeps only the window controls and the sidebar toggle (DESIGN.md §2).
                 .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         }
+        .onGeometryChange(for: Bool.self) { $0.size.width < Self.autoHideWidth } action: { narrow in
+            isNarrow = narrow
+            showsPeek = false
+            withAnimation(.snappy) { columnVisibility = narrow ? .detailOnly : .all }
+        }
+        .overlay(alignment: .leading) {
+            if isNarrow, columnVisibility == .detailOnly {
+                SidebarPeek(isShown: $showsPeek, hasTip: isOviNoticing) { sidebar }
+            }
+        }
+        .onChange(of: navigation.section) { showsPeek = false }
         .overlay(alignment: .top) {
             if let title = notice.banner {
                 ClaudeRequestBanner(title: title, onOpen: notice.open) { notice.banner = nil }
@@ -64,8 +80,14 @@ struct RootView: View {
             }
         }
         #if DEBUG
-        // Manual checks: -CivaShowHelp YES
-        .onAppear { if UserDefaults.standard.bool(forKey: "CivaShowHelp") { openWindow(id: "help") } }
+        // Manual checks: -CivaShowHelp YES, -CivaWindowWidth 640
+        .onAppear {
+            if UserDefaults.standard.bool(forKey: "CivaShowHelp") { openWindow(id: "help") }
+            let width = UserDefaults.standard.double(forKey: "CivaWindowWidth")
+            if width > 0, let window = NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }) {
+                window.setContentSize(NSSize(width: width, height: 800))
+            }
+        }
         #endif
         .onChange(of: onboarding.request) { _, request in
             guard let request else { return }
@@ -81,7 +103,8 @@ struct RootView: View {
                 }
             }
         }
-        .background { OviWatcher(isSidebarCollapsed: columnVisibility == .detailOnly) }
+        // A hidden sidebar pauses Ovi, except when it only waits for a hover (the edge shows a dot).
+        .background { OviWatcher(isSidebarCollapsed: columnVisibility == .detailOnly && !isNarrow) }
         #if DEBUG
         .onAppear {
             if let raw = UserDefaults.standard.string(forKey: "CivaOviPreview"), let tip = OviTipID(rawValue: raw) {
@@ -92,8 +115,8 @@ struct RootView: View {
         .environment(navigation)
         .environment(ovi)
         .civaWindowStyle()
-        // Wide enough for the Career Profile tabs and the resume editor's three columns at their minimums.
-        .frame(minWidth: 1100, minHeight: 640)
+        // Half of a 1280 pt screen, the narrowest common Mac, so Civa fits side by side anywhere.
+        .frame(minWidth: 640, minHeight: 600)
         .onChange(of: bridge.isEnabled, initial: true) { _, enabled in
             ClaudeTip.isConnected = enabled
             if !enabled, navigation.section == .aiActivity { navigation.section = .dashboard }
@@ -104,25 +127,17 @@ struct RootView: View {
         .windowDismissBehavior(changes.hasUnsavedChanges ? .disabled : .automatic)
     }
 
-    /// DESIGN.md §8.1: wordmark, the sections, Settings set apart, then Ovi's perch (Plan 3) and,
-    /// in debug builds, the data mode.
+    /// DESIGN.md §8.1: wordmark, the sections, Settings set apart, then Ovi's perch (Plan 3) and
+    /// whose workspace this is.
     private var sidebar: some View {
         let sections = AppSection.visible(claudeEnabled: bridge.isEnabled)
         let selection = changes.selection($navigation.section, pending: $pendingSection)
         return VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Civa")
-                    .font(.wordmark)
-                    .foregroundStyle(Color.textPrimary)
-                    .accessibilityAddTraits(.isHeader)
-                // Whose data this is, so a shared Mac never mixes people up.
-                Text(WorkspaceRegistry.shared.current.displayName)
-                    .font(.caption)
-                    .foregroundStyle(Color.textSecondary)
-                    .lineLimit(1)
-                    .help("Workspace. Switch in Settings or the Civa menu.")
-            }
-            .padding(.horizontal, Space.m)
+            Text("Civa")
+                .font(.wordmark)
+                .foregroundStyle(Color.textPrimary)
+                .accessibilityAddTraits(.isHeader)
+                .padding(.horizontal, Space.m)
             .padding(.bottom, Space.m)
             VStack(alignment: .leading, spacing: 1) {
                 ForEach(sections.filter { $0 != .settings }) { item(for: $0, selection: selection) }
@@ -136,15 +151,8 @@ struct RootView: View {
             })
                 .padding(.leading, 2)
                 .padding(.bottom, Space.s)
-            #if DEBUG
-            if DataMode.current != .real {
-                Label(DataMode.current.title, systemImage: "testtube.2")
-                    .font(.caption)
-                    .foregroundStyle(Color.textTertiary)
-                    .padding(.horizontal, Space.m)
-                    .help("This debug run starts fresh every launch. Switch in Settings → Developer.")
-            }
-            #endif
+            WorkspaceLabel()
+                .padding(.horizontal, Space.m)
         }
         .padding(.horizontal, 10)
         .padding(.top, Space.s)
@@ -185,6 +193,10 @@ struct RootView: View {
             selection.wrappedValue = section
         }
         .civaFocusRing(RoundedRectangle(cornerRadius: Radius.control), isFocused: isSidebarFocused && selection.wrappedValue == section)
+    }
+
+    private var isOviNoticing: Bool {
+        if case .noticing = ovi.state { true } else { false }
     }
 
     private func step(_ offset: Int, in sections: [AppSection], selection: Binding<AppSection>) -> KeyPress.Result {

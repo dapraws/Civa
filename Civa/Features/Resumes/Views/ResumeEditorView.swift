@@ -16,6 +16,9 @@ struct ResumeEditorView: View {
     @State private var selection: ResumeOutlineItem?
     @State private var outlineWidth: CGFloat = 210
     @State private var previewWidth: CGFloat = 540
+    /// Too narrow for outline, fields and preview side by side: the preview swaps with the fields.
+    @State private var isCompact = false
+    @State private var showsPreview = false
     @State private var isShowingHistory = false
     @State private var isShowingSuggestions = false
     @State private var isShowingClaude = false
@@ -45,17 +48,30 @@ struct ResumeEditorView: View {
         GeometryReader { proxy in
             // The fields column takes what's left and keeps at least 320 pt, so labels and values don't overlap.
             let previewRange = 280...max(280, proxy.size.width - outlineWidth - 322)
+            let compact = proxy.size.width < outlineWidth + 322 + 280
             HStack(spacing: 0) {
                 ResumeOutlineView(document: document, selection: $selection)
                     .frame(width: outlineWidth)
                 ColumnDivider(width: $outlineWidth, range: 170...340, direction: 1)
-                ResumeItemForm(editor: editor, document: document, selection: $selection)
-                    .frame(maxWidth: .infinity)
-                ColumnDivider(width: $previewWidth, range: previewRange, direction: -1)
-                PDFPreview(data: data)
-                    .frame(width: min(max(previewWidth, previewRange.lowerBound), previewRange.upperBound))
+                if compact {
+                    if showsPreview {
+                        PDFPreview(data: data)
+                    } else {
+                        ResumeItemForm(editor: editor, document: document, selection: $selection)
+                            .frame(maxWidth: .infinity)
+                    }
+                } else {
+                    ResumeItemForm(editor: editor, document: document, selection: $selection)
+                        .frame(maxWidth: .infinity)
+                    ColumnDivider(width: $previewWidth, range: previewRange, direction: -1)
+                    PDFPreview(data: data)
+                        .frame(width: min(max(previewWidth, previewRange.lowerBound), previewRange.upperBound))
+                }
             }
+            .onChange(of: compact, initial: true) { _, compact in isCompact = compact }
         }
+        // Picking a section to edit brings the fields back.
+        .onChange(of: selection) { showsPreview = false }
         .safeAreaInset(edge: .top, spacing: 0) {
             VStack(spacing: 0) {
                 titleRow
@@ -120,6 +136,14 @@ extension ResumeEditorView {
                 .lineLimit(1)
                 .accessibilityAddTraits(.isHeader)
             Spacer(minLength: Space.l)
+            if isCompact {
+                Button(showsPreview ? "Edit" : "Preview", systemImage: showsPreview ? "square.and.pencil" : "doc.text.magnifyingglass") {
+                    showsPreview.toggle()
+                }
+                .civaButton(.secondary, size: .small)
+                .labelStyle(.iconOnly)
+                .help(showsPreview ? "Back to the fields" : "Show the PDF preview")
+            }
             let claudeCount = pendingClaude.count
             if claudeCount > 0 {
                 Button("\(claudeCount) From Claude", systemImage: "sparkles") { isShowingClaude = true }
@@ -133,19 +157,25 @@ extension ResumeEditorView {
             if suggestionCount > 0 {
                 Button("\(suggestionCount) Suggested", systemImage: "arrow.triangle.2.circlepath") { isShowingSuggestions = true }
                     .civaButton(.secondary, size: .small)
+                    .labelStyle(compactLabel)
                     .help("Changes from your Career Profile that this resume doesn't have yet")
             }
             Button("History", systemImage: "clock.arrow.circlepath") { isShowingHistory = true }
                 .civaButton(.secondary, size: .small)
+                .labelStyle(compactLabel)
                 .disabled(editor.isNew)
                 .help(editor.isNew ? "Save the resume to start its history" : "Versions of this resume")
             ResumeExportButton(editor: editor)
                 .civaButton(.primary, size: .small)
+                .labelStyle(compactLabel)
         }
         .padding(.horizontal, Space.l)
         .frame(height: 40)
         .background(Color.canvas)
     }
+
+    /// Narrow windows keep the toolbar's icons and drop their words (the help text still names them).
+    private var compactLabel: CompactLabelStyle { CompactLabelStyle(isCompact: isCompact) }
 
     private var pendingClaude: [ClaudeProposal] {
         claudeProposals.filter { $0.targetID == editor.record.id }
@@ -207,4 +237,17 @@ extension ResumeEditorView {
     ResumeEditorView(editor: .preview())
         .frame(width: 1100, height: 700)
         .previewEnvironment()
+}
+
+/// Icon only when compact, icon and title otherwise. The title stays the accessibility label.
+struct CompactLabelStyle: LabelStyle {
+    let isCompact: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        if isCompact {
+            Label(configuration).labelStyle(.iconOnly)
+        } else {
+            Label(configuration).labelStyle(.titleAndIcon)
+        }
+    }
 }

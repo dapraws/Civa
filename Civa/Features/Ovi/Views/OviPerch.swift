@@ -152,22 +152,37 @@ struct OviShadow: View {
 
     var body: some View {
         let width = height * OviShadow.aspect
-        let size = CGSize(width: height * 0.46 * (1 - 0.35 * lift), height: height * 0.07 * (1 - 0.35 * lift))
+        let shrink = 1 - 0.35 * lift
+        let isDark = colorScheme == .dark
+        // Two layers: a soft halo, and a tight contact shadow under the feet so Ovi stands on the
+        // sidebar instead of floating.
+        let halo = CGSize(width: height * 0.5 * shrink, height: height * 0.085 * shrink)
+        let contact = CGSize(width: height * 0.3 * shrink, height: height * 0.035 * shrink)
+        ZStack {
+            // Black can't darken a near-black sidebar, so in dark mode the halo is a faint pool of
+            // light the contact shadow sits in.
+            blob(halo, color: isDark ? .white : .black, opacity: isDark ? 0.09 : 0.14)
+            blob(contact, color: .black, opacity: isDark ? 0.8 : 0.32)
+        }
+        .frame(width: halo.width, height: halo.height)
+        .opacity(1 - 0.5 * lift)
+        // The feet stand 4% above the image's bottom edge (the images are 524 × 611, feet at 587).
+        .offset(x: (feetX - 0.5) * width, y: halo.height / 2 - height * 0.039)
+        .frame(width: width)
+        .accessibilityHidden(true)
+    }
+
+    private func blob(_ size: CGSize, color: Color, opacity: Double) -> some View {
         Ellipse()
             .fill(
                 RadialGradient(
-                    colors: [.black.opacity(colorScheme == .dark ? 0.55 : 0.22), .black.opacity(0)],
+                    colors: [color.opacity(opacity), color.opacity(opacity * 0.4), color.opacity(0)],
                     center: .center,
                     startRadius: 0,
                     endRadius: size.width / 2
                 )
             )
             .frame(width: size.width, height: size.height)
-            .opacity(1 - 0.5 * lift)
-            // The feet stand 4% above the image's bottom edge (the images are 524 × 611, feet at 587).
-            .offset(x: (feetX - 0.5) * width, y: size.height / 2 - height * 0.039)
-            .frame(width: width)
-            .accessibilityHidden(true)
     }
 
     /// Width over height of Ovi's images.
