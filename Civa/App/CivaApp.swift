@@ -60,6 +60,7 @@ struct CivaApp: App {
         .commands {
             CommandGroup(replacing: .appSettings) {
                 SettingsCommand()
+                WorkspaceMenu()
             }
             CommandGroup(replacing: .help) {
                 HelpMenu()

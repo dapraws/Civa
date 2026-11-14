@@ -99,6 +99,7 @@ struct RootView: View {
             if !enabled, navigation.section == .aiActivity { navigation.section = .dashboard }
         }
         .unsavedChangesAlert(changes)
+        .workspaceSwitchAlert(changes)
         // Closing the window quits; keep it open until edits are saved or reverted.
         .windowDismissBehavior(changes.hasUnsavedChanges ? .disabled : .automatic)
     }
@@ -109,12 +110,20 @@ struct RootView: View {
         let sections = AppSection.visible(claudeEnabled: bridge.isEnabled)
         let selection = changes.selection($navigation.section, pending: $pendingSection)
         return VStack(alignment: .leading, spacing: 0) {
-            Text("Civa")
-                .font(.wordmark)
-                .foregroundStyle(Color.textPrimary)
-                .padding(.horizontal, Space.m)
-                .padding(.bottom, Space.m)
-                .accessibilityAddTraits(.isHeader)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Civa")
+                    .font(.wordmark)
+                    .foregroundStyle(Color.textPrimary)
+                    .accessibilityAddTraits(.isHeader)
+                // Whose data this is, so a shared Mac never mixes people up.
+                Text(WorkspaceRegistry.shared.current.displayName)
+                    .font(.caption)
+                    .foregroundStyle(Color.textSecondary)
+                    .lineLimit(1)
+                    .help("Workspace. Switch in Settings or the Civa menu.")
+            }
+            .padding(.horizontal, Space.m)
+            .padding(.bottom, Space.m)
             VStack(alignment: .leading, spacing: 1) {
                 ForEach(sections.filter { $0 != .settings }) { item(for: $0, selection: selection) }
             }

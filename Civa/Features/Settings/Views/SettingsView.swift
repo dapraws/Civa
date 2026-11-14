@@ -46,6 +46,7 @@ struct SettingsView: View {
                     .help("Ovi can show every tip again, including ones you closed or turned off")
                 }
             }
+            WorkspacesSection()
             ClaudeSettingsSection()
             Section {
                 Toggle("Fetch Logos Online", isOn: $fetchesLogos)
