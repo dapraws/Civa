@@ -47,8 +47,20 @@ struct OviPerch: View {
         }
     }
 
+    /// The bubble floats above Ovi instead of taking room in the sidebar, so at the smallest
+    /// window it overlaps the space above rather than pushing the sections off.
     private var perch: some View {
-            VStack(alignment: .leading, spacing: Space.s) {
+            HStack(alignment: .bottom, spacing: Space.s) {
+                owl
+                if case .waving = ovi.state {
+                    Text("Ovi")
+                        .font(.caption)
+                        .foregroundStyle(Color.textSecondary)
+                }
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .overlay(alignment: .bottomLeading) {
                 if case .waving(let match) = ovi.state {
                     OviBubble(
                         match: match,
@@ -61,15 +73,10 @@ struct OviPerch: View {
                         dontShowAgain: ovi.dontShowAgain,
                         turnOff: ovi.turnOff
                     )
+                    // An overlay is offered only Ovi's height; the bubble takes its own.
+                    .fixedSize(horizontal: false, vertical: true)
+                    .offset(y: -(Self.height + Space.s))
                     .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.96, anchor: .bottomLeading)))
-                }
-                HStack(alignment: .bottom, spacing: Space.s) {
-                    owl
-                    if case .waving = ovi.state {
-                        Text("Ovi")
-                            .font(.caption)
-                            .foregroundStyle(Color.textSecondary)
-                    }
                 }
             }
             .animation(reduceMotion ? nil : Motion.emphasis, value: ovi.state)
