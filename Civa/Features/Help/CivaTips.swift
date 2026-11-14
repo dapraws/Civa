@@ -64,11 +64,6 @@ enum CivaTips {
             OviStore().reset()
         }
         #endif
-        if resets {
-            try? Tips.resetDatastore()
-            UserDefaults.standard.removeObject(forKey: resetKey)
-        }
-        var options: [Tips.ConfigurationOption] = []
         // Each workspace remembers its own tips; the first keeps TipKit's usual place.
         #if DEBUG
         let usesWorkspace = DataMode.current == .real
@@ -76,9 +71,16 @@ enum CivaTips {
         let usesWorkspace = true
         #endif
         let workspaces = WorkspaceRegistry.shared
-        if usesWorkspace, let url = workspaces.tipsURL(for: workspaces.current) {
-            try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
-            options.append(.datastoreLocation(.url(url)))
+        let folder = usesWorkspace ? workspaces.tipsURL(for: workspaces.current) : nil
+        if resets {
+            // resetDatastore() only clears TipKit's usual place, so a workspace's own folder is emptied here.
+            if let folder { try? FileManager.default.removeItem(at: folder) } else { try? Tips.resetDatastore() }
+            UserDefaults.standard.removeObject(forKey: resetKey)
+        }
+        var options: [Tips.ConfigurationOption] = []
+        if let folder {
+            try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            options.append(.datastoreLocation(.url(folder)))
         }
         try? Tips.configure(options)
     }

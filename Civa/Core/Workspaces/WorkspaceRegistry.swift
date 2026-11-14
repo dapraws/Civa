@@ -50,7 +50,13 @@ final class WorkspaceRegistry {
     ]
     private static let listKey = "Workspaces"
     private static let currentKey = "CurrentWorkspace"
+    private static let pendingKey = "PendingWorkspace"
+    /// A list that couldn't be read, kept rather than overwritten.
+    private static let unreadableKey = "WorkspacesUnreadable"
     private static let savedPrefix = "WorkspacePreferences."
+    /// Each workspace folder describes itself, so a folder put back from the Trash (or a list
+    /// that can't be read) brings the workspace back.
+    private static let infoFile = "workspace.json"
 
     /// Where SwiftData keeps `ModelConfiguration("Civa")`: the original workspace's store.
     static let defaultOriginalStoreURL = URL.applicationSupportDirectory.appending(path: "Civa.store")
@@ -73,14 +79,33 @@ final class WorkspaceRegistry {
         self.root = root
         self.originalStoreURL = originalStoreURL
         self.trash = trash
-        var list = (defaults.data(forKey: Self.listKey)).flatMap { try? JSONDecoder().decode([Workspace].self, from: $0) } ?? []
-        if list.isEmpty {
-            list = [Workspace(id: UUID(), name: "", isOriginal: true)]
+        let stored = defaults.data(forKey: Self.listKey)
+        let decoded = stored.flatMap { try? JSONDecoder().decode([Workspace].self, from: $0) }
+        if let stored, decoded == nil { defaults.set(stored, forKey: Self.unreadableKey) }
+        var list = decoded ?? []
+        // Folders the list doesn't know: put back from the Trash, or the list was unreadable.
+        let folders = (try? FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: nil)) ?? []
+        for folder in folders.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) {
+            guard let data = try? Data(contentsOf: folder.appending(path: Self.infoFile)),
+                  let workspace = try? JSONDecoder().decode(Workspace.self, from: data),
+                  !list.contains(where: { $0.id == workspace.id })
+            else { continue }
+            list.append(workspace)
+        }
+        // The original store: on first launch, when the list was unreadable, or when its files
+        // came back from the Trash.
+        if !list.contains(where: \.isOriginal), decoded == nil || FileManager.default.fileExists(atPath: originalStoreURL.path) {
+            list.insert(Workspace(id: UUID(), name: "", isOriginal: true), at: 0)
         }
         all = list
         let saved = defaults.string(forKey: Self.currentKey).flatMap(UUID.init(uuidString:))
         currentID = list.contains { $0.id == saved } ? saved! : list[0].id
         persist()
+        // A switch asked for before the restart happens here, before anything reads those keys.
+        if let pending = defaults.string(forKey: Self.pendingKey).flatMap(UUID.init(uuidString:)) {
+            defaults.removeObject(forKey: Self.pendingKey)
+            switchTo(pending)
+        }
     }
 
     var current: Workspace {
@@ -102,6 +127,7 @@ final class WorkspaceRegistry {
         let name = try validated(name, excluding: nil)
         let workspace = Workspace(id: UUID(), name: name, isOriginal: false)
         try FileManager.default.createDirectory(at: folder(workspace.id), withIntermediateDirectories: true)
+        try writeInfo(workspace)
         all.append(workspace)
         persist()
         return workspace
@@ -111,6 +137,7 @@ final class WorkspaceRegistry {
         let name = try validated(name, excluding: id)
         guard let index = all.firstIndex(where: { $0.id == id }) else { return }
         all[index].name = name
+        try? writeInfo(all[index])
         persist()
     }
 
@@ -130,13 +157,25 @@ final class WorkspaceRegistry {
         } else if FileManager.default.fileExists(atPath: folder(id).path) {
             try trash(folder(id))
         }
+        // Its saved preferences stay, for when it's put back from the Trash.
         all.removeAll { $0.id == id }
-        defaults.removeObject(forKey: Self.savedPrefix + id.uuidString)
         persist()
     }
 
-    /// Saves this workspace's own preferences, loads the other's, and makes it current. The
-    /// caller restarts Civa so the other store and tips open.
+    /// Opens `id` at the next launch; the caller restarts Civa. The preferences swap then, in the
+    /// new copy, so whatever the closing copy still writes stays in this workspace.
+    func scheduleSwitch(to id: UUID) {
+        guard id != currentID, all.contains(where: { $0.id == id }) else { return }
+        defaults.set(id.uuidString, forKey: Self.pendingKey)
+    }
+
+    /// The restart failed: stay here.
+    func cancelScheduledSwitch() {
+        defaults.removeObject(forKey: Self.pendingKey)
+    }
+
+    /// Saves this workspace's own preferences, loads the other's, and makes it current. Runs at
+    /// launch for a scheduled switch.
     func switchTo(_ id: UUID) {
         guard id != currentID, all.contains(where: { $0.id == id }) else { return }
         var saved: [String: Any] = [:]
@@ -155,11 +194,16 @@ final class WorkspaceRegistry {
     /// The first workspace takes the profile's full name, once.
     func nameOriginalIfNeeded(_ fullName: String) {
         let fullName = fullName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !fullName.isEmpty, let index = all.firstIndex(where: { $0.isOriginal && $0.name.isEmpty }),
+        // Only from the original's own profile, never another workspace's.
+        guard current.isOriginal, !fullName.isEmpty, let index = all.firstIndex(where: { $0.isOriginal && $0.name.isEmpty }),
               !all.contains(where: { $0.name.caseInsensitiveCompare(fullName) == .orderedSame })
         else { return }
         all[index].name = fullName
         persist()
+    }
+
+    private func writeInfo(_ workspace: Workspace) throws {
+        try JSONEncoder().encode(workspace).write(to: folder(workspace.id).appending(path: Self.infoFile))
     }
 
     private func folder(_ id: UUID) -> URL {

@@ -24,13 +24,14 @@ enum AppRelauncher {
         }
     }
 
-    /// In the new copy: the old one still holds the store and the Claude socket (which it removes
-    /// as it quits), so wait for it to exit. Gives up after 10 seconds.
+    /// In the new copy: wait for the old one to quit, so two Civas never run at once (one window,
+    /// one Claude connection). Gives up after 10 seconds. `kill(pid, 0)` can't see other apps
+    /// from the sandbox, so this asks AppKit.
     static func waitForPreviousInstance() {
         let pid = pid_t(UserDefaults.standard.integer(forKey: waitKey))
         guard pid > 0 else { return }
         let deadline = Date.now.addingTimeInterval(10)
-        while kill(pid, 0) == 0, Date.now < deadline {
+        while NSRunningApplication(processIdentifier: pid).map({ !$0.isTerminated }) == true, Date.now < deadline {
             usleep(100_000)
         }
     }

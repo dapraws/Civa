@@ -126,4 +126,74 @@ struct WorkspaceRegistryTests {
         let configuration = ModelConfiguration("Civa", schema: Schema(versionedSchema: SchemaV1.self))
         #expect(WorkspaceRegistry.defaultOriginalStoreURL == configuration.url)
     }
+
+    /// Delete says the data can be put back from the Trash: putting the folder back brings the
+    /// workspace back, name and preferences included.
+    @Test func workspacePutBackFromTheTrashReturns() throws {
+        let bin = URL.temporaryDirectory.appending(path: "Bin-\(UUID())")
+        try FileManager.default.createDirectory(at: bin, withIntermediateDirectories: true)
+        let workspaces = WorkspaceRegistry(defaults: defaults, root: root, originalStoreURL: original, trash: {
+            try FileManager.default.moveItem(at: $0, to: bin.appending(path: $0.lastPathComponent))
+        })
+        let najla = try workspaces.create(name: "Najla")
+        try workspaces.delete(najla.id)
+        #expect(registry().all.count == 1)
+        try FileManager.default.moveItem(at: bin.appending(path: najla.id.uuidString), to: root.appending(path: najla.id.uuidString))
+        #expect(registry().all.first { $0.id == najla.id }?.name == "Najla")
+    }
+
+    @Test func originalPutBackFromTheTrashReturns() throws {
+        let workspaces = registry()
+        let najla = try workspaces.create(name: "Najla")
+        workspaces.switchTo(najla.id)
+        try workspaces.delete(workspaces.all.first { $0.isOriginal }!.id)
+        try FileManager.default.createDirectory(at: original.deletingLastPathComponent(), withIntermediateDirectories: true)
+        FileManager.default.createFile(atPath: original.path, contents: Data())
+        #expect(registry().all.contains { $0.isOriginal })
+    }
+
+    /// A list that can't be read is rebuilt from the folders, never replaced by an empty one.
+    @Test func unreadableListIsRebuiltFromFolders() throws {
+        let najla = try registry().create(name: "Najla")
+        defaults.set(Data("not json".utf8), forKey: "Workspaces")
+        let again = registry()
+        #expect(again.all.contains { $0.id == najla.id && $0.name == "Najla" })
+        #expect(again.all.contains { $0.isOriginal })
+    }
+
+    @Test func originalIsNeverNamedFromAnotherWorkspacesProfile() throws {
+        let workspaces = registry()
+        let work = try workspaces.create(name: "Work")
+        workspaces.switchTo(work.id)
+        workspaces.nameOriginalIfNeeded("Bob Smith")
+        #expect(workspaces.all.first { $0.isOriginal }?.name == "")
+    }
+
+    /// The swap happens in the new copy at launch, so the closing copy's writes stay in its own
+    /// workspace.
+    @Test func scheduledSwitchHappensAtTheNextLaunch() throws {
+        let workspaces = registry()
+        let darrel = workspaces.current
+        let najla = try workspaces.create(name: "Najla")
+        defaults.set(true, forKey: Onboarding.welcomeShownKey)
+        workspaces.scheduleSwitch(to: najla.id)
+        #expect(workspaces.current.id == darrel.id)
+        defaults.set(true, forKey: Onboarding.checklistHiddenKey)  // written while closing
+
+        let next = registry()
+        #expect(next.current.id == najla.id)
+        #expect(defaults.object(forKey: Onboarding.welcomeShownKey) == nil)
+        #expect(defaults.object(forKey: Onboarding.checklistHiddenKey) == nil)
+        next.switchTo(darrel.id)
+        #expect(defaults.bool(forKey: Onboarding.checklistHiddenKey))
+        #expect(registry().current.id == darrel.id)
+    }
+
+    @Test func cancelledSwitchDoesNothingAtLaunch() throws {
+        let workspaces = registry()
+        let najla = try workspaces.create(name: "Najla")
+        workspaces.scheduleSwitch(to: najla.id)
+        workspaces.cancelScheduledSwitch()
+        #expect(registry().current.id == workspaces.current.id)
+    }
 }

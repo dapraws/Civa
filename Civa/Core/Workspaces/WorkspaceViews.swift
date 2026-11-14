@@ -14,6 +14,16 @@ final class WorkspaceSwitcher {
 
     var request: Workspace?
     var error: String?
+
+    /// Debug runs on Sample or Empty data don't open a workspace's store, so switching there would
+    /// only shuffle preferences.
+    static var isAvailable: Bool {
+        #if DEBUG
+        DataMode.current == .real
+        #else
+        true
+        #endif
+    }
 }
 
 extension View {
@@ -55,11 +65,9 @@ private struct WorkspaceSwitchAlert: ViewModifier {
 
     private func restart(into target: Workspace) {
         let registry = WorkspaceRegistry.shared
-        let previous = registry.currentID
-        registry.switchTo(target.id)
+        registry.scheduleSwitch(to: target.id)
         AppRelauncher.relaunch { error in
-            // Stay where we are, preferences included.
-            registry.switchTo(previous)
+            registry.cancelScheduledSwitch()
             WorkspaceSwitcher.shared.error = error.localizedDescription
         }
     }
@@ -81,6 +89,7 @@ struct WorkspaceMenu: View {
                         openWindow(id: "main")
                     }
                 ))
+                .disabled(!WorkspaceSwitcher.isAvailable)
             }
             Divider()
             Button("Manage Workspaces…") {
@@ -108,6 +117,7 @@ struct WorkspacesSection: View {
     @State private var naming: Naming?
     @State private var name = ""
     @State private var nameError: String?
+    @State private var deleteError: String?
     @State private var deleting: Workspace?
 
     var body: some View {
@@ -148,6 +158,14 @@ struct WorkspacesSection: View {
         } message: {
             Text(nameError ?? "")
         }
+        .alert(
+            "Couldn't Delete the Workspace",
+            isPresented: Binding(get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })
+        ) {
+            Button("OK") { deleteError = nil }
+        } message: {
+            Text(deleteError ?? "")
+        }
         .confirmationDialog(
             Text("Delete “\(deleting?.displayName ?? "")”?"),
             isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } })
@@ -155,7 +173,7 @@ struct WorkspacesSection: View {
             Button("Move to Trash", role: .destructive) {
                 guard let workspace = deleting else { return }
                 deleting = nil
-                do { try registry.delete(workspace.id) } catch { nameError = error.localizedDescription }
+                do { try registry.delete(workspace.id) } catch { deleteError = error.localizedDescription }
             }
         } message: {
             Text("Its profile, resumes, applications, and documents move to the Trash. You can put them back from there.")
@@ -171,6 +189,7 @@ struct WorkspacesSection: View {
                 } else {
                     Button("Switch…") { WorkspaceSwitcher.shared.request = workspace }
                         .civaButton(.textLink)
+                        .disabled(!WorkspaceSwitcher.isAvailable)
                 }
                 Menu {
                     Button("Rename…") {
@@ -211,8 +230,13 @@ struct WorkspacesSection: View {
             switch current {
             case .new:
                 let created = try registry.create(name: name)
-                // Offer to open it right away.
-                WorkspaceSwitcher.shared.request = created
+                // Offer to open it right away, once the name alert has gone (one alert at a time).
+                if WorkspaceSwitcher.isAvailable {
+                    Task {
+                        try? await Task.sleep(for: .milliseconds(400))
+                        WorkspaceSwitcher.shared.request = created
+                    }
+                }
             case .rename(let workspace):
                 try registry.rename(workspace.id, to: name)
             }
