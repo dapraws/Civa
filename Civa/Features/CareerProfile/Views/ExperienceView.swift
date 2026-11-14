@@ -126,6 +126,9 @@ struct ExperienceForm: View {
                         showsReason: false,
                         saveFirst: editor.saveIfNeeded
                     )
+                    CopyPromptButton {
+                        .improveBullets(role: editor.record.role, organization: editor.record.organization, bullets: editor.record.impacts)
+                    }
                 }
             } footer: {
                 ClaudeUnavailableNote(reason: improveUnavailable)

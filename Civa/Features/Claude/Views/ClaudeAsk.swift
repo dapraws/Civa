@@ -210,14 +210,16 @@ struct AskClaudeButton: View {
                 tip?.invalidate(reason: .actionPerformed)
                 outcome = ClaudeAsk.send(ask, container: context.container)
             } label: {
-                Label {
+                // A clay text link (DESIGN.md: Claude actions): reads as an action, not a badge.
+                // The arrow says the work happens in Claude Desktop.
+                HStack(spacing: 3) {
                     Text(title)
-                } icon: {
-                    // The sparkle stays orange, so it still reads as Claude while it waits.
-                    Image(systemName: "sparkles").foregroundStyle(.claude)
+                    Image(systemName: "arrow.up.right")
+                        .font(.caption.weight(.semibold))
+                        .accessibilityHidden(true)
                 }
             }
-            .civaButton(.claude)
+            .civaButton(.textLink, color: .claudeText)
             .disabled(unavailable != nil)
             .help(unavailable ?? String(localized: "Queue this for Claude; start it from AI Activity → Requests and review the result in Civa"))
             // Outside the orange style, so the tip's text keeps its normal color.

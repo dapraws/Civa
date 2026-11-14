@@ -94,6 +94,13 @@ struct ProjectForm: View {
                         showsReason: false,
                         saveFirst: editor.saveIfNeeded
                     )
+                    CopyPromptButton {
+                        .improveBullets(
+                            role: editor.record.role.isBlank ? String(localized: "Project") : editor.record.role,
+                            organization: editor.record.name,
+                            bullets: editor.record.impacts
+                        )
+                    }
                 }
             } footer: {
                 ClaudeUnavailableNote(reason: improveUnavailable)

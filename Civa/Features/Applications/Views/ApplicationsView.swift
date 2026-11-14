@@ -181,6 +181,16 @@ struct ApplicationForm: View {
                     tip: .draft,
                     saveFirst: editor.saveIfNeeded
                 )
+                CopyPromptButton {
+                    // The resume sent for this job, or else the Master to start from.
+                    let resume = editor.record.resume ?? resumes.first(where: \.isMaster)
+                    return .tailor(
+                        position: editor.record.position,
+                        company: editor.record.company,
+                        jobDescription: editor.record.jobDescription,
+                        resume: resume?.document
+                    )
+                }
             } footer: {
                 Text("The resume you sent for this job. Claude can draft one from your Career Profile for this job description; you keep or discard it.")
             }
