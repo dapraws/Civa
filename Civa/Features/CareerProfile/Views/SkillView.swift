@@ -23,6 +23,7 @@ struct SkillList: View {
     @State private var moveError: String?
     /// See `RecordListDetail.actionToken`.
     @State private var actionToken = UUID()
+    @FocusState private var isListFocused: Bool
 
     var body: some View {
         content
@@ -69,49 +70,76 @@ struct SkillList: View {
             .padding(.horizontal, Space.xl)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         } else {
+            // The same columns as the other record pages (RecordListDetail): a tinted list with a
+            // hairline, the rest on canvas.
             HStack(spacing: 0) {
                 sidebar
-                    .frame(width: 220)
-                Divider()
+                    .frame(width: Size.recordList)
+                    .background(Color.sidebar)
+                    .overlay(alignment: .trailing) { Rectangle().fill(Color.hairline).frame(width: 1) }
                 VStack(spacing: 0) {
                     chips
-                    Divider()
+                    Rectangle().fill(Color.hairline).frame(height: 1)
                     detail
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
+                .background(Color.canvas)
             }
         }
     }
 
     // MARK: Sidebar
 
+    /// Categories as record rows (DESIGN.md §7.8): name, how many skills, and Needs Review when
+    /// one of them does. Click or arrow keys select; drop a chip on a row to move that skill.
     private var sidebar: some View {
-        List(selection: Binding(get: { group }, set: { new in changes.perform { select(new) } })) {
-            Section(civa: "Categories") {
-                ForEach(groups, id: \.self) { row in
-                    sidebarRow(row)
-                        .tag(row)
+        let all = groups
+        let selection = Binding(get: { group }, set: { new in changes.perform { select(new) } })
+        return ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 1) {
+                    ForEach(all, id: \.self) { row in
+                        let members = skills(in: row)
+                        let isSelected = group == row
+                        RecordRow(
+                            title: row.title,
+                            subtitle: members.count == 1 ? String(localized: "1 skill") : String(localized: "\(members.count) skills"),
+                            needsReview: members.contains(where: \.needsReview),
+                            isSelected: isSelected
+                        )
+                        .civaFocusRing(RoundedRectangle(cornerRadius: Radius.control), isFocused: isListFocused && isSelected)
+                        .id(row)
+                        .onTapGesture {
+                            isListFocused = true
+                            selection.wrappedValue = row
+                        }
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityAction { selection.wrappedValue = row }
                         .dropDestination(for: String.self) { ids, _ in move(ids, to: row) }
+                    }
                 }
+                .padding(Space.s)
             }
+            .focusable()
+            .focused($isListFocused)
+            .focusEffectDisabled()
+            .onKeyPress(.upArrow) { step(-1, in: all, selection: selection, proxy: proxy) }
+            .onKeyPress(.downArrow) { step(1, in: all, selection: selection, proxy: proxy) }
         }
     }
 
-    private func sidebarRow(_ row: SkillGroup) -> some View {
-        let members = skills(in: row)
-        return HStack {
-            Text(row.title)
-                .foregroundStyle(row.category.isBlank ? .secondary : .primary)
-            if members.contains(where: \.needsReview) {
-                Image(systemName: "exclamationmark.triangle")
-                    .foregroundStyle(Color.warning)
-                    .help("Some of these need review")
-            }
-            Spacer()
-            Text(members.count, format: .number)
-                .monospacedDigit()
-                .foregroundStyle(.secondary)
+    private func step(_ offset: Int, in all: [SkillGroup], selection: Binding<SkillGroup?>, proxy: ScrollViewProxy) -> KeyPress.Result {
+        let next: SkillGroup?
+        if let index = all.firstIndex(where: { $0 == selection.wrappedValue }) {
+            guard all.indices.contains(index + offset) else { return .handled }
+            next = all[index + offset]
+        } else {
+            next = offset > 0 ? all.first : all.last
         }
+        guard let next else { return .ignored }
+        selection.wrappedValue = next
+        proxy.scrollTo(next)
+        return .handled
     }
 
     // MARK: Chips

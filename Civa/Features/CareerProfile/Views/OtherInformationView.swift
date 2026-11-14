@@ -31,9 +31,10 @@ struct OtherInformationView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            // Its own band under the Career Profile tabs, with the same room above and below as theirs.
             SegmentedTabs(Kind.allCases, selection: changes.selection($kind, pending: $pendingKind), title: \.title)
                 .padding(.horizontal, Space.xl)
-                .padding(.bottom, Space.m)
+                .padding(.vertical, Space.m)
             Rectangle().fill(Color.hairline).frame(height: 1)
 
             Group {
