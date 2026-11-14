@@ -89,9 +89,15 @@ final class OviEngine {
         if !blocked { check() }
     }
 
-    /// Edits were discarded: if that clears the tip, close without Happy.
+    /// Edits were discarded: if that clears the tip showing now, close without Happy. With no tip
+    /// showing there's nothing to close, so a later fix still gets its Happy.
     func discarded() {
-        wasDiscarded = true
+        wasDiscarded = current != nil
+    }
+
+    /// Looks again now, such as when a sheet that was blocking the "!" closes.
+    func recheck() {
+        check()
     }
 
     /// "Show Ovi" may have changed (Settings).
@@ -110,14 +116,15 @@ final class OviEngine {
         if case .noticing(let match) = state { state = .waving(match) }
     }
 
-    /// ✕: quiet this tip for 14 days.
+    /// ✕: quiet this tip for 14 days. Ovi is happy too: the user dealt with it.
     func close() {
         guard let match = current else { return }
         store.update(match.tip) {
             $0.snoozedUntil = now().addingTimeInterval(OviScheduler.snooze)
             $0.lastOutcome = .closed
         }
-        state = .neutral
+        // Then the next tip on this screen, after Happy.
+        showHappy()
     }
 
     /// The bubble's action was taken (the caller applied it). Never snoozes.
@@ -136,12 +143,14 @@ final class OviEngine {
             $0.lastOutcome = .shown
         }
         state = .neutral
+        check()
     }
 
     func dontShowAgain() {
         guard let match = current else { return }
         store.update(match.tip) { $0.isEnded = true }
         state = .neutral
+        check()
     }
 
     func turnOff() {
@@ -191,7 +200,6 @@ final class OviEngine {
             $0.lastShown = now()
             $0.lastOutcome = .shown
         }
-        store.countShown(now: now())
         state = .noticing(pick)
     }
 
@@ -202,6 +210,7 @@ final class OviEngine {
             do { try await sleep(Self.happyHold) } catch { return }
             guard let self, self.state == .happy else { return }
             self.state = .neutral
+            self.check()
         }
     }
 }

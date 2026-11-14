@@ -24,19 +24,11 @@ struct OviTipRecord: Codable, Equatable {
 final class OviStore {
     static let isShownKey = "OviIsShown"
     static let tipStateKey = "OviTipState"
-    static let shownTodayKey = "OviShownToday"
-
-    private struct Day: Codable {
-        let day: String
-        let count: Int
-    }
 
     private let defaults: UserDefaults
-    private let calendar: Calendar
 
-    init(defaults: UserDefaults = .standard, calendar: Calendar = .current) {
+    init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        self.calendar = calendar
     }
 
     /// "Show Ovi" (Settings, and ⋯ → Turn off Ovi).
@@ -57,24 +49,9 @@ final class OviStore {
         defaults.set(try? JSONEncoder().encode(all), forKey: Self.tipStateKey)
     }
 
-    /// How many "!" appeared on the Mac's calendar day of `now`.
-    func shownToday(now: Date) -> Int {
-        guard let data = defaults.data(forKey: Self.shownTodayKey),
-              let day = try? JSONDecoder().decode(Day.self, from: data),
-              day.day == key(for: now)
-        else { return 0 }
-        return day.count
-    }
-
-    func countShown(now: Date) {
-        let day = Day(day: key(for: now), count: shownToday(now: now) + 1)
-        defaults.set(try? JSONEncoder().encode(day), forKey: Self.shownTodayKey)
-    }
-
     /// Settings → Reset Ovi's tips. "Show Ovi" stays as it is.
     func reset() {
         defaults.removeObject(forKey: Self.tipStateKey)
-        defaults.removeObject(forKey: Self.shownTodayKey)
     }
 
     private var records: [String: OviTipRecord] {
@@ -82,10 +59,5 @@ final class OviStore {
               let all = try? JSONDecoder().decode([String: OviTipRecord].self, from: data)
         else { return [:] }
         return all.filter { OviTipID(rawValue: $0.key) != nil }
-    }
-
-    private func key(for date: Date) -> String {
-        let parts = calendar.dateComponents([.year, .month, .day], from: date)
-        return String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
     }
 }

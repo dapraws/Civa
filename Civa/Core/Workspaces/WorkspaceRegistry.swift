@@ -44,7 +44,7 @@ final class WorkspaceRegistry {
 
     /// Preferences that belong to one workspace. Everything else is shared.
     static let workspaceKeys = [
-        OviStore.isShownKey, OviStore.tipStateKey, OviStore.shownTodayKey,
+        OviStore.isShownKey, OviStore.tipStateKey,
         Onboarding.welcomeShownKey, Onboarding.checklistHiddenKey,
         "ClaudeReadCategories", "ClaudeSuggestCategories",
     ]

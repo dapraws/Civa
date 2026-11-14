@@ -118,6 +118,8 @@ struct OviWatcher: View {
     @Environment(\.modelContext) private var context
     @Environment(OviEngine.self) private var ovi
     @Environment(UnsavedChangesGuard.self) private var changes
+    /// Read so a new skill (an insert, which fetching doesn't observe) updates the signature.
+    @Query private var skills: [Skill]
 
     private struct Visit: Equatable {
         let section: AppSection
@@ -130,6 +132,7 @@ struct OviWatcher: View {
         // Reading the records here makes this view update whenever they change (Observation).
         let isNew = changes.active?.isNew ?? false
         let built = OviContextBuilder.make(navigation: navigation, in: context, isNewRecord: isNew, full: false)
+        let skillCount = skills.count
         Color.clear
             .frame(width: 0, height: 0)
             .accessibilityHidden(true)
@@ -143,6 +146,17 @@ struct OviWatcher: View {
             }
             .onChange(of: built?.signature) {
                 ovi.dataChanged(built?.context)
+            }
+            .onChange(of: skillCount) {
+                ovi.dataChanged(built?.context)
+            }
+            // A sheet blocked the "!" while it was open; look again once it's gone.
+            .onReceive(NotificationCenter.default.publisher(for: NSWindow.didEndSheetNotification)) { _ in
+                // The window may still list the sheet as it posts this; look a moment later.
+                Task {
+                    try? await Task.sleep(for: .milliseconds(300))
+                    ovi.recheck()
+                }
             }
             .onChange(of: navigation.revertCount) {
                 ovi.discarded()

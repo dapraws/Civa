@@ -36,7 +36,6 @@ struct OviEngineTests {
         let ovi = engine()
         ovi.visit(smallFont())
         #expect(noticing(ovi)?.tip == .fontSize)
-        #expect(store.shownToday(now: now) == 1)
         #expect(store.record(.fontSize)?.lastShown == now)
     }
 
@@ -56,7 +55,7 @@ struct OviEngineTests {
         ovi.dataChanged(fine)
         await ovi.pendingCheck?.value
         #expect(ovi.state == .neutral)
-        #expect(store.shownToday(now: now) == 0)
+        #expect(store.record(.fontSize) == nil)
     }
 
     @Test func openShowsWaving() {
@@ -66,12 +65,13 @@ struct OviEngineTests {
         if case .waving(let match) = ovi.state { #expect(match.tip == .fontSize) } else { Issue.record("not waving: \(ovi.state)") }
     }
 
-    @Test func closeSnoozesAndReturnsNeutral() {
+    /// ✕ snoozes, and Ovi is happy too (2026-11-14): the user dealt with it.
+    @Test func closeSnoozesAndShowsHappy() {
         let ovi = engine()
         ovi.visit(smallFont())
         ovi.open()
         ovi.close()
-        #expect(ovi.state == .neutral)
+        #expect(ovi.state == .happy)
         #expect(store.record(.fontSize)?.snoozedUntil == now.addingTimeInterval(OviScheduler.snooze))
         #expect(store.record(.fontSize)?.lastOutcome == .closed)
     }
@@ -94,6 +94,7 @@ struct OviEngineTests {
         ovi.visit(smallFont())
         ovi.open()
         ovi.took(.setFontSize10)
+        ovi.contextProvider = { [fine] in fine }  // the action fixed it
         await ovi.pendingHappy?.value
         #expect(ovi.state == .neutral)
     }
@@ -122,7 +123,7 @@ struct OviEngineTests {
         ovi.setBlocked(true)
         ovi.visit(smallFont())
         #expect(ovi.state == .neutral)
-        #expect(store.shownToday(now: now) == 0)
+        #expect(store.record(.fontSize) == nil)
         ovi.setBlocked(false)
         #expect(noticing(ovi)?.tip == .fontSize)
     }
@@ -231,6 +232,83 @@ struct OviEngineTests {
         dates.format.dateStyle = .numeric
         ovi.visit(OviContext(screen: .resumeEditor(UUID()), resume: dates))
         #expect(noticing(ovi)?.tip == .numericDates)
+        ovi.pendingHappy?.cancel()
+    }
+
+    // MARK: One tip at a time, then the next (2026-11-14)
+
+    private var twoMistakes: OviContext {
+        var both = smallFont()
+        both.resume?.format.dateStyle = .numeric
+        return both
+    }
+
+    @Test func closingATipShowsTheNextOneAfterHappy() async {
+        let ovi = engine()
+        ovi.visit(twoMistakes)
+        #expect(noticing(ovi)?.tip == .fontSize)
+        ovi.open()
+        ovi.close()
+        await ovi.pendingHappy?.value
+        #expect(noticing(ovi)?.tip == .numericDates)
+    }
+
+    @Test func dontShowAgainShowsTheNextOne() {
+        let ovi = engine()
+        ovi.visit(twoMistakes)
+        ovi.open()
+        ovi.dontShowAgain()
+        #expect(noticing(ovi)?.tip == .numericDates)
+    }
+
+    @Test func afterHappyTheNextOneShows() async {
+        let ovi = engine()
+        ovi.visit(twoMistakes)
+        ovi.open()
+        ovi.took(.setFontSize10)
+        var fixedFont = twoMistakes
+        fixedFont.resume?.format.fontSize = 11
+        ovi.contextProvider = { fixedFont }
+        await ovi.pendingHappy?.value
+        #expect(noticing(ovi)?.tip == .numericDates)
+    }
+
+    @Test func fixingByHandThenTheNextOneShows() async {
+        let ovi = engine()
+        ovi.visit(twoMistakes)
+        var fixedFont = twoMistakes
+        fixedFont.resume?.format.fontSize = 11
+        ovi.dataChanged(fixedFont)
+        await ovi.pendingCheck?.value
+        #expect(store.record(.fontSize)?.lastOutcome == .fixed)
+        await ovi.pendingHappy?.value
+        #expect(noticing(ovi)?.tip == .numericDates)
+    }
+
+    /// A sheet was open at check time; when it closes, Ovi looks again.
+    @Test func recheckAfterABlockerClears() {
+        let ovi = engine()
+        var sheetOpen = true
+        ovi.externalBlocker = { sheetOpen }
+        ovi.visit(smallFont())
+        #expect(ovi.state == .neutral)
+        sheetOpen = false
+        ovi.recheck()
+        #expect(noticing(ovi)?.tip == .fontSize)
+    }
+
+    /// Reverting with no tip showing mustn't swallow the Happy of a later fix.
+    @Test func discardOnlyCountsWhileATipShows() async {
+        let ovi = OviEngine(store: store, now: { [now] in now }) { duration in
+            if duration == OviEngine.happyHold { try await Task.sleep(for: .seconds(3600)) }
+        }
+        ovi.visit(fine)
+        ovi.discarded()
+        ovi.dataChanged(smallFont())
+        await ovi.pendingCheck?.value
+        ovi.dataChanged(fine)
+        await ovi.pendingCheck?.value
+        #expect(ovi.state == .happy)
         ovi.pendingHappy?.cancel()
     }
 }

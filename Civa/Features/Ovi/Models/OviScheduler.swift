@@ -9,7 +9,6 @@ import Foundation
 
 /// Which tip, if any, may show now (tip engine spec §5.2–§5.5).
 enum OviScheduler {
-    static let dailyCap = 3
     /// ✕ quiets a tip for 14 days.
     static let snooze: TimeInterval = 14 * 86_400
     /// A "!" left without ✕ or an action rests for 24 hours, so walking between screens doesn't replay it.
@@ -24,9 +23,9 @@ enum OviScheduler {
         return true
     }
 
-    /// The highest-priority eligible match, unless today's cap is reached.
+    /// The highest-priority eligible match. No daily limit (2026-11-14): tips show one at a time,
+    /// each as soon as the one before it is done.
     static func pick(_ matches: [OviMatch], store: OviStore, now: Date) -> OviMatch? {
-        guard store.shownToday(now: now) < dailyCap else { return nil }
-        return matches.first { isEligible($0.tip, store: store, now: now) }
+        matches.first { isEligible($0.tip, store: store, now: now) }
     }
 }
