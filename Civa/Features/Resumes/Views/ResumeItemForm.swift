@@ -199,8 +199,9 @@ struct ResumeItemForm: View {
                 HStack(alignment: .center) {
                     summaryTitle
                     Spacer()
-                    summaryEye
                     summaryActions
+                    // Last, so it lines up with the eyes in the rows below.
+                    summaryEye
                 }
                 VStack(alignment: .leading, spacing: Space.xs) {
                     HStack(alignment: .center) {

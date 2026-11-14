@@ -27,12 +27,17 @@ struct CareerProfileView: View {
             }
             .padding(.horizontal, Space.xl)
             .padding(.top, 20)
-            SegmentedTabs(
-                ProfileCategory.allCases,
-                selection: changes.selection(Bindable(navigation).profileCategory, pending: $pendingCategory),
-                title: \.shortTitle
-            )
-            .padding(.horizontal, Space.xl)
+            // Scrolls sideways when a narrow window can't fit all six tabs.
+            ScrollView(.horizontal) {
+                SegmentedTabs(
+                    ProfileCategory.allCases,
+                    selection: changes.selection(Bindable(navigation).profileCategory, pending: $pendingCategory),
+                    title: \.shortTitle
+                )
+                .padding(.horizontal, Space.xl)
+            }
+            .scrollIndicators(.never)
+            .scrollBounceBehavior(.basedOnSize)
             .padding(.top, Space.m)
             .padding(.bottom, Space.m)
             Rectangle().fill(Color.hairline).frame(height: 1)

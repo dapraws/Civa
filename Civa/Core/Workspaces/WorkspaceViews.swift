@@ -74,12 +74,17 @@ private struct WorkspaceSwitchAlert: ViewModifier {
 }
 
 /// Civa ▸ Switch Workspace, with a check by the open one.
-struct WorkspaceMenu: View {
+struct WorkspaceMenu<Label: View>: View {
     @Environment(\.openWindow) private var openWindow
     private let registry = WorkspaceRegistry.shared
+    private let label: Label
+
+    init(@ViewBuilder label: () -> Label) {
+        self.label = label()
+    }
 
     var body: some View {
-        Menu("Switch Workspace") {
+        Menu {
             ForEach(registry.all) { workspace in
                 Toggle(workspace.displayName, isOn: Binding(
                     get: { workspace.id == registry.currentID },
@@ -96,7 +101,16 @@ struct WorkspaceMenu: View {
                 Onboarding.shared.request = .settings
                 openWindow(id: "main")
             }
+        } label: {
+            label
         }
+    }
+}
+
+extension WorkspaceMenu where Label == Text {
+    /// The Civa menu's item.
+    init() {
+        label = Text("Switch Workspace")
     }
 }
 
@@ -258,4 +272,56 @@ struct WorkspacesSection: View {
         .civaForm()
         .frame(width: 700, height: 400)
         .preferredColorScheme(.dark)
+}
+
+/// Whose data this is, at the foot of the sidebar so a shared Mac never mixes people up.
+/// Clicking it switches workspaces.
+struct WorkspaceLabel: View {
+    private let registry = WorkspaceRegistry.shared
+
+    var body: some View {
+        WorkspaceMenu {
+            HStack(spacing: Space.xs) {
+                Image(systemName: "person.crop.circle")
+                    .accessibilityHidden(true)
+                Text(title)
+                    .lineLimit(1)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption2)
+                    .accessibilityHidden(true)
+            }
+            .font(.caption)
+            .foregroundStyle(Color.textSecondary)
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help(dataModeHelp ?? String(localized: "Workspace. Click to switch."))
+        .accessibilityLabel(Text("Workspace: \(title)"))
+    }
+
+    private var title: String {
+        #if DEBUG
+        if DataMode.current != .real { return "\(registry.current.displayName) · \(DataMode.current.title)" }
+        #endif
+        return registry.current.displayName
+    }
+
+    private var dataModeHelp: String? {
+        #if DEBUG
+        if DataMode.current != .real {
+            return String(localized: "This debug run starts fresh every launch. Switch in Settings → Developer.")
+        }
+        #endif
+        return nil
+    }
+}
+
+#Preview {
+    WorkspaceLabel().padding().background(Color.sidebar)
+}
+
+#Preview("Dark") {
+    WorkspaceLabel().padding().background(Color.sidebar).preferredColorScheme(.dark)
 }

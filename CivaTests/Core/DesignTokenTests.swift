@@ -24,11 +24,12 @@ struct DesignTokenTests {
         "accentPressed": ("1A3586", "3155C2"), "accentText": ("2649B8", "8EA8F2"),
         "accentTint": ("E6EBF8", "1E2742"), "onAccent": ("FFFFFF", "FFFFFF"),
         "claude": ("D97857", "E8946B"), "claudeText": ("A44A21", "E8946B"),
-        "claudeTint": ("FBEDE5", "3A2419"),
+        "claudeTint": ("FBEDE5", "3A2419"), "claudeBorder": ("EBC9B5", "5A3524"),
         "statusNeutral": ("736D64", "8E887F"), "statusAmber": ("9A5B00", "E0A33A"),
         "statusGreen": ("1F7A4D", "4CC38A"), "statusRed": ("B42318", "F07167"),
         "danger": ("B42318", "F07167"), "dangerFill": ("B42318", "C9372C"),
         "success": ("1F7A4D", "4CC38A"), "warning": ("9A5B00", "E0A33A"),
+        "claudeTintHover": ("F3E6DE", "402B20"), "claudeTintPressed": ("EEE1D9", "47322A"),
     ]
 
     @Test(arguments: tokens.keys.sorted())
@@ -66,7 +67,7 @@ struct DesignTokenTests {
         ("danger", "surface", 4.5), ("onAccent", "dangerFill", 4.5),
         ("fieldBorder", "surface", 3.0), ("fieldBorder", "canvas", 3.0),
         ("statusAmber", "selectionFill", 3.0), ("statusNeutral", "selectionFill", 3.0),
-        ("claude", "surface", 3.0),
+        ("claudeText", "claudeTintHover", 4.5), ("claudeText", "claudeTintPressed", 4.5),
         ("claudeText", "canvas", 4.5), ("claudeText", "surface", 4.5), ("accentText", "canvas", 4.5),
     ])
     func contrastPairsPassAA(foreground: String, background: String, minimum: Double) throws {
