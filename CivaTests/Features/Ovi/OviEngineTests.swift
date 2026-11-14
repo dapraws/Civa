@@ -22,6 +22,9 @@ struct OviEngineTests {
 
     private func smallFont(_ size: Double = 9) -> OviContext {
         var document = ResumeDocument.blank
+        // Contact details filled in, so only the tips under test match.
+        document.header.email = "darrel@example.com"
+        document.header.phone = "+62 812 0000 0000"
         document.format.fontSize = size
         return OviContext(screen: .resumeEditor(UUID()), resume: document, resumePageCount: 1)
     }
@@ -140,7 +143,7 @@ struct OviEngineTests {
         ovi.visit(smallFont())
         ovi.visit(fine)
         #expect(ovi.state == .neutral)
-        var dates = ResumeDocument.blank
+        var dates = ResumeDocument.withContact
         dates.format.dateStyle = .numeric
         ovi.visit(OviContext(screen: .resumeEditor(UUID()), resume: dates))
         #expect(noticing(ovi)?.tip == .numericDates)
@@ -179,14 +182,14 @@ struct OviEngineTests {
     }
 
     @Test func fontSizeActionSetsTen() {
-        var document = ResumeDocument.blank
+        var document = ResumeDocument.withContact
         document.format.fontSize = 9
         OviAction.setFontSize10.apply(to: &document)
         #expect(document.format.fontSize == 10)
     }
 
     @Test func numericDatesActionSetsShort() {
-        var document = ResumeDocument.blank
+        var document = ResumeDocument.withContact
         document.format.dateStyle = .numeric
         OviAction.useShortDates.apply(to: &document)
         #expect(document.format.dateStyle == .short)
@@ -210,7 +213,7 @@ struct OviEngineTests {
     @Test func resumeActionGoesThroughTheEditor() throws {
         let container = try ModelContainer.civa(inMemory: true)
         let context = container.mainContext
-        var document = ResumeDocument.blank
+        var document = ResumeDocument.withContact
         document.format.fontSize = 9
         let resume = Resume(title: "Master", document: document)
         context.insert(resume)
@@ -228,7 +231,7 @@ struct OviEngineTests {
         ovi.visit(smallFont())
         ovi.open()
         ovi.took(.setFontSize10)
-        var dates = ResumeDocument.blank
+        var dates = ResumeDocument.withContact
         dates.format.dateStyle = .numeric
         ovi.visit(OviContext(screen: .resumeEditor(UUID()), resume: dates))
         #expect(noticing(ovi)?.tip == .numericDates)
@@ -310,5 +313,15 @@ struct OviEngineTests {
         await ovi.pendingCheck?.value
         #expect(ovi.state == .happy)
         ovi.pendingHappy?.cancel()
+    }
+}
+
+extension ResumeDocument {
+    /// A blank resume with an email and phone, so the contact tip stays out of the way.
+    static var withContact: ResumeDocument {
+        var document = ResumeDocument.blank
+        document.header.email = "darrel@example.com"
+        document.header.phone = "+62 812 0000 0000"
+        return document
     }
 }

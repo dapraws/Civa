@@ -55,6 +55,8 @@ enum OviContextBuilder {
             else { return nil }
             let document = resume.document
             hasher.combine(document)
+            let justExported = navigation.justExportedResumeID == id
+            hasher.combine(justExported)
             guard full else {
                 built = OviContext(screen: .resumeEditor(id), resume: document)
                 break
@@ -65,26 +67,60 @@ enum OviContextBuilder {
             )
             // Rendered only when the engine checks (after the 1.5 s debounce), not per keystroke.
             let pages = PDFDocument(data: ResumeRenderer.pdf(for: document))?.pageCount ?? 1
-            built = OviContext(
+            let experiences = fetch(Experience.self, nil, in: context)
+            var resumeContext = OviContext(
                 screen: .resumeEditor(id),
                 resume: document,
                 resumePageCount: pages,
                 educationLevels: levels,
-                yearsOfExperience: yearsOfExperience(fetch(Experience.self, nil, in: context))
+                yearsOfExperience: yearsOfExperience(experiences)
             )
+            resumeContext.largestGapMonths = largestGapMonths(experiences)
+            resumeContext.justExported = justExported
+            built = resumeContext
         case .applications:
             guard let id = navigation.openRecordID,
                   let application = fetch(JobApplication.self, #Predicate { $0.id == id }, in: context).first
             else { return nil }
             hasher.combine(application.resume?.id)
             hasher.combine(application.resume?.isMaster)
-            built = OviContext(screen: .applicationRecord(id), application: application)
+            var applicationContext = OviContext(screen: .applicationRecord(id), application: application)
+            if full, let resumeID = application.resume?.id {
+                let weekAgo = Date.now.addingTimeInterval(-7 * 86_400)
+                applicationContext.applicationsWithSameResumeThisWeek = fetch(
+                    JobApplication.self, #Predicate { $0.createdAt >= weekAgo }, in: context
+                ).filter { $0.resume?.id == resumeID }.count
+            }
+            built = applicationContext
         default:
             built = nil
         }
         guard var built else { return nil }
         built.isNewRecord = isNewRecord
         return (built, hasher.finalize())
+    }
+
+    /// The longest stretch, in months, between the end of one professional role and the start of
+    /// the next one, with overlapping roles merged. Roles without a start date are skipped.
+    static func largestGapMonths(_ experiences: [Experience], now: Date = .now) -> Int {
+        let today = Calendar.current.dateComponents([.year, .month], from: now)
+        let todayIndex = (today.year ?? 0) * 12 + (today.month ?? 1)
+        let index = { (value: YearMonth) in value.year * 12 + (value.month ?? 1) }
+        let spans = experiences
+            .filter { $0.kind == .professional }
+            .compactMap { record -> (start: Int, end: Int)? in
+                guard let start = record.start else { return nil }
+                let end = record.isCurrent ? todayIndex : record.end.map(index) ?? index(start)
+                return (index(start), max(index(start), end))
+            }
+            .sorted { $0.start < $1.start }
+        var largest = 0
+        var reach: Int?
+        for span in spans {
+            if let reach { largest = max(largest, span.start - reach) }
+            reach = max(reach ?? span.end, span.end)
+        }
+        return largest
     }
 
     /// Summed spans of professional experience, start to end or to today when current (spec §4.3).
@@ -142,6 +178,7 @@ struct OviWatcher: View {
             ) {
                 // A first save only counts for the record it was made on.
                 if navigation.justSavedRecordID != navigation.openRecordID { navigation.justSavedRecordID = nil }
+                if navigation.justExportedResumeID != navigation.openRecordID { navigation.justExportedResumeID = nil }
                 ovi.visit(built?.context)
             }
             .onChange(of: built?.signature) {

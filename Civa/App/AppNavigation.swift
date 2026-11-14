@@ -25,6 +25,8 @@ final class AppNavigation {
     var openRecordID: UUID?
     /// The record whose first save just succeeded (Ovi's `numberLog`).
     var justSavedRecordID: UUID?
+    /// The resume just exported, for Ovi's proofread tip; cleared on the next visit.
+    var justExportedResumeID: UUID?
     /// Bumped when the open editor's changes are reverted, so Ovi closes without Happy.
     var revertCount = 0
     /// Ovi's "Tailor a copy": the Resumes page opens the Tailor sheet for this resume.

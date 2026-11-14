@@ -35,6 +35,7 @@ struct ResumeExportButton: View {
     let editor: RecordEditor<Resume>
 
     @Environment(\.modelContext) private var context
+    @Environment(AppNavigation.self) private var navigation
     @State private var file: PDFFile?
     @State private var issues: [String] = []
     @State private var isReviewingIssues = false
@@ -55,10 +56,17 @@ struct ResumeExportButton: View {
                 isPresented: $isExporting,
                 document: file,
                 contentType: .pdf,
-                defaultFilename: editor.record.displayTitle
+                // "Darrel Prawira - iOS Engineer", like a dragged-out PDF.
+                defaultFilename: String(ResumeFileName.make(
+                    fullName: editor.record.document.header.fullName,
+                    target: editor.record.targetPosition,
+                    title: editor.record.displayTitle
+                ).dropLast(4))
             ) { result in
                 switch result {
-                case .success: recordExport()
+                case .success:
+                    navigation.justExportedResumeID = editor.record.id
+                    recordExport()
                 case .failure(let error): exportError = error.localizedDescription
                 }
             }

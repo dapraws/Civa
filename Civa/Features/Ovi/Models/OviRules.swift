@@ -24,11 +24,24 @@ struct OviContext {
     var justSavedNewCurrentExperience = false
     /// The open record hasn't been saved yet: skipped until its first save (spec §5.1).
     var isNewRecord = false
+    /// The longest gap, in months, between professional roles in the profile (`careerGap`).
+    var largestGapMonths = 0
+    /// This resume was just exported (`proofread`).
+    var justExported = false
+    /// Applications created in the last 7 days that use this application's resume (`sameResume`).
+    var applicationsWithSameResumeThisWeek = 0
 }
 
 /// The tip rules of spec §4.2 and their copy (§4.3).
 enum OviRules {
     static let weakOpenings = ["responsible for", "helped", "worked on", "assisted", "bertanggung jawab", "membantu"]
+    /// Self-praise that's easy to claim and hard to believe (Harvard OCS), English and Indonesian.
+    static let selfPraise = [
+        "team player", "hard worker", "hard-working", "hardworking", "results-oriented", "results-driven",
+        "detail-oriented", "self-motivated", "go-getter", "fast learner", "quick learner", "think outside the box",
+        "excellent communication", "pekerja keras", "cepat belajar", "berorientasi pada hasil",
+        "mampu bekerja dalam tim", "mampu bekerja sama", "mampu bekerja di bawah tekanan",
+    ]
 
     /// Every tip that matches the screen, in priority order.
     static func matches(in context: OviContext) -> [OviMatch] {
@@ -89,6 +102,37 @@ enum OviRules {
                 : (context.resume?.sections ?? []).filter { $0.kind == .skills }.flatMap(\.entries).map(\.title)
             guard categories.contains(where: { $0.localizedCaseInsensitiveContains("soft skill") }) else { return nil }
             return copy(.softSkills)
+        case .contactDetails:
+            guard let header = context.resume?.header.printed else { return nil }
+            let noEmail = header.email.isBlank, noPhone = header.phone.isBlank
+            guard noEmail || noPhone else { return nil }
+            return contactDetails(noEmail: noEmail, noPhone: noPhone)
+        case .sameResume:
+            guard let resume = context.application?.resume, !resume.isMaster,
+                  context.applicationsWithSameResumeThisWeek >= 5
+            else { return nil }
+            return sameResume(context.applicationsWithSameResumeThisWeek, resumeID: resume.id)
+        case .educationFirst:
+            let first = (context.resume?.sections ?? []).first?.kind
+            guard first == .education, context.yearsOfExperience >= 3 else { return nil }
+            return copy(.educationFirst)
+        case .selfPraise:
+            let texts = context.screen.kind == .skills
+                ? context.skills.map(\.name)
+                : [context.resume?.printedSummary ?? ""]
+                    + (context.resume?.sections ?? []).filter { $0.kind == .skills }.flatMap(\.entries).flatMap { [$0.title, $0.subtitle] }
+            for text in texts {
+                if let range = selfPraise.lazy.compactMap({ text.range(of: $0, options: .caseInsensitive) }).first {
+                    return selfPraise(phrase: String(text[range]))
+                }
+            }
+            return nil
+        case .careerGap:
+            guard context.largestGapMonths >= 6 else { return nil }
+            return careerGap(context.largestGapMonths)
+        case .proofread:
+            guard context.justExported else { return nil }
+            return copy(.proofread)
         case .numberLog:
             guard context.justSavedNewCurrentExperience, context.experience?.isCurrent == true else { return nil }
             return copy(.numberLog)
@@ -165,6 +209,48 @@ enum OviRules {
         )
     }
 
+    private static func contactDetails(noEmail: Bool, noPhone: Bool) -> OviMatch {
+        OviMatch(
+            tip: .contactDetails,
+            title: String(localized: "Add a way to reach you"),
+            body: noEmail && noPhone
+                ? String(localized: "This resume shows no email or phone. A missing contact detail is one of the most common mistakes.")
+                : noEmail
+                ? String(localized: "This resume shows no email. Recruiters expect both an email and a phone number.")
+                : String(localized: "This resume shows no phone number. Recruiters expect both an email and a phone number."),
+            source: "Harvard · MIT CAPD"
+        )
+    }
+
+    private static func sameResume(_ count: Int, resumeID: UUID) -> OviMatch {
+        OviMatch(
+            tip: .sameResume,
+            title: String(localized: "One resume, \(count) jobs"),
+            body: String(localized: "\(count) applications this week use this resume. A copy tailored to each job's wording usually lands better."),
+            source: "MIT CAPD · Harvard",
+            action: .tailorCopy(resumeID: resumeID)
+        )
+    }
+
+    private static func selfPraise(phrase: String) -> OviMatch {
+        let phrase = phrase.prefix(1).uppercased() + phrase.dropFirst()
+        return OviMatch(
+            tip: .selfPraise,
+            title: String(localized: "Show it instead of saying it"),
+            body: String(localized: "\"\(phrase)\" is easy to claim and hard to believe. A bullet about a time you did it says more."),
+            source: "Harvard"
+        )
+    }
+
+    private static func careerGap(_ months: Int) -> OviMatch {
+        OviMatch(
+            tip: .careerGap,
+            title: String(localized: "About the gap"),
+            body: String(localized: "There's a \(months)-month gap between roles. A short line, like a course or freelance work, can explain it."),
+            source: "Harvard"
+        )
+    }
+
     private static func copy(_ tip: OviTipID, action: OviAction? = nil) -> OviMatch {
         let (title, body, source): (String, String, String) = switch tip {
         case .tailor: (
@@ -187,6 +273,14 @@ enum OviRules {
             String(localized: "About soft skills"),
             String(localized: "MIT suggests showing skills like leadership in your bullets instead of the Skills list. Keep them if you like."),
             "MIT CAPD")
+        case .educationFirst: (
+            String(localized: "Experience first now?"),
+            String(localized: "With a few years of work, most resumes put Experience above Education. Drag it down in the outline."),
+            "MIT CAPD")
+        case .proofread: (
+            String(localized: "Read it once more"),
+            String(localized: "Typos are one of the most common reasons a resume gets passed over. Reading it aloud catches what spellcheck misses."),
+            "Harvard")
         case .numberLog: (
             String(localized: "Start a number log"),
             String(localized: "For this current role, note one number a month: users, hours saved, sales. Later bullets will need them."),
@@ -206,6 +300,12 @@ enum OviRules {
             actionVerb(phrase: "Bertanggung jawab"),
             bulletCount(99),
             copy(.addNumber), copy(.softSkills), copy(.numberLog),
+            contactDetails(noEmail: true, noPhone: true), contactDetails(noEmail: true, noPhone: false), contactDetails(noEmail: false, noPhone: true),
+            sameResume(99, resumeID: UUID()),
+            copy(.educationFirst),
+            selfPraise(phrase: "mampu bekerja di bawah tekanan"),
+            careerGap(120),
+            copy(.proofread),
         ]
     }
 }

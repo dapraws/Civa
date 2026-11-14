@@ -19,6 +19,9 @@ struct OviRulesTests {
 
     private func resume(fontSize: Double = 11, dateStyle: ResumeFormat.DateStyle? = .short, sections: [ResumeSection] = []) -> ResumeDocument {
         var document = ResumeDocument.blank
+        // Contact details filled in, so only the tips under test match.
+        document.header.email = "darrel@example.com"
+        document.header.phone = "+62 812 0000 0000"
         document.format.fontSize = fontSize
         document.format.dateStyle = dateStyle
         document.sections = sections
