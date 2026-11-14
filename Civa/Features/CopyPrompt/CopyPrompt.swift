@@ -50,7 +50,7 @@ nonisolated struct CopyPrompt: Equatable {
         if !bullets.isEmpty { includes.append(bullets.count == 1 ? String(localized: "1 bullet") : String(localized: "\(bullets.count) bullets")) }
         return CopyPrompt(
             title: String(localized: "Improve These Bullets"),
-            text: text,
+            text: scrubbed(text),
             includes: includes,
             excludes: [String(localized: "Your name and contact details"), String(localized: "Other records")]
         )
@@ -59,11 +59,13 @@ nonisolated struct CopyPrompt: Equatable {
     // MARK: Write a summary (resume)
 
     static func writeSummary(_ resume: ResumeDocument) -> CopyPrompt {
-        let current = resume.summary.trimmingCharacters(in: .whitespacesAndNewlines)
+        // What the eye hides stays out, as on the printed resume.
+        let current = resume.printedSummary.trimmingCharacters(in: .whitespacesAndNewlines)
+        let headline = resume.header.printed.headline
         let text = """
             You're an experienced career coach. Write the summary at the top of my resume: 2–3 sentences that say what I do, my strongest skills, and the result I'm known for. No first person ("I"), no clichés like "hard worker" or "team player".
 
-            Headline: \(resume.header.headline.isEmpty ? "(none)" : resume.header.headline)
+            Headline: \(headline.isEmpty ? "(none)" : headline)
             \(current.isEmpty ? "I have no summary yet." : "My summary now: \(current)")
 
             My resume:
@@ -73,7 +75,7 @@ nonisolated struct CopyPrompt: Equatable {
             """
         return CopyPrompt(
             title: String(localized: "Write a Summary"),
-            text: text,
+            text: scrubbed(text),
             includes: [String(localized: "Headline and summary"), String(localized: "This resume's sections, entries, and bullets")],
             excludes: [String(localized: "Your name, email, phone, location, and links")]
         )
@@ -101,13 +103,31 @@ nonisolated struct CopyPrompt: Equatable {
         if resume != nil { includes.append(String(localized: "The resume's sections, entries, and bullets")) }
         return CopyPrompt(
             title: String(localized: "Tailor to This Job"),
-            text: text,
+            text: scrubbed(text),
             includes: includes,
             excludes: [String(localized: "Your name, email, phone, location, and links")]
         )
     }
 
     // MARK: Helpers
+
+    /// Emails, phone numbers, and links typed into any text become [email], [phone], and [link],
+    /// so the sheet's "Leaves out" holds whatever the user wrote where.
+    static func scrubbed(_ text: String) -> String {
+        let types: NSTextCheckingResult.CheckingType = [.link, .phoneNumber]
+        guard let detector = try? NSDataDetector(types: types.rawValue) else { return text }
+        var result = text
+        let matches = detector.matches(in: text, range: NSRange(text.startIndex..., in: text))
+        for match in matches.reversed() {
+            guard let range = Range(match.range, in: result) else { continue }
+            let placeholder = switch match.resultType {
+            case .phoneNumber: "[phone]"
+            default: match.url?.scheme == "mailto" ? "[email]" : "[link]"
+            }
+            result.replaceSubrange(range, with: placeholder)
+        }
+        return result
+    }
 
     /// A resume as plain text, without the header (name and contact details stay out).
     private static func body(of resume: ResumeDocument) -> String {

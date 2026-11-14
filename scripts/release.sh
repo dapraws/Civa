@@ -16,8 +16,9 @@ PROFILE=${NOTARY_PROFILE:-civa-notary}
 ROOT=${0:A:h:h}
 OUT="$ROOT/build/release"
 
-if ! security find-identity -v -p codesigning | grep -q "Developer ID Application"; then
-    echo "No Developer ID Application certificate found. See the setup notes at the top of this script." >&2
+IDENTITY=$(security find-identity -v -p codesigning | grep -o "\"Developer ID Application: [^\"]*($TEAM_ID)\"" | head -1 | tr -d '"') || true
+if [[ -z "$IDENTITY" ]]; then
+    echo "No Developer ID Application certificate for team $TEAM_ID. See the setup notes at the top of this script." >&2
     exit 1
 fi
 
@@ -54,7 +55,7 @@ mkdir -p "$STAGE"
 cp -R "$APP" "$STAGE/"
 ln -s /Applications "$STAGE/Applications"
 hdiutil create -volname "Civa" -srcfolder "$STAGE" -ov -format UDZO "$DMG" -quiet
-codesign --sign "Developer ID Application" --timestamp "$DMG"
+codesign --sign "$IDENTITY" --timestamp "$DMG"
 
 echo "Notarizing (this takes a few minutes)…"
 xcrun notarytool submit "$DMG" --keychain-profile "$PROFILE" --wait

@@ -78,15 +78,22 @@ struct OviMoreTipsTests {
             Experience(kind: .organizational, organization: "Club", role: "Lead", start: YearMonth(year: 2010, month: 1), end: YearMonth(year: 2010, month: 2)),
             Experience(kind: .professional, organization: "D", role: "R"),
         ]
-        // June 2022 → March 2023 is 9 months; Jan → Mar 2024 is 2.
-        #expect(OviContextBuilder.largestGapMonths(records, now: now) == 9)
+        // June 2022 → March 2023 leaves Jul–Feb: 8 months. Jan → Mar 2024 leaves February: 1.
+        #expect(OviContextBuilder.largestGapMonths(records, now: now) == 8)
         // Overlapping roles leave no gap.
         let overlapping = [
             Experience(kind: .professional, organization: "A", role: "R", start: YearMonth(year: 2020, month: 1), end: YearMonth(year: 2024, month: 1)),
             Experience(kind: .professional, organization: "B", role: "R", start: YearMonth(year: 2021, month: 1), end: YearMonth(year: 2022, month: 1)),
             Experience(kind: .professional, organization: "C", role: "R", start: YearMonth(year: 2024, month: 2), isCurrent: true),
         ]
-        #expect(OviContextBuilder.largestGapMonths(overlapping, now: now) == 1)
+        #expect(OviContextBuilder.largestGapMonths(overlapping, now: now) == 0)
+        // A year-only end runs to December; a role with no end and not current is skipped.
+        let rough = [
+            Experience(kind: .professional, organization: "A", role: "R", start: YearMonth(year: 2019, month: 2), end: YearMonth(year: 2020, month: nil)),
+            Experience(kind: .professional, organization: "B", role: "R", start: YearMonth(year: 2021, month: 2), isCurrent: true),
+            Experience(kind: .professional, organization: "C", role: "R", start: YearMonth(year: 2015, month: 1)),
+        ]
+        #expect(OviContextBuilder.largestGapMonths(rough, now: now) == 1)
     }
 
     // T4
@@ -97,6 +104,8 @@ struct OviMoreTipsTests {
         #expect(onResume(resume { $0.sections = [education, experience] }, years: 3).contains(.educationFirst))
         #expect(!onResume(resume { $0.sections = [education, experience] }, years: 1).contains(.educationFirst))
         #expect(!onResume(resume { $0.sections = [experience, education] }, years: 5).contains(.educationFirst))
+        // A student who keeps Education first on purpose hears it once.
+        #expect(OviTipID.educationFirst.isOnceEver)
     }
 
     // T5

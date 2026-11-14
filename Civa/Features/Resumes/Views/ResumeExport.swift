@@ -66,6 +66,7 @@ struct ResumeExportButton: View {
                 switch result {
                 case .success:
                     navigation.justExportedResumeID = editor.record.id
+                    navigation.justExportedAt = .now
                     recordExport()
                 case .failure(let error): exportError = error.localizedDescription
                 }

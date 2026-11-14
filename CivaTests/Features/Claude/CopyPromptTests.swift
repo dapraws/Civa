@@ -70,4 +70,24 @@ struct CopyPromptTests {
         #expect(prompt.text.contains("no resume"))
         #expect(prompt.includes == ["Position and company", "Job description"])
     }
+
+    /// What the eye hides stays out, and contact details typed into any text are replaced.
+    @Test func hiddenTextAndTypedContactDetailsStayOut() {
+        var document = resume
+        document.summary = "Reach me at darrel@example.com or +62 812 3456 7890, portfolio darrel.dev/work."
+        document.header.setShows(.headline, false)
+        document.sections[0].entries[0].bullets = ["Shipped app, see https://apps.apple.com/app/id123"]
+        let summary = CopyPrompt.writeSummary(document)
+        #expect(!summary.text.contains("darrel@example.com"))
+        #expect(!summary.text.contains("3456"))
+        #expect(!summary.text.contains("apps.apple.com"))
+        #expect(!summary.text.contains("iOS Engineer · SwiftUI"))
+        #expect(summary.text.contains("[email]"))
+        var hidden = document
+        hidden.hidesSummary = true
+        #expect(!CopyPrompt.writeSummary(hidden).text.contains("Reach me"))
+        let bullets = CopyPrompt.improveBullets(role: "iOS Engineer", organization: "Gojek", bullets: ["Mail me: a@b.co"])
+        #expect(!bullets.text.contains("a@b.co"))
+    }
 }
+

@@ -33,6 +33,8 @@ final class OviEngine {
     private var context: OviContext?
     private var isBlocked = false
     private var wasDiscarded = false
+    /// The tip whose action was just taken: Revert undoes the action, so the tip rests then.
+    private var lastActed: OviTipID?
     /// Checked with every check: an open sheet or marked (IME) text. Set by the app.
     var externalBlocker: () -> Bool = { false }
     /// Builds the full context at check time (the resume's page count needs a PDF render), so it
@@ -93,6 +95,14 @@ final class OviEngine {
     /// showing there's nothing to close, so a later fix still gets its Happy.
     func discarded() {
         wasDiscarded = current != nil
+        // Reverting the change a tip's action made would bring the "!" straight back; let it rest.
+        if current == nil, let tip = lastActed {
+            store.update(tip) {
+                $0.lastShown = now()
+                $0.lastOutcome = .shown
+            }
+        }
+        lastActed = nil
     }
 
     /// Looks again now, such as when a sheet that was blocking the "!" closes.
@@ -131,6 +141,7 @@ final class OviEngine {
     func took(_ action: OviAction) {
         guard let match = current else { return }
         store.update(match.tip) { $0.lastOutcome = .acted }
+        lastActed = match.tip
         showHappy()
     }
 

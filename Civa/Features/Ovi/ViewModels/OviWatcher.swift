@@ -45,6 +45,7 @@ enum OviContextBuilder {
             case .other where navigation.isOnSkills:
                 let skills = fetch(Skill.self, nil, in: context)
                 hasher.combine(skills.map(\.category))
+                hasher.combine(skills.map(\.name))  // the self-praise tip reads names
                 built = OviContext(screen: .skills, skills: skills)
             default:
                 built = nil
@@ -55,7 +56,9 @@ enum OviContextBuilder {
             else { return nil }
             let document = resume.document
             hasher.combine(document)
+            // Only right after the export: a tip still showing then mustn't push it to much later.
             let justExported = navigation.justExportedResumeID == id
+                && (navigation.justExportedAt.map { Date.now.timeIntervalSince($0) < 120 } ?? false)
             hasher.combine(justExported)
             guard full else {
                 built = OviContext(screen: .resumeEditor(id), resume: document)
@@ -100,24 +103,27 @@ enum OviContextBuilder {
         return (built, hasher.finalize())
     }
 
-    /// The longest stretch, in months, between the end of one professional role and the start of
-    /// the next one, with overlapping roles merged. Roles without a start date are skipped.
+    /// The longest stretch, in whole months, between the end of one professional role and the
+    /// start of the next, with overlapping roles merged. A year-only end counts as December; roles
+    /// without a start, or with no end that aren't current, are skipped (their length is unknown).
     static func largestGapMonths(_ experiences: [Experience], now: Date = .now) -> Int {
         let today = Calendar.current.dateComponents([.year, .month], from: now)
         let todayIndex = (today.year ?? 0) * 12 + (today.month ?? 1)
-        let index = { (value: YearMonth) in value.year * 12 + (value.month ?? 1) }
         let spans = experiences
             .filter { $0.kind == .professional }
             .compactMap { record -> (start: Int, end: Int)? in
                 guard let start = record.start else { return nil }
-                let end = record.isCurrent ? todayIndex : record.end.map(index) ?? index(start)
-                return (index(start), max(index(start), end))
+                let startIndex = start.year * 12 + (start.month ?? 1)
+                if record.isCurrent { return (startIndex, todayIndex) }
+                guard let end = record.end else { return nil }
+                return (startIndex, max(startIndex, end.year * 12 + (end.month ?? 12)))
             }
             .sorted { $0.start < $1.start }
         var largest = 0
         var reach: Int?
         for span in spans {
-            if let reach { largest = max(largest, span.start - reach) }
+            // Ending in March and starting in September leaves April to August: 5 months.
+            if let reach { largest = max(largest, span.start - reach - 1) }
             reach = max(reach ?? span.end, span.end)
         }
         return largest

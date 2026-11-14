@@ -37,7 +37,7 @@ enum OviTipID: String, CaseIterable, Codable {
 
     /// Shown at most once, ever.
     var isOnceEver: Bool {
-        [.pageCount, .softSkills, .numberLog, .careerGap, .proofread].contains(self)
+        [.pageCount, .softSkills, .numberLog, .careerGap, .proofread, .educationFirst].contains(self)
     }
 
     var screens: Set<OviScreen.Kind> {

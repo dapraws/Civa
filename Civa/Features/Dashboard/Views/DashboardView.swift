@@ -29,6 +29,8 @@ struct DashboardView: View {
     private var claudeRequests: [ClaudeRequest]
     @State private var isSettingUpClaude = false
     @State private var showsAllNeeds = false
+    /// The Continue resume's page count, rendered once per edit rather than on every refresh.
+    @State private var continuePages: Int?
 
     var body: some View {
         let summary = DashboardSummary(
@@ -61,6 +63,11 @@ struct DashboardView: View {
                         GettingStartedCard(steps: gettingStarted(summary), onShowMe: showMe)
                         RatioRow(ratios: [3, 2], spacing: Space.m) {
                             continueTile(summary.continueResume)
+                                .task(id: summary.continueResume.map { "\($0.id)\($0.updatedAt)" }) {
+                                    continuePages = summary.continueResume.map {
+                                        PDFDocument(data: ResumeRenderer.pdf(for: $0.document))?.pageCount ?? 1
+                                    }
+                                }
                             profileTile(summary)
                         }
                         pipeline(summary)
@@ -104,13 +111,13 @@ struct DashboardView: View {
 
     // MARK: Tiles (DESIGN.md §8.2)
 
-    @ViewBuilder
-    /// "1 page" or "2 pages", from the rendered PDF (one resume, on the Dashboard only).
-    private func pageText(_ resume: Resume) -> String {
-        let pages = PDFDocument(data: ResumeRenderer.pdf(for: resume.document))?.pageCount ?? 1
-        return pages == 1 ? String(localized: "1 page") : String(localized: "\(pages) pages")
+    /// "1 page" or "2 pages", once `continuePages` is known.
+    private var pageText: String {
+        guard let pages = continuePages else { return "" }
+        return pages == 1 ? String(localized: "1 page · ") : String(localized: "\(pages) pages · ")
     }
 
+    @ViewBuilder
     private func continueTile(_ resume: Resume?) -> some View {
         Group {
             if let resume {
@@ -131,7 +138,7 @@ struct DashboardView: View {
                             .font(.sectionTitle)
                             .foregroundStyle(Color.textPrimary)
                             .lineLimit(1)
-                        Text("Resume · \(pageText(resume)) · edited \(resume.updatedAt, format: .relative(presentation: .named))")
+                        Text("Resume · \(pageText)edited \(resume.updatedAt, format: .relative(presentation: .named))")
                             .font(.callout)
                             .foregroundStyle(Color.textSecondary)
                         Button("Open in Editor") { openResume(resume) }

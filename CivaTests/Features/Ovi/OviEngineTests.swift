@@ -314,6 +314,21 @@ struct OviEngineTests {
         #expect(ovi.state == .happy)
         ovi.pendingHappy?.cancel()
     }
+
+    /// Taking the action and then reverting it mustn't bring the "!" straight back.
+    @Test func revertAfterTheActionRestsTheTip() async {
+        let ovi = engine()
+        ovi.visit(smallFont())
+        ovi.open()
+        ovi.took(.setFontSize10)
+        ovi.contextProvider = { [fine] in fine }
+        await ovi.pendingHappy?.value
+        ovi.contextProvider = nil
+        ovi.discarded()
+        ovi.dataChanged(smallFont())
+        await ovi.pendingCheck?.value
+        #expect(ovi.state == .neutral)
+    }
 }
 
 extension ResumeDocument {
