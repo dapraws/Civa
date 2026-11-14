@@ -11,9 +11,13 @@ import SwiftUI
 @main
 enum CivaMain {
     static func main() {
+        AppRelauncher.waitForPreviousInstance()
         if CommandLine.arguments.contains(ClaudeLink.helperArgument) {
             ClaudeHelper.run()
         } else {
+            // First, so a switch asked for before the restart swaps the workspace's preferences
+            // before Ovi, tips, or Claude's permissions read them.
+            _ = WorkspaceRegistry.shared
             CivaApp.main()
         }
     }

@@ -95,6 +95,8 @@ struct DocumentCard: View {
             }
         }
         .accessibilityElement(children: .combine)
+        // Drag the card to a job site's upload box, Mail, or Finder for the file itself.
+        .fileDrag { document.fileURL() }
     }
 
     private var linkedSummary: String? {
@@ -128,6 +130,8 @@ struct DocumentForm: View {
                     DocumentThumbnail(document: document, size: 220)
                         .frame(width: 160, height: 160)
                         .clipShape(.rect(cornerRadius: 8))
+                        .fileDrag { document.fileURL() }
+                        .help("Drag to a website, Mail, or Finder")
                     VStack(alignment: .leading, spacing: 6) {
                         Text(document.fileName)
                             .font(.headline)

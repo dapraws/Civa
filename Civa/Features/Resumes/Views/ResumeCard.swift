@@ -60,6 +60,8 @@ struct ResumeCard: View {
             }
         }
         .accessibilityElement(children: .combine)
+        // Drag the card to a job site's upload box, Mail, or Finder for the PDF.
+        .fileDrag { resume.dragFile() }
     }
 
     private var subtitle: String {

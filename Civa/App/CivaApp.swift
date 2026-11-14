@@ -19,7 +19,13 @@ struct CivaApp: App {
         case .real: break
         }
         #endif
-        return try ModelContainer.civa()
+        let workspaces = WorkspaceRegistry.shared
+        let container = try ModelContainer.civa(storeURL: workspaces.storeURL(for: workspaces.current))
+        // The first workspace takes the profile's name.
+        if let name = try? container.mainContext.fetch(FetchDescriptor<PersonalInfo>()).first?.fullName {
+            workspaces.nameOriginalIfNeeded(name)
+        }
+        return container
     }
 
     init() {
@@ -54,6 +60,7 @@ struct CivaApp: App {
         .commands {
             CommandGroup(replacing: .appSettings) {
                 SettingsCommand()
+                WorkspaceMenu()
             }
             CommandGroup(replacing: .help) {
                 HelpMenu()
