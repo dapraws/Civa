@@ -161,6 +161,8 @@ struct DocumentRow: View {
         .labelStyle(.iconOnly)
         .buttonStyle(.borderless)
         .quickLookPreview($previewURL)
+        .contentShape(.rect)
+        .fileDrag { document.fileURL() }
     }
 }
 
