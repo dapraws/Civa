@@ -21,8 +21,8 @@ struct ClaudePermissionsSection: View {
                     Toggle("Read", isOn: read(category))
                     Toggle("Suggest", isOn: suggest(category))
                 }
-                .toggleStyle(.checkbox)
-                .tint(.claude)
+                // The system checkbox ignores .tint and draws in Civa's blue accent.
+                .toggleStyle(ClaudeCheckboxStyle())
             }
         } header: {
             SectionTitle("What Claude May Use")
@@ -80,3 +80,30 @@ struct ClaudeRecentActivitySection: View {
     .frame(width: 560, height: 600)
     .previewEnvironment()
 }
+
+/// A checkbox filled with Claude's clay (claudeText, so the check keeps 4.5:1 on canvas in both modes), for switches that decide what Claude may do.
+struct ClaudeCheckboxStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Button { configuration.isOn.toggle() } label: {
+            HStack(spacing: Space.xs) {
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(configuration.isOn ? Color.claudeText : Color.surface)
+                    .strokeBorder(configuration.isOn ? Color.clear : Color.fieldBorder)
+                    .overlay {
+                        if configuration.isOn {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundStyle(Color.canvas)
+                        }
+                    }
+                    .frame(width: 14, height: 14)
+                configuration.label
+            }
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(.isToggle)
+        .accessibilityValue(configuration.isOn ? Text("On") : Text("Off"))
+    }
+}
+

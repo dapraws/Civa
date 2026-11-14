@@ -153,6 +153,31 @@ struct ResumeItemForm: View {
         ))
     }
 
+    private var summaryTitle: some View {
+        HStack {
+            Text("Summary").fixedSize()
+            if document.claudeTouchedSummary == true { ClaudeTag() }
+        }
+    }
+
+    private var summaryEye: some View {
+        EyeToggle(isShown: Binding(
+            get: { document.hidesSummary != true },
+            set: { document.hidesSummary = $0 ? nil : true }
+        ))
+    }
+
+    @ViewBuilder private var summaryActions: some View {
+        AskClaudeButton(
+            title: "Write with Claude",
+            ask: .init(kind: .writeSummary, category: .resumes, targetID: editor.record.id, targetTitle: editor.record.displayTitle),
+            unavailable: summaryUnavailable,
+            showsReason: false,
+            saveFirst: editor.saveIfNeeded
+        )
+        CopyPromptButton { .writeSummary(document) }
+    }
+
     private var summaryField: some View {
         Section {
             TextField(
@@ -168,22 +193,23 @@ struct ResumeItemForm: View {
                 set: { document.format.showsSummaryHeading = $0 }
             ))
         } header: {
-            HStack(alignment: .center) {
-                Text("Summary")
-                if document.claudeTouchedSummary == true { ClaudeTag() }
-                Spacer()
-                EyeToggle(isShown: Binding(
-                    get: { document.hidesSummary != true },
-                    set: { document.hidesSummary = $0 ? nil : true }
-                ))
-                AskClaudeButton(
-                    title: "Write with Claude",
-                    ask: .init(kind: .writeSummary, category: .resumes, targetID: editor.record.id, targetTitle: editor.record.displayTitle),
-                    unavailable: summaryUnavailable,
-                    showsReason: false,
-                    saveFirst: editor.saveIfNeeded
-                )
-                CopyPromptButton { .writeSummary(document) }
+            // The editor column is narrow: when the actions don't fit beside the title, they
+            // move to a second line instead of squeezing "Summary" letter by letter.
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .center) {
+                    summaryTitle
+                    Spacer()
+                    summaryEye
+                    summaryActions
+                }
+                VStack(alignment: .leading, spacing: Space.xs) {
+                    HStack(alignment: .center) {
+                        summaryTitle
+                        Spacer()
+                        summaryEye
+                    }
+                    HStack(spacing: Space.m) { summaryActions }
+                }
             }
         } footer: {
             VStack(alignment: .leading, spacing: 4) {

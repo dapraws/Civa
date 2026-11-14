@@ -48,7 +48,7 @@ struct ClaudeSetupSheet: View {
                                     .accessibilityLabel("Done")
                             } else {
                                 Button("Connect…", action: connect)
-                                    .civaButton(.primary)
+                                    .civaButton(.claude)
                             }
                         }
                         if let error { FieldError(error) }
@@ -153,6 +153,7 @@ struct ClaudeSettingsSection: View {
                 }
                 HStack {
                     Button("Run Setup Again…") { isSettingUp = true }
+                        .civaButton(.claude)
                     Spacer()
                     Button("Disconnect…", role: .destructive) { isConfirmingDisconnect = true }
                 }
@@ -161,6 +162,7 @@ struct ClaudeSettingsSection: View {
                     Text("Not connected")
                     Spacer()
                     Button("Set Up…") { isSettingUp = true }
+                        .civaButton(.claude)
                 }
             }
             if let error { FieldError(error) }
