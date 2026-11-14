@@ -17,7 +17,7 @@ struct OviSchedulerTests {
         calendar.timeZone = TimeZone(identifier: "Asia/Jakarta")!
         return calendar
     }
-    private var store: OviStore { OviStore(defaults: defaults, calendar: calendar) }
+    private var store: OviStore { OviStore(defaults: defaults) }
 
     private func date(_ text: String) -> Date {
         try! Date(text, strategy: .iso8601)
@@ -67,19 +67,13 @@ struct OviSchedulerTests {
         #expect(picked?.tip == .numericDates)
     }
 
-    @Test func dailyCapIsThree() {
+    /// No daily limit: every eligible tip can show (2026-11-14).
+    @Test func noDailyLimit() {
         let now = date(noon)
-        for _ in 0..<3 { store.countShown(now: now) }
-        #expect(store.shownToday(now: now) == 3)
-        #expect(OviScheduler.pick([match(.fontSize)], store: store, now: now) == nil)
-    }
-
-    @Test func dailyCapResetsAtMidnight() {
-        let beforeMidnight = date("2026-11-12T16:59:00Z")  // 23:59 in Jakarta
-        let afterMidnight = date("2026-11-12T17:01:00Z")   // 00:01 next day
-        for _ in 0..<3 { store.countShown(now: beforeMidnight) }
-        #expect(store.shownToday(now: afterMidnight) == 0)
-        #expect(OviScheduler.pick([match(.fontSize)], store: store, now: afterMidnight)?.tip == .fontSize)
+        for tip in [OviTipID.fontSize, .numericDates, .highSchool, .actionVerb] {
+            store.update(tip) { $0.lastShown = now; $0.lastOutcome = .fixed }
+        }
+        #expect(OviScheduler.pick([match(.addNumber)], store: store, now: now)?.tip == .addNumber)
     }
 
     @Test func unknownAndCorruptStateIsIgnored() {
@@ -94,11 +88,9 @@ struct OviSchedulerTests {
     @Test func resetKeepsShowOvi() {
         store.isShown = false
         store.update(.fontSize) { $0.isEnded = true }
-        store.countShown(now: date(noon))
         store.reset()
         #expect(store.isShown == false)
         #expect(store.record(.fontSize) == nil)
-        #expect(store.shownToday(now: date(noon)) == 0)
     }
 
     @Test func showOviDefaultsToOn() {

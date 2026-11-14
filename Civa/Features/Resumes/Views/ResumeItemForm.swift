@@ -183,6 +183,7 @@ struct ResumeItemForm: View {
                     showsReason: false,
                     saveFirst: editor.saveIfNeeded
                 )
+                CopyPromptButton { .writeSummary(document) }
             }
         } footer: {
             VStack(alignment: .leading, spacing: 4) {

@@ -86,7 +86,12 @@ struct DesignTokenTests {
 
     @Test func youngSerifRegisters() {
         CivaFonts.register()
-        #expect(NSFont(name: "YoungSerif-Regular", size: 26) != nil)
+        let font = NSFont(name: "YoungSerif-Regular", size: 26)
+        #expect(font != nil)
+        // From Civa's bundle, not a copy installed on this Mac.
+        let url = font.flatMap { CTFontDescriptorCopyAttribute($0.fontDescriptor, kCTFontURLAttribute) as? URL }
+        let bundle = Bundle.main.bundleURL.resolvingSymlinksInPath().path
+        #expect(url?.resolvingSymlinksInPath().path.hasPrefix(bundle) == true)
     }
 
     private struct ColorSetFile: Decodable {

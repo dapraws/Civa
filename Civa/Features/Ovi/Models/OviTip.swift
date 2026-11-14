@@ -32,18 +32,20 @@ enum OviScreen: Hashable {
 
 /// Ovi's starter tips, in priority order (spec §4.2).
 enum OviTipID: String, CaseIterable, Codable {
-    case fontSize, entryDetails, tailor, numericDates, highSchool, pageCount, actionVerb, bulletCount, addNumber, softSkills, numberLog
+    case fontSize, entryDetails, contactDetails, tailor, sameResume, numericDates, highSchool, educationFirst, pageCount,
+         actionVerb, selfPraise, bulletCount, addNumber, careerGap, softSkills, proofread, numberLog
 
     /// Shown at most once, ever.
     var isOnceEver: Bool {
-        [.pageCount, .softSkills, .numberLog].contains(self)
+        [.pageCount, .softSkills, .numberLog, .careerGap, .proofread, .educationFirst].contains(self)
     }
 
     var screens: Set<OviScreen.Kind> {
         switch self {
-        case .fontSize, .numericDates, .highSchool, .pageCount: [.resumeEditor]
+        case .fontSize, .numericDates, .highSchool, .pageCount, .contactDetails, .careerGap, .educationFirst, .proofread: [.resumeEditor]
         case .entryDetails, .numberLog: [.experienceRecord]
-        case .tailor: [.applicationRecord]
+        case .tailor, .sameResume: [.applicationRecord]
+        case .selfPraise: [.skills, .resumeEditor]
         case .actionVerb, .bulletCount, .addNumber: [.experienceRecord, .projectRecord, .resumeEditor]
         case .softSkills: [.skills, .resumeEditor]
         }

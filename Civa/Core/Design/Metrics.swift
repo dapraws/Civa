@@ -46,11 +46,6 @@ enum Motion {
     static let fast = Animation.easeOut(duration: 0.12)
     static let standard = Animation.easeOut(duration: 0.2)
     static let emphasis = Animation.spring(response: 0.3, dampingFraction: 1.0)
-
-    /// The animation to use, or none when Reduce Motion is on.
-    static func animation(_ base: Animation, reduceMotion: Bool) -> Animation? {
-        reduceMotion ? nil : base
-    }
 }
 
 /// DESIGN.md §5.5: the only shadows in Civa.

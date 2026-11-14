@@ -153,7 +153,10 @@ extension SupportingDocument {
     func fileURL() -> URL? {
         let folder = FileManager.default.temporaryDirectory.appending(path: "Documents/\(id.uuidString)")
         let url = folder.appending(path: fileName.isEmpty ? "Document" : fileName)
-        if FileManager.default.fileExists(atPath: url.path) { return url }
+        // Reused only while it still holds these bytes: a replaced file with the same name is
+        // written again. The size check keeps the usual case to one file-system lookup.
+        let size = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int) ?? -1
+        if size == data.count, (try? Data(contentsOf: url)) == data { return url }
         do {
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
             try data.write(to: url)

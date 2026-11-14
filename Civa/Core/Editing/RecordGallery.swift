@@ -165,9 +165,9 @@ struct RecordGallery<Model: EditableRecord, Card: View, Editor: View, HeaderActi
                     EmptyStateView(
                         symbol: empty.systemImage,
                         title: LocalizedStringKey(empty.title),
-                        message: LocalizedStringKey(empty.message),
-                        button: (LocalizedStringKey(addTitle), .primary, addRecord)
+                        message: LocalizedStringKey(empty.message)
                     )
+                    // No Add here: the title row's Add is the one way to add.
                     .padding(.horizontal, Space.xl)
                     Spacer()
                 } else {

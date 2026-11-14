@@ -45,6 +45,7 @@ enum OviContextBuilder {
             case .other where navigation.isOnSkills:
                 let skills = fetch(Skill.self, nil, in: context)
                 hasher.combine(skills.map(\.category))
+                hasher.combine(skills.map(\.name))  // the self-praise tip reads names
                 built = OviContext(screen: .skills, skills: skills)
             default:
                 built = nil
@@ -55,6 +56,10 @@ enum OviContextBuilder {
             else { return nil }
             let document = resume.document
             hasher.combine(document)
+            // Only right after the export: a tip still showing then mustn't push it to much later.
+            let justExported = navigation.justExportedResumeID == id
+                && (navigation.justExportedAt.map { Date.now.timeIntervalSince($0) < 120 } ?? false)
+            hasher.combine(justExported)
             guard full else {
                 built = OviContext(screen: .resumeEditor(id), resume: document)
                 break
@@ -65,26 +70,63 @@ enum OviContextBuilder {
             )
             // Rendered only when the engine checks (after the 1.5 s debounce), not per keystroke.
             let pages = PDFDocument(data: ResumeRenderer.pdf(for: document))?.pageCount ?? 1
-            built = OviContext(
+            let experiences = fetch(Experience.self, nil, in: context)
+            var resumeContext = OviContext(
                 screen: .resumeEditor(id),
                 resume: document,
                 resumePageCount: pages,
                 educationLevels: levels,
-                yearsOfExperience: yearsOfExperience(fetch(Experience.self, nil, in: context))
+                yearsOfExperience: yearsOfExperience(experiences)
             )
+            resumeContext.largestGapMonths = largestGapMonths(experiences)
+            resumeContext.justExported = justExported
+            built = resumeContext
         case .applications:
             guard let id = navigation.openRecordID,
                   let application = fetch(JobApplication.self, #Predicate { $0.id == id }, in: context).first
             else { return nil }
             hasher.combine(application.resume?.id)
             hasher.combine(application.resume?.isMaster)
-            built = OviContext(screen: .applicationRecord(id), application: application)
+            var applicationContext = OviContext(screen: .applicationRecord(id), application: application)
+            if full, let resumeID = application.resume?.id {
+                let weekAgo = Date.now.addingTimeInterval(-7 * 86_400)
+                applicationContext.applicationsWithSameResumeThisWeek = fetch(
+                    JobApplication.self, #Predicate { $0.createdAt >= weekAgo }, in: context
+                ).filter { $0.resume?.id == resumeID }.count
+            }
+            built = applicationContext
         default:
             built = nil
         }
         guard var built else { return nil }
         built.isNewRecord = isNewRecord
         return (built, hasher.finalize())
+    }
+
+    /// The longest stretch, in whole months, between the end of one professional role and the
+    /// start of the next, with overlapping roles merged. A year-only end counts as December; roles
+    /// without a start, or with no end that aren't current, are skipped (their length is unknown).
+    static func largestGapMonths(_ experiences: [Experience], now: Date = .now) -> Int {
+        let today = Calendar.current.dateComponents([.year, .month], from: now)
+        let todayIndex = (today.year ?? 0) * 12 + (today.month ?? 1)
+        let spans = experiences
+            .filter { $0.kind == .professional }
+            .compactMap { record -> (start: Int, end: Int)? in
+                guard let start = record.start else { return nil }
+                let startIndex = start.year * 12 + (start.month ?? 1)
+                if record.isCurrent { return (startIndex, todayIndex) }
+                guard let end = record.end else { return nil }
+                return (startIndex, max(startIndex, end.year * 12 + (end.month ?? 12)))
+            }
+            .sorted { $0.start < $1.start }
+        var largest = 0
+        var reach: Int?
+        for span in spans {
+            // Ending in March and starting in September leaves April to August: 5 months.
+            if let reach { largest = max(largest, span.start - reach - 1) }
+            reach = max(reach ?? span.end, span.end)
+        }
+        return largest
     }
 
     /// Summed spans of professional experience, start to end or to today when current (spec §4.3).
@@ -118,6 +160,8 @@ struct OviWatcher: View {
     @Environment(\.modelContext) private var context
     @Environment(OviEngine.self) private var ovi
     @Environment(UnsavedChangesGuard.self) private var changes
+    /// Read so a new skill (an insert, which fetching doesn't observe) updates the signature.
+    @Query private var skills: [Skill]
 
     private struct Visit: Equatable {
         let section: AppSection
@@ -130,6 +174,7 @@ struct OviWatcher: View {
         // Reading the records here makes this view update whenever they change (Observation).
         let isNew = changes.active?.isNew ?? false
         let built = OviContextBuilder.make(navigation: navigation, in: context, isNewRecord: isNew, full: false)
+        let skillCount = skills.count
         Color.clear
             .frame(width: 0, height: 0)
             .accessibilityHidden(true)
@@ -139,10 +184,22 @@ struct OviWatcher: View {
             ) {
                 // A first save only counts for the record it was made on.
                 if navigation.justSavedRecordID != navigation.openRecordID { navigation.justSavedRecordID = nil }
+                if navigation.justExportedResumeID != navigation.openRecordID { navigation.justExportedResumeID = nil }
                 ovi.visit(built?.context)
             }
             .onChange(of: built?.signature) {
                 ovi.dataChanged(built?.context)
+            }
+            .onChange(of: skillCount) {
+                ovi.dataChanged(built?.context)
+            }
+            // A sheet blocked the "!" while it was open; look again once it's gone.
+            .onReceive(NotificationCenter.default.publisher(for: NSWindow.didEndSheetNotification)) { _ in
+                // The window may still list the sheet as it posts this; look a moment later.
+                Task {
+                    try? await Task.sleep(for: .milliseconds(300))
+                    ovi.recheck()
+                }
             }
             .onChange(of: navigation.revertCount) {
                 ovi.discarded()
