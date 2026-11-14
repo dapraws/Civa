@@ -153,9 +153,10 @@ struct ClaudeSettingsSection: View {
                 }
                 HStack {
                     Button("Run Setup Again…") { isSettingUp = true }
-                        .civaButton(.claude)
+                        .civaButton(.secondary)
                     Spacer()
                     Button("Disconnect…", role: .destructive) { isConfirmingDisconnect = true }
+                        .civaButton(.destructive)
                 }
             } else {
                 HStack {
