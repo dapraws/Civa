@@ -68,6 +68,18 @@ enum CivaTips {
             try? Tips.resetDatastore()
             UserDefaults.standard.removeObject(forKey: resetKey)
         }
-        try? Tips.configure()
+        var options: [Tips.ConfigurationOption] = []
+        // Each workspace remembers its own tips; the first keeps TipKit's usual place.
+        #if DEBUG
+        let usesWorkspace = DataMode.current == .real
+        #else
+        let usesWorkspace = true
+        #endif
+        let workspaces = WorkspaceRegistry.shared
+        if usesWorkspace, let url = workspaces.tipsURL(for: workspaces.current) {
+            try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+            options.append(.datastoreLocation(.url(url)))
+        }
+        try? Tips.configure(options)
     }
 }

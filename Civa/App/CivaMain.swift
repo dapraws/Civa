@@ -11,6 +11,7 @@ import SwiftUI
 @main
 enum CivaMain {
     static func main() {
+        AppRelauncher.waitForPreviousInstance()
         if CommandLine.arguments.contains(ClaudeLink.helperArgument) {
             ClaudeHelper.run()
         } else {
