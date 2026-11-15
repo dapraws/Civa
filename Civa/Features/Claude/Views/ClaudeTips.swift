@@ -21,7 +21,16 @@ struct ClaudeTip: Tip {
     // Tip requirements are nonisolated; the generated asset symbols are main-actor, so name the set.
     var title: Text { Text(titleText).foregroundStyle(Color("claudeText")) }
     var message: Text? { Text(messageText) }
-    var image: Image? { Image(systemName: "sparkles") }
+    /// Popover tips ignore `tipImageStyle` and draw the image in the accent blue, so the spark
+    /// carries its own clay color.
+    var image: Image? {
+        guard let spark = NSImage(systemSymbolName: "sparkles", accessibilityDescription: nil),
+              let clay = NSColor(named: "claude"),
+              let colored = spark.withSymbolConfiguration(.init(paletteColors: [clay])) else {
+            return Image(systemName: "sparkles")
+        }
+        return Image(nsImage: colored).renderingMode(.original)
+    }
     var rules: [Rule] { [#Rule(Self.$isConnected) { $0 == true }] }
 
     static let askResume = ClaudeTip(

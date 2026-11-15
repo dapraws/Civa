@@ -67,8 +67,6 @@ private struct CivaButton: View {
         }
     }
 
-    private var sparkSize: CGFloat { height == Size.controlSmall ? 12 : 14 }
-
     private var isPressed: Bool { configuration.isPressed }
     private var hovers: Bool { isHovered && isEnabled }
 
@@ -108,13 +106,13 @@ private struct CivaButton: View {
     /// Claude buttons always lead with the spark; a label's own icon is dropped so there's one.
     @ViewBuilder private var label: some View {
         if kind == .claude {
-            HStack(spacing: 6) {
-                SparkOutline()
-                    .stroke(style: StrokeStyle(lineWidth: 1.2, lineJoin: .round))
-                    .frame(width: sparkSize, height: sparkSize)
-                    .accessibilityHidden(true)
+            // A system Label sizes and spaces the spark to the text.
+            Label {
                 configuration.label.labelStyle(.titleOnly)
+            } icon: {
+                Image(systemName: "sparkles").accessibilityHidden(true)
             }
+            .labelStyle(.titleAndIcon)
         } else {
             configuration.label
         }
@@ -152,29 +150,6 @@ private struct CivaButton: View {
         case .claude: .claudeBorder
         default: nil
         }
-    }
-}
-
-/// Claude's spark as an outline (SF Symbols only has a filled one): one large four-point star
-/// and two small ones.
-nonisolated struct SparkOutline: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        func star(_ x: CGFloat, _ y: CGFloat, _ r: CGFloat) {
-            let c = CGPoint(x: rect.minX + x * rect.width, y: rect.minY + y * rect.height)
-            let radius = r * min(rect.width, rect.height)
-            let k = radius * 0.16
-            path.move(to: CGPoint(x: c.x, y: c.y - radius))
-            path.addQuadCurve(to: CGPoint(x: c.x + radius, y: c.y), control: CGPoint(x: c.x + k, y: c.y - k))
-            path.addQuadCurve(to: CGPoint(x: c.x, y: c.y + radius), control: CGPoint(x: c.x + k, y: c.y + k))
-            path.addQuadCurve(to: CGPoint(x: c.x - radius, y: c.y), control: CGPoint(x: c.x - k, y: c.y + k))
-            path.addQuadCurve(to: CGPoint(x: c.x, y: c.y - radius), control: CGPoint(x: c.x - k, y: c.y - k))
-            path.closeSubpath()
-        }
-        star(0.6, 0.58, 0.40)
-        star(0.2, 0.2, 0.17)
-        star(0.2, 0.86, 0.12)
-        return path
     }
 }
 
