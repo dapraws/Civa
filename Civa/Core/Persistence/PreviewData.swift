@@ -5,19 +5,43 @@
 //  Created by Muhammad Darrel Prawira on 06/11/26.
 //
 
-#if DEBUG
 import SwiftData
 import SwiftUI
+
+// #Preview bodies compile in Release too, so the preview helpers stay outside the debug-only block.
+// Only the sample data is debug-only: in Release the preview store is empty and never used.
 
 extension ModelContainer {
     /// In-memory store with the sample person, for SwiftUI previews and debug runs. Fresh on every launch.
     static let preview: ModelContainer = {
         let container = try! ModelContainer.civa(inMemory: true)
+        #if DEBUG
         SampleProfile.populate(container.mainContext)
+        #endif
         return container
     }()
 }
 
+extension RecordEditor {
+    /// Editor on a sample record of this type.
+    static func preview(needsReview: Bool = false) -> RecordEditor<Model> {
+        let context = ModelContainer.preview.mainContext
+        let records = try! context.fetch(FetchDescriptor<Model>())
+        let record = records.first { $0.needsReview == needsReview } ?? records[0]
+        return RecordEditor(record: record, context: context)
+    }
+}
+
+extension View {
+    /// The environment every Civa view expects, backed by sample data.
+    func previewEnvironment() -> some View {
+        modelContainer(.preview)
+            .environment(UnsavedChangesGuard())
+            .environment(AppNavigation())
+    }
+}
+
+#if DEBUG
 /// Which data a debug build runs on. Debug builds start on fresh sample data every launch, so
 /// testing never touches real data. Settings → Developer switches mode after a restart.
 nonisolated enum DataMode: String, CaseIterable {
@@ -114,22 +138,4 @@ enum PreviewSamples {
     }
 }
 
-extension RecordEditor {
-    /// Editor on a sample record of this type.
-    static func preview(needsReview: Bool = false) -> RecordEditor<Model> {
-        let context = ModelContainer.preview.mainContext
-        let records = try! context.fetch(FetchDescriptor<Model>())
-        let record = records.first { $0.needsReview == needsReview } ?? records[0]
-        return RecordEditor(record: record, context: context)
-    }
-}
-
-extension View {
-    /// The environment every Civa view expects, backed by sample data.
-    func previewEnvironment() -> some View {
-        modelContainer(.preview)
-            .environment(UnsavedChangesGuard())
-            .environment(AppNavigation())
-    }
-}
 #endif
