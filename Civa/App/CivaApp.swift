@@ -38,6 +38,7 @@ struct CivaApp: App {
         }
         #endif
         CivaTips.configure()
+        _ = Updater.shared
     }
 
     var body: some Scene {
@@ -63,6 +64,9 @@ struct CivaApp: App {
         }
         .defaultSize(width: 1280, height: 800)
         .commands {
+            CommandGroup(after: .appInfo) {
+                CheckForUpdatesCommand()
+            }
             CommandGroup(replacing: .appSettings) {
                 SettingsCommand()
                 WorkspaceMenu()
