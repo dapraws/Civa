@@ -134,4 +134,43 @@ struct ResumeTemplateTests {
         #expect(text.contains("10 pt"))
         #expect(text.contains("1.15×"))
     }
+    /// A long title wraps before the date; the date stays on the title's first line.
+    @Test(arguments: ResumeFormat.Template.allCases)
+    func longTitlesWrapBeforeTheDate(_ template: ResumeFormat.Template) throws {
+        var document = ResumeDocument(header: ResumeHeader(fullName: "Garuda Arrasyid"))
+        var projects = ResumeSection(kind: .projects)
+        projects.entries = [ResumeEntry(
+            title: "Production of Exopolysaccharide by Lactiplantibacillus pentosus FT3 with Varying Nitrogen Sources and NaCl Concentration",
+            subtitle: "Undergraduate Thesis", dates: "Apr 2026"
+        )]
+        document.sections = [projects]
+        document.format.apply(template)
+        let pdf = try #require(PDFDocument(data: ResumeRenderer.pdf(for: document)))
+        let page = try #require(pdf.page(at: 0))
+        let title = try #require(pdf.findString("Production", withOptions: []).first).bounds(for: page)
+        let date = try #require(pdf.findString("Apr 2026", withOptions: []).first).bounds(for: page)
+        #expect(abs(title.midY - date.midY) < 2, "\(template): the date left the title's first line")
+        let overlap = page.selection(for: date.insetBy(dx: -3, dy: 1))?.string ?? ""
+        #expect(overlap.trimmingCharacters(in: .whitespacesAndNewlines) == "Apr 2026", "\(template): \(overlap)")
+    }
+
+    /// A long link that wraps still opens in full: every line it takes is a link to the whole URL.
+    @Test func headerLinksOpenTheWholeURL() throws {
+        let url = "https://www.linkedin.com/in/muhammad-garuda-arrasyid-309526439"
+        var document = ResumeDocument(header: ResumeHeader(
+            fullName: "Muhammad Garuda Arrasyid", email: "garuda.raka@example.com", phone: "+6285100000000",
+            location: "Jakarta, Indonesia", links: [ProfileLink(label: "LinkedIn", url: url)]
+        ))
+        document.format.apply(.classic)
+        let pdf = try #require(PDFDocument(data: ResumeRenderer.pdf(for: document)))
+        let page = try #require(pdf.page(at: 0))
+        let text = try #require(pdf.string)
+        #expect(text.contains("linkedin.com/in/muhammad-garuda-"))
+        #expect(!text.contains("https://www."))
+        let links = page.annotations.filter { $0.url?.absoluteString == url }
+        #expect(!links.isEmpty)
+        let tail = try #require(pdf.findString("309526439", withOptions: []).first).bounds(for: page)
+        #expect(links.contains { $0.bounds.insetBy(dx: -1, dy: -1).contains(CGPoint(x: tail.midX, y: tail.midY)) })
+        #expect(page.annotations.contains { $0.url?.absoluteString == "mailto:garuda.raka@example.com" })
+    }
 }

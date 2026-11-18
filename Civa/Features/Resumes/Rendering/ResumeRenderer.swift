@@ -97,10 +97,9 @@ enum ResumeRenderer {
             if let mark = block.mark {
                 drawCheck(in: context, at: CGPoint(x: side + mark.x, y: y + mark.y), size: style.format.fontSize * 0.7)
             }
-            if let link = block.link {
+            for link in block.links {
                 // The context is flipped, and link rects are in page space, so flip the rect back.
-                let top = y + link.top
-                let rect = CGRect(x: side, y: page.height - top - link.height, width: style.width, height: link.height)
+                let rect = CGRect(x: side + link.rect.minX, y: page.height - y - link.rect.maxY, width: link.rect.width, height: link.rect.height)
                 context.setURL(link.url as CFURL, for: rect)
             }
             y += height
@@ -131,7 +130,8 @@ enum ResumeRenderer {
     /// the block's top-left.
     private struct Block {
         let text: NSAttributedString
-        var link: (url: URL, top: CGFloat, height: CGFloat)?
+        /// Clickable areas: one per line a link covers, so a wrapped URL opens in full.
+        var links: [(url: URL, rect: CGRect)] = []
         /// Rules under headings, by their distance from the block's top.
         var rules: [CGFloat] = []
         /// The center of the proof check.
@@ -276,10 +276,23 @@ enum ResumeRenderer {
             // Never larger than the name: Harvard sets the name at body size.
             header.append(style.text(person.headline, scale: min(1.1, template.nameScale), after: 2, alignment: alignment))
         }
-        let contact = ([person.location, person.email, person.phone] + person.links.map(\.url))
-            .filter { !$0.isBlank }
-            .joined(separator: template == .tech ? " | " : template == .harvard ? " • " : " · ")
-        if !contact.isEmpty {
+        // Links get real link areas: left to the viewer, a URL that wraps opens only its first line.
+        let contactParts: [(text: String, url: URL?)] = [
+            (person.location, nil),
+            (person.email, URL.mailLink(person.email)),
+            (person.phone, nil),
+        ] + person.links.map { (URL.shortLinkText($0.url), URL.webLink($0.url)) }
+        let shownParts = contactParts.filter { !$0.text.isBlank }
+        var contactLinks: [(url: URL, range: NSRange)] = []
+        if !shownParts.isEmpty {
+            let separator = template == .tech ? " | " : template == .harvard ? " • " : " · "
+            var contact = ""
+            for (index, part) in shownParts.enumerated() {
+                if index > 0 { contact += separator }
+                let start = header.length + (contact as NSString).length
+                contact += part.text
+                if let url = part.url { contactLinks.append((url, NSRange(location: start, length: (part.text as NSString).length))) }
+            }
             header.append(style.text(contact, scale: 0.95, color: template == .harvard ? .black : .darkGray, after: 2, alignment: alignment))
         }
         let summaryHasHeading = style.format.showsSummaryHeading == true
@@ -294,6 +307,7 @@ enum ResumeRenderer {
             // No rule under the header: the first heading's rule follows right after, as in the
             // MIT and Jake's samples. Harvard's template rules off the name instead.
             var block = Block(text: header)
+            block.links = contactLinks.flatMap { link in style.rects(of: link.range, in: header).map { (link.url, $0) } }
             if template == .harvard, let nameRange {
                 block.rules = [style.lineRect(of: nameRange, in: header).maxY + 2 + style.format.dividerWidth / 2]
             }
@@ -331,7 +345,7 @@ enum ResumeRenderer {
                 // Link Proof shows the check and makes the title open the proof.
                 if let url = entry.proofLink(style.format) {
                     let line = style.lineRect(of: titleRange, in: text)
-                    block.link = (url, line.minY, line.height)
+                    block.links = [(url, CGRect(x: 0, y: line.minY, width: style.width, height: line.height))]
                     let end = style.glyphRect(of: NSRange(location: NSMaxRange(titleRange) - 1, length: 1), in: text)
                     block.mark = CGPoint(x: end.maxX + style.format.fontSize * 0.65, y: end.midY)
                 }
@@ -370,15 +384,14 @@ enum ResumeRenderer {
             // Harvard sets the role in bold and the degree plain, with location and dates plain on
             // the right; the others set the role in italics.
             let isHarvard = format.layout == .harvard
-            text.append(style.plainRight(style.text(tabbed(organization, right1), bold: true, rightTab: style.width), right1, when: isHarvard))
-            let start = text.length
-            let titleLine = style.text(tabbed(titleText, right2), bold: isHarvard && kind != .education, italic: !isHarvard, after: 1, rightTab: style.width)
-            text.append(style.plainRight(titleLine, right2, when: isHarvard))
-            titleRange = NSRange(location: start, length: (titleText as NSString).length)
+            text.append(style.pair(organization, right1, bold: true, plainRight: isHarvard))
+            let line = style.pair(titleText, right2, bold: isHarvard && kind != .education, italic: !isHarvard, plainRight: isHarvard, after: 1)
+            titleRange = leftRange(of: line, at: text.length)
+            text.append(line)
         } else {
-            let start = text.length
-            text.append(style.text(tabbed(title, dates), bold: true, rightTab: style.width))
-            titleRange = NSRange(location: start, length: max(1, (title as NSString).length))
+            let line = style.pair(title, dates, bold: true)
+            titleRange = leftRange(of: line, at: text.length)
+            text.append(line)
             // A hidden location comes off the end of the subtitle too.
             let subtitle = ([entry.shows(.location, in: format) ? entry.subtitle : organization] + details).filter { !$0.isBlank }.joined(separator: " · ")
             if !subtitle.isBlank {
@@ -404,9 +417,13 @@ enum ResumeRenderer {
         return titleRange
     }
 
-    /// "Left\tRight" when there's something on the right.
-    private static func tabbed(_ left: String, _ right: String) -> String {
-        right.isBlank ? left : "\(left)\t\(right)"
+    /// Where the left part of a `Style.pair` line ends: before the tab, or at the end of a left
+    /// part that wrapped past the right part. At least one character, for the proof check.
+    private static func leftRange(of line: NSAttributedString, at start: Int) -> NSRange {
+        let string = line.string as NSString
+        let end = string.contains("\u{2028}") ? string.length - 1
+            : string.range(of: "\t").location != NSNotFound ? string.range(of: "\t").location : string.length - 1
+        return NSRange(location: start, length: max(1, end))
     }
 
     /// "Thesis: On-device speech recognition", with the label in bold.
@@ -540,13 +557,51 @@ private struct Style {
         return rect
     }
 
-    /// The line with the text after its tab set in the regular weight.
-    func plainRight(_ line: NSAttributedString, _ right: String, when condition: Bool) -> NSAttributedString {
-        guard condition, !right.isBlank else { return line }
-        let result = NSMutableAttributedString(attributedString: line)
-        let length = (right as NSString).length
-        result.addAttribute(.font, value: font(scale: 1, bold: false, italic: false), range: NSRange(location: result.length - 1 - length, length: length))
-        return result
+    /// One line with a left and a right part, like a title and its dates. The right part stays
+    /// on the first line at the right edge and the left part wraps before it, so a long title
+    /// never pushes the dates down. `plainRight` sets the right part in the regular weight.
+    ///
+    /// It stays one paragraph in reading order (left, right, rest of left), so text extraction
+    /// and ATS parsers read it as before: the part of the left that fits beside the right part,
+    /// a right tab, the right part, then a line break and the rest of the left.
+    func pair(
+        _ left: String, _ right: String, bold: Bool = false, italic: Bool = false, plainRight: Bool = false, after: CGFloat = 0
+    ) -> NSAttributedString {
+        guard !right.isBlank else { return text(left, bold: bold, italic: italic, after: after) }
+        let rightFont = font(scale: 1, bold: bold && !plainRight, italic: italic && !plainRight)
+        let room = ceil((right as NSString).size(withAttributes: [.font: rightFont]).width) + format.fontSize
+        let fits = firstLineLength(of: text(left, bold: bold, italic: italic, tail: room))
+        let head = (left as NSString).substring(to: min(fits, (left as NSString).length))
+        let rest = (left as NSString).substring(from: (head as NSString).length).trimmingCharacters(in: .whitespaces)
+        let headText = head.trimmingCharacters(in: .whitespaces)
+        // U+2028 breaks the line without starting a new paragraph, so the spacing stays as one line.
+        let string = "\(headText)\t\(right)" + (rest.isEmpty ? "" : "\u{2028}\(rest)")
+        let line = NSMutableAttributedString(attributedString: text(string, bold: bold, italic: italic, after: after, rightTab: width))
+        let rightRange = NSRange(location: (headText as NSString).length + 1, length: (right as NSString).length)
+        line.addAttribute(.font, value: rightFont, range: rightRange)
+        return line
+    }
+
+    /// How many characters of `text` its first line holds.
+    private func firstLineLength(of text: NSAttributedString) -> Int {
+        let (storage, manager, _) = layout(text)
+        defer { withExtendedLifetime(storage) {} }
+        guard manager.numberOfGlyphs > 0 else { return 0 }
+        var glyphs = NSRange()
+        manager.lineFragmentRect(forGlyphAt: 0, effectiveRange: &glyphs)
+        return manager.characterRange(forGlyphRange: glyphs, actualGlyphRange: nil).length
+    }
+
+    /// One rect per line the text in `range` takes.
+    func rects(of range: NSRange, in text: NSAttributedString) -> [CGRect] {
+        let (storage, manager, container) = layout(text)
+        defer { withExtendedLifetime(storage) {} }
+        let glyphs = manager.glyphRange(forCharacterRange: range, actualCharacterRange: nil)
+        var rects: [CGRect] = []
+        manager.enumerateEnclosingRects(
+            forGlyphRange: glyphs, withinSelectedGlyphRange: NSRange(location: NSNotFound, length: 0), in: container
+        ) { rect, _ in rects.append(rect) }
+        return rects
     }
 
     /// A section heading in the template's style. Returns its range.
@@ -585,13 +640,14 @@ private struct Style {
     func attributes(
         scale: CGFloat = 1, bold: Bool = false, italic: Bool = false, color: NSColor = .black,
         before: CGFloat = 0, after: CGFloat = 0, indent: CGFloat = 0, rightTab: CGFloat? = nil,
-        alignment: NSTextAlignment = .left
+        alignment: NSTextAlignment = .left, tail: CGFloat = 0
     ) -> [NSAttributedString.Key: Any] {
         let paragraph = NSMutableParagraphStyle()
         paragraph.lineHeightMultiple = format.lineSpacing
         paragraph.paragraphSpacingBefore = before
         paragraph.paragraphSpacing = after
         paragraph.headIndent = indent
+        paragraph.tailIndent = -tail
         paragraph.alignment = alignment
         paragraph.tabStops = [
             indent > 0 ? NSTextTab(textAlignment: .left, location: indent) : nil,
@@ -604,11 +660,11 @@ private struct Style {
     func text(
         _ string: String, scale: CGFloat = 1, bold: Bool = false, italic: Bool = false, color: NSColor = .black,
         before: CGFloat = 0, after: CGFloat = 0, indent: CGFloat = 0, rightTab: CGFloat? = nil,
-        alignment: NSTextAlignment = .left
+        alignment: NSTextAlignment = .left, tail: CGFloat = 0
     ) -> NSAttributedString {
         NSAttributedString(string: string + "\n", attributes: attributes(
             scale: scale, bold: bold, italic: italic, color: color,
-            before: before, after: after, indent: indent, rightTab: rightTab, alignment: alignment
+            before: before, after: after, indent: indent, rightTab: rightTab, alignment: alignment, tail: tail
         ))
     }
 

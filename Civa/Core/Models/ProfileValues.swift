@@ -147,6 +147,23 @@ nonisolated enum ValidationMessage {
 }
 
 nonisolated extension URL {
+    /// A `mailto:` link for an email address; nil unless it looks like one.
+    static func mailLink(_ text: String) -> URL? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.contains("@"), !trimmed.contains(" ") else { return nil }
+        return URL(string: "mailto:" + trimmed)
+    }
+
+    /// How a resume prints a link: "linkedin.com/in/raka", without "https://www." or a final slash.
+    static func shortLinkText(_ text: String) -> String {
+        var short = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        for prefix in ["https://", "http://", "www."] where short.lowercased().hasPrefix(prefix) {
+            short.removeFirst(prefix.count)
+        }
+        while short.hasSuffix("/") { short.removeLast() }
+        return short
+    }
+
     /// A web address typed by the user, with "https://" added when they left it out. Nil unless it has a host.
     static func webLink(_ text: String) -> URL? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
