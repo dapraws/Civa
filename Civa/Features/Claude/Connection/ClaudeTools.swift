@@ -176,7 +176,8 @@ enum ClaudeText {
             field("Level", education.degreeLevel?.title ?? ""),
             field("Degree", [education.degree, education.fieldOfStudy].filter { !$0.isBlank }.joined(separator: ", ")),
             dates(YearMonth.rangeText(start: education.start, end: education.end)),
-            field("Grade", education.gradeText),
+            // In the resumes' number format (3.30, never 3,30), so Claude never mixes the two.
+            field("Grade", education.numericGrade.map { "\(education.gradeLabel.title) \($0.formatted(locale: Locale(identifier: "en_US_POSIX")))" } ?? education.grade),
             field("Thesis", education.thesis),
             field("Relevant coursework", education.coursework.joined(separator: ", ")),
             field("Honors", education.honors),

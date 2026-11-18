@@ -27,7 +27,7 @@ nonisolated enum LinkedInPDF {
         (0..<document.pageCount).flatMap { index -> [Line] in
             guard let page = document.page(at: index) else { return [] }
             return (page.selection(for: page.bounds(for: .mediaBox))?.selectionsByLine() ?? []).compactMap { selection in
-                guard let text = selection.string?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else { return nil }
+                guard let text = selection.string?.withoutInvisibles.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else { return nil }
                 let bounds = selection.bounds(for: page)
                 let font = selection.attributedString.flatMap { string in
                     string.length > 0 ? string.attribute(.font, at: 0, effectiveRange: nil) as? NSFont : nil

@@ -96,4 +96,25 @@ struct ProfileFieldsTests {
         let skill = Skill(name: "Swift")
         #expect(skill.proof == nil)
     }
+
+    /// A PDF's photo comes through as U+FFFC; it never belongs in a name.
+    @Test func invisibleCharactersAreRemoved() {
+        #expect("\u{FFFC} Muhammad Garuda\u{200B} Arrasyid\u{0007}".withoutInvisibles == " Muhammad Garuda Arrasyid")
+        #expect("Line one\nLine\ttwo".withoutInvisibles == "Line one\nLine\ttwo")
+        #expect("Café 👩‍💻".withoutInvisibles == "Café 👩‍💻")
+    }
+
+    @Test func savedProfilesLoseInvisibleCharacters() throws {
+        let container = try ModelContainer.civa(inMemory: true)
+        let context = container.mainContext
+        context.insert(PersonalInfo(fullName: "\u{FFFC} Muhammad Garuda Arrasyid", headline: "Biology\u{FFFC} Graduate"))
+        let resume = Resume(title: "Master", document: ResumeDocument(header: ResumeHeader(fullName: "\u{FFFC} Muhammad Garuda Arrasyid")))
+        context.insert(resume)
+        try context.save()
+        PersonalInfo.removeInvisibles(in: context)
+        let person = try #require(try context.fetch(FetchDescriptor<PersonalInfo>()).first)
+        #expect(person.fullName == "Muhammad Garuda Arrasyid")
+        #expect(person.headline == "Biology Graduate")
+        #expect(resume.document.header.fullName == "Muhammad Garuda Arrasyid")
+    }
 }

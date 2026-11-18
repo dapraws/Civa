@@ -76,4 +76,16 @@ struct ClaudeToolsTests {
             #expect(call(tool.name).ok, "\(tool.name)")
         }
     }
+
+    /// Claude reads grades the way resumes print them, whatever the Mac's language.
+    @Test func gradesUseTheResumeNumberFormat() throws {
+        let education = Education(institution: "Universitas Negeri Jakarta")
+        education.gradeValue = 3.3
+        education.gradeScale = 4
+        container.mainContext.insert(education)
+        try container.mainContext.save()
+        permissions.read.insert(.education)
+        let text = call("list_education").text
+        #expect(text.contains("3.30 / 4.00"), "\(text)")
+    }
 }

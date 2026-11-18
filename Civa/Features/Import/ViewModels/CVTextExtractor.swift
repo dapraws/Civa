@@ -58,7 +58,7 @@ enum CVTextExtractor {
         }
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw Failure.noText }
         // Ligatures such as "ﬀ" become plain letters.
-        return text.precomposedStringWithCompatibilityMapping
+        return text.precomposedStringWithCompatibilityMapping.withoutInvisibles
     }
 
     /// Text rebuilt row by row from where each character sits on the page. PDFKit's own text

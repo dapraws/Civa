@@ -58,7 +58,7 @@ nonisolated enum CVParser {
     // MARK: - Lines
 
     static func clean(_ line: String) -> String {
-        line.replacingOccurrences(of: "\u{00A0}", with: " ")
+        line.withoutInvisibles.replacingOccurrences(of: "\u{00A0}", with: " ")
             .split(whereSeparator: \.isWhitespace)
             .joined(separator: " ")
     }

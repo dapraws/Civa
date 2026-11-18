@@ -131,6 +131,19 @@ nonisolated extension ProfileRecord {
 
 nonisolated extension String {
     var isBlank: Bool { trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+
+    /// Without characters nobody sees but parsers and ATS do: the object replacement character a
+    /// PDF's photo leaves (U+FFFC), zero-width spaces, byte order marks, and control characters.
+    /// Line breaks, tabs, and the joiners inside emoji stay.
+    var withoutInvisibles: String {
+        let invisible: Set<Unicode.Scalar> = ["\u{FFFC}", "\u{FFFD}", "\u{200B}", "\u{FEFF}", "\u{2060}"]
+        var scalars = String.UnicodeScalarView()
+        for scalar in unicodeScalars where !invisible.contains(scalar)
+            && (scalar.properties.generalCategory != .control || ["\n", "\t", "\r"].contains(scalar)) {
+            scalars.append(scalar)
+        }
+        return String(scalars)
+    }
 }
 
 nonisolated extension YearMonth {

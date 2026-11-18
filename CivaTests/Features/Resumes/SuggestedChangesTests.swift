@@ -117,4 +117,33 @@ struct SuggestedChangesTests {
         job.role = "Senior iOS Engineer"
         #expect(SuggestedChanges.suggestions(for: document, from: profile(person, [job])).count == 1)
     }
+
+    /// A detail the profile has and an older resume lacks, like a headline added later, is
+    /// suggested rather than taken as the starting point.
+    @Test func olderResumesStillGetDetailsTheyLack() throws {
+        var (job, person, document) = setUp()
+        document.headerSource = nil
+        person.headline = "Biology Graduate"
+        let source = profile(person, [job])
+
+        #expect(SuggestedChanges.startTracking(&document, from: source))
+        let suggestion = try #require(SuggestedChanges.suggestions(for: document, from: source).first)
+        #expect(suggestion.target == .header)
+        #expect(suggestion.changes.map(\.new) == ["Biology Graduate"])
+        SuggestedChanges.apply(suggestion, to: &document, from: source)
+        #expect(document.header.headline == "Biology Graduate")
+    }
+
+    /// Update Header from Profile copies every detail and keeps what the resume hides.
+    @Test func headerCanBeCopiedFromTheProfile() {
+        var (job, person, document) = setUp()
+        document.header.setShows(.email, false)
+        person.headline = "Biology Graduate"
+        person.email = "alex@example.com"
+        SuggestedChanges.copyHeader(into: &document, from: profile(person, [job]))
+        #expect(document.header.headline == "Biology Graduate")
+        #expect(document.header.email == "alex@example.com")
+        #expect(!document.header.shows(.email))
+        #expect(SuggestedChanges.suggestions(for: document, from: profile(person, [job])).isEmpty)
+    }
 }

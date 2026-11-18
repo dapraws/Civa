@@ -57,3 +57,26 @@ nonisolated final class PersonalInfo: ProfileRecord {
         self.statusRaw = status.rawValue
     }
 }
+
+extension PersonalInfo {
+    /// Removes invisible characters (see `String.withoutInvisibles`) from the header details of
+    /// the profile and of every resume. Run at launch, for profiles imported before Civa cleaned
+    /// imported text.
+    static func removeInvisibles(in context: ModelContext) {
+        func clean(_ text: String) -> String { text.withoutInvisibles.trimmingCharacters(in: .whitespacesAndNewlines) }
+        func needsCleaning(_ text: String) -> Bool { clean(text) != text && text.withoutInvisibles != text }
+        for person in (try? context.fetch(FetchDescriptor<PersonalInfo>())) ?? [] {
+            for path in [\PersonalInfo.fullName, \.headline, \.email, \.phone, \.location] where needsCleaning(person[keyPath: path]) {
+                person[keyPath: path] = clean(person[keyPath: path])
+            }
+        }
+        for resume in (try? context.fetch(FetchDescriptor<Resume>())) ?? [] {
+            var header = resume.document.header
+            for path in [\ResumeHeader.fullName, \.headline, \.email, \.phone, \.location] where needsCleaning(header[keyPath: path]) {
+                header[keyPath: path] = clean(header[keyPath: path])
+            }
+            if header != resume.document.header { resume.document.header = header }
+        }
+        try? context.save()
+    }
+}

@@ -184,6 +184,17 @@ enum SuggestedChanges {
         }
     }
 
+    /// Replaces the resume's header details with the Career Profile's. What the resume hides
+    /// stays hidden. Returns false when the profile has no confirmed Personal Information.
+    @discardableResult
+    static func copyHeader(into document: inout ResumeDocument, from profile: ProfileSource) -> Bool {
+        guard var header = profile.header else { return false }
+        header.hidden = document.header.hidden
+        document.header = header
+        document.headerSource = profile.header
+        return true
+    }
+
     /// Resumes made before suggestions existed start tracking from the profile as it is now, so
     /// earlier differences (often the user's own edits) aren't suggested. Returns whether it changed anything.
     @discardableResult
@@ -191,7 +202,11 @@ enum SuggestedChanges {
         var changed = false
         if document.headerSource == nil, let header = profile.header, !header.fullName.isBlank,
            header.fullName.lowercased() == document.header.fullName.lowercased() {
-            document.headerSource = header
+            // Details the resume lacks start blank, so the profile's value is still suggested.
+            var baseline = header
+            for (_, field) in headerFields where document.header[keyPath: field].isBlank { baseline[keyPath: field] = "" }
+            if document.header.links.isEmpty { baseline.links = [] }
+            document.headerSource = baseline
             changed = true
         }
         for s in document.sections.indices {

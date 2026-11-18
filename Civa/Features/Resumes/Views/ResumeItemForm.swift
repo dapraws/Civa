@@ -5,6 +5,7 @@
 //  Created by Muhammad Darrel Prawira on 06/11/26.
 //
 
+import SwiftData
 import SwiftUI
 import TipKit
 
@@ -14,6 +15,7 @@ struct ResumeItemForm: View {
     let editor: RecordEditor<Resume>
     @Environment(UnsavedChangesGuard.self) private var changes
     @Environment(AppNavigation.self) private var navigation
+    @Environment(\.modelContext) private var modelContext
     @Binding var document: ResumeDocument
     @Binding var selection: ResumeOutlineItem?
 
@@ -139,6 +141,10 @@ struct ResumeItemForm: View {
                     set: { document.header.setShows(link, $0) }
                 ))
             }
+            Button("Update Header from Profile") {
+                SuggestedChanges.copyHeader(into: &document, from: .current(in: modelContext))
+            }
+            .help("Copy your name, headline, contact details, and links from Personal Information.")
         } header: {
             SectionTitle("Header")
         } footer: {

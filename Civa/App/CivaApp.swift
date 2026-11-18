@@ -21,6 +21,7 @@ struct CivaApp: App {
         #endif
         let workspaces = WorkspaceRegistry.shared
         let container = try ModelContainer.civa(storeURL: workspaces.storeURL(for: workspaces.current))
+        PersonalInfo.removeInvisibles(in: container.mainContext)
         // The first workspace takes the profile's name.
         if let name = try? container.mainContext.fetch(FetchDescriptor<PersonalInfo>()).first?.fullName {
             workspaces.nameOriginalIfNeeded(name)
