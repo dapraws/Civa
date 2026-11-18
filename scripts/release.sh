@@ -50,11 +50,13 @@ VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP/Co
 DMG="$OUT/Civa-$VERSION.dmg"
 
 echo "Making $DMG…"
-STAGE="$OUT/dmg"
-mkdir -p "$STAGE"
-cp -R "$APP" "$STAGE/"
-ln -s /Applications "$STAGE/Applications"
-hdiutil create -volname "Civa" -srcfolder "$STAGE" -ov -format UDZO "$DMG" -quiet
+# dmgbuild lays out the Finder window (background, icon spots, no toolbar) without scripting Finder.
+# It lives in a venv under build/, so nothing is installed system-wide.
+VENV="$ROOT/build/dmgbuild-venv"
+[[ -x "$VENV/bin/dmgbuild" ]] || { /usr/bin/python3 -m venv "$VENV" && "$VENV/bin/pip" install -q "dmgbuild==1.6.5"; }
+"$VENV/bin/dmgbuild" -s "$ROOT/scripts/dmg/settings.py" \
+    -D app="$APP" -D icon="$APP/Contents/Resources/AppIcon.icns" \
+    -D background="$ROOT/scripts/dmg/background.tiff" "Civa" "$DMG"
 codesign --sign "$IDENTITY" --timestamp "$DMG"
 
 echo "Notarizing (this takes a few minutes)…"

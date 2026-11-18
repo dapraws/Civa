@@ -10,6 +10,10 @@ import AppKit
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let changes = UnsavedChangesGuard()
 
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        InstallLocation.promptIfNeeded()
+    }
+
     /// Civa is a single window, so closing it quits, which goes through the guard below.
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         true
