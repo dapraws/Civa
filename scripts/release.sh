@@ -87,6 +87,6 @@ mkdir -p "$FEED"
 cp "$DMG" "$FEED/"
 "$ROOT/scripts/release-notes.py" "$ROOT/CHANGELOG.md" "$VERSION" > "$FEED/Civa-$VERSION.html"
 "$SPARKLE_BIN/generate_appcast" --embed-release-notes \
-    --download-url-prefix "https://github.com/dapraws/civa-releases/releases/download/v$VERSION/" \
+    --download-url-prefix "https://github.com/dapraws/Civa/releases/download/v$VERSION/" \
     -o "$OUT/appcast.xml" "$FEED"
-echo "Done: $DMG and $OUT/appcast.xml. Upload both to the civa-releases release v$VERSION."
+echo "Done: $DMG and $OUT/appcast.xml. Upload both to the GitHub release v$VERSION of dapraws/Civa."
