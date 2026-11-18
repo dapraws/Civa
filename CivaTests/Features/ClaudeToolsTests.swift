@@ -47,8 +47,10 @@ struct ClaudeToolsTests {
         #expect(reply.ok)
         #expect(reply.text.contains("iOS Engineer — Gojek"))
         #expect(reply.text.contains("Cut drop-off by 14%"))
-        #expect(!reply.text.contains("Imported Role"))
-        #expect(reply.text.contains("1 more awaiting"))
+        // Records awaiting review show by title only.
+        #expect(reply.text.contains("Awaiting the user's review in Civa (1 experience records"))
+        #expect(reply.text.contains("Imported Role"))
+        #expect(!reply.text.contains("Unverified Co"))
         let entry = try #require(try log().first)
         #expect(entry.kind == .read)
         #expect(entry.category == .experience)

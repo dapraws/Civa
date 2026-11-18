@@ -39,6 +39,7 @@ struct EducationForm: View {
     var body: some View {
         Form {
             ReviewBanner(editor: editor)
+            ClaudeRecordProposalsSection(editor: editor)
             Section {
                 OrganizationField(title: "Institution", name: editor.binding(\.institution), prompt: Text("Required"))
                 FieldError(editor.error(for: \.institution))

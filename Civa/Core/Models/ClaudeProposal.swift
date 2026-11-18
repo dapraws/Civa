@@ -113,9 +113,31 @@ nonisolated final class ClaudeProposal {
             case entry(UUID)
         }
 
+        /// An entry Civa built from a Career Profile record when Claude suggested it.
+        struct Addition: Codable, Hashable {
+            var kind: ResumeSection.Kind
+            var entry: ResumeEntry
+        }
+
         var summary: String?
         var summaryOptions: [Version]?
         var entries: [Entry] = []
+        /// Entries to add, each to the first section of its kind (made when there's none).
+        var additions: [Addition]?
+        /// Entries to take out, by id.
+        var removals: [UUID]?
+        /// Section ids or kinds, first to last. Sections not named follow in their order.
+        var sectionOrder: [String]?
+        /// Entry ids, first to last within their sections. Entries not named follow.
+        var entryOrder: [UUID]?
+        /// Make this resume the Master Resume.
+        var makeMaster: Bool?
+
+        /// Changes to what the resume holds or its order, besides wording.
+        var hasStructure: Bool {
+            additions?.isEmpty == false || removals?.isEmpty == false || sectionOrder?.isEmpty == false
+                || entryOrder?.isEmpty == false || makeMaster == true
+        }
 
         var summaryVersions: [Version] {
             summaryOptions ?? summary.map { [Version(label: "", text: $0)] } ?? []
@@ -138,7 +160,8 @@ nonisolated final class ClaudeProposal {
                     pick(entry.versions, .entry(entry.entryID)).map {
                         Entry(entryID: entry.entryID, title: $0.title, subtitle: $0.subtitle, bullets: $0.lines)
                     }
-                }
+                },
+                additions: additions, removals: removals, sectionOrder: sectionOrder, entryOrder: entryOrder, makeMaster: makeMaster
             )
         }
     }
@@ -147,6 +170,12 @@ nonisolated final class ClaudeProposal {
     struct RecordEdit: Codable, Hashable {
         enum Field: String, Codable, CaseIterable {
             case impacts, details, summary, headline
+            case role, organization, location, recognition, name, institution, degree
+            case fieldOfStudy = "field_of_study"
+            case thesis, honors, coursework, title, issuer, placement, category
+
+            /// Fields that hold a list of lines rather than one text.
+            var isLines: Bool { self == .impacts || self == .coursework }
         }
 
         var field: Field
@@ -167,6 +196,7 @@ nonisolated final class ClaudeProposal {
 
     /// `profileImport`: what Claude read, in the import review's terms.
     struct ProfileImport: Codable, Hashable {
+        /// The common fields, plus the ones only some categories have.
         struct Record: Codable, Hashable {
             var category: String
             var title: String
@@ -176,6 +206,27 @@ nonisolated final class ClaudeProposal {
             var end: String?
             var current: Bool?
             var bullets: [String]?
+            /// Projects: the user's role. Experience: the job title when `title` is the company.
+            var role: String?
+            /// Achievements and certifications.
+            var issuer: String?
+            var issued: String?
+            var expires: String?
+            /// A test score, like TOEFL 573.
+            var score: String?
+            var url: String?
+            var credentialURL: String?
+            var credentialID: String?
+            /// Education.
+            var fieldOfStudy: String?
+            var grade: String?
+            /// Achievements: "1st Place".
+            var placement: String?
+
+            enum CodingKeys: String, CodingKey {
+                case category, title, subtitle, location, start, end, current, bullets, role, issuer, issued, expires, score, url
+                case credentialURL = "credential_url", credentialID = "credential_id", fieldOfStudy = "field_of_study", grade, placement
+            }
         }
 
         var source: String

@@ -100,6 +100,15 @@ nonisolated struct ImportItem: Identifiable, Hashable {
     var bullets: [String] = []
     /// Professional experience only.
     var employmentType: EmploymentType?
+    /// Fields only some categories have, when the source gave them (Claude does; CVs rarely).
+    var url = ""
+    var credentialURL = ""
+    var credentialID = ""
+    var expires: YearMonth?
+    var fieldOfStudy = ""
+    var grade = ""
+    var placement = ""
+    var score = ""
     var action = ImportAction.add
     /// The existing record this matches, if any.
     var matchID: UUID?
@@ -166,7 +175,26 @@ nonisolated struct ImportItem: Identifiable, Hashable {
         }
         record.sources = [source]
         record.possibleDuplicateOf = matchID
-        if let experience = record as? Experience { experience.employmentType = employmentType }
+        switch record {
+        case let experience as Experience:
+            experience.employmentType = employmentType
+        case let education as Education:
+            education.fieldOfStudy = fieldOfStudy
+            education.grade = grade
+            education.convertTextGrade()
+        case let project as Project:
+            project.url = url
+        case let achievement as Achievement:
+            achievement.placement = placement.isBlank ? score : placement
+            achievement.proofURL = url
+        case let certification as Certification:
+            certification.expires = expires
+            certification.credentialURL = credentialURL.isBlank ? url : credentialURL
+            certification.credentialID = credentialID
+            if !score.isBlank { certification.customFields.append(CustomField(name: String(localized: "Score"), value: score)) }
+        default:
+            break
+        }
         return record
     }
 }

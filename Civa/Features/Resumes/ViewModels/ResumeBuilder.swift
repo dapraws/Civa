@@ -191,7 +191,7 @@ enum ResumeBuilder {
 
     /// One line per category: "Languages: Swift, Kotlin". Uncategorized skills share a line.
     /// Each line remembers its skills, so later additions, removals, and renames can be suggested (FR-042).
-    private static func skillLines(_ skills: [Skill]) -> [ResumeEntry] {
+    static func skillLines(_ skills: [Skill]) -> [ResumeEntry] {
         Dictionary(grouping: skills) { skillCategory($0.category) }
             .sorted { $0.key.isEmpty == $1.key.isEmpty ? $0.key < $1.key : !$0.key.isEmpty }
             .map { category, skills in

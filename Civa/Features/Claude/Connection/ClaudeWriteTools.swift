@@ -19,6 +19,7 @@ enum ClaudeWriteTools {
         switch request.tool {
         case "get_pending_requests": return pendingRequests(context)
         case "finish_request": return finish(arguments, context)
+        case "list_suggestions": return suggestions(context)
         case "suggest_resume_edit": return resumeEdit(arguments, context, permissions)
         case "suggest_profile_edit": return recordEdit(arguments, context, permissions)
         case "create_resume_draft": return resumeDraft(arguments, context, permissions)
@@ -61,6 +62,22 @@ enum ClaudeWriteTools {
         return "[\(id)] \(request.title)\n\(body)\n\(rule)"
     }
 
+    /// Every suggestion Claude sent, newest first, with what the user did with it.
+    private static func suggestions(_ context: ModelContext) -> Reply {
+        let proposals = (try? context.fetch(FetchDescriptor<ClaudeProposal>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)]))) ?? []
+        guard !proposals.isEmpty else { return Reply(ok: true, text: "No suggestions sent to Civa yet.") }
+        let text = proposals.prefix(50).map { proposal in
+            let status = switch proposal.status {
+            case .pending: "waiting for the user"
+            case .applied: "applied"
+            case .dismissed: "dismissed"
+            }
+            let decided = proposal.decidedAt.map { " on \($0.formatted(date: .abbreviated, time: .shortened))" } ?? ""
+            return "[suggestion_id: \(proposal.id)] \(ClaudeDecisions.describe(proposal))\nSent \(proposal.createdAt.formatted(date: .abbreviated, time: .shortened)) · \(status)\(decided)"
+        }.joined(separator: "\n\n")
+        return Reply(ok: true, text: text)
+    }
+
     private static func finish(_ arguments: [String: String], _ context: ModelContext) -> Reply {
         guard let request = fetchRequest(arguments["request_id"], context) else {
             return Reply(ok: false, text: "No request with that id. Call get_pending_requests for the ids.")
@@ -89,7 +106,7 @@ enum ClaudeWriteTools {
             request.answeredAt = .now
         }
         context.insert(ClaudeActivity(kind: .suggested, tool: tool, category: proposal.category, summary: summary, detail: proposal.note))
-        return Reply(ok: true, text: "Sent to Civa. The user reviews it there; nothing changes until they apply it.")
+        return Reply(ok: true, text: "Sent to Civa (suggestion_id: \(proposal.id)). The user reviews it there; nothing changes until they apply it. list_suggestions shows whether they applied or dismissed it.")
     }
 
     private static func refuse(_ category: ClaudeCategory, tool: String, _ context: ModelContext) -> Reply {
@@ -182,17 +199,39 @@ enum ClaudeWriteTools {
             return Reply(ok: false, text: error.localizedDescription)
         }
         let summary = summaryOptions == nil ? arguments["summary"].flatMap { $0.isBlank ? nil : $0 } : nil
-        guard summary != nil || summaryOptions != nil || !entries.isEmpty else {
-            return Reply(ok: false, text: "Nothing to suggest: send a summary or entries with entry ids from get_resume.")
+
+        // Structure: records from the Career Profile, skills, removals, order, Master.
+        let recordInputs = decode([RecordInput].self, arguments["add_records"]) ?? []
+        var additions = profileEntries(recordInputs, context, permissions).map { ClaudeProposal.ResumeEdit.Addition(kind: $0.kind, entry: $0.entry) }
+        let skillNames = Set((decode([String].self, arguments["add_skills"]) ?? []).map { $0.lowercased() })
+        let skills = permissions.canRead(.skills) && !skillNames.isEmpty
+            ? ((try? context.fetch(FetchDescriptor<Skill>())) ?? []).filter { !$0.needsReview && skillNames.contains($0.name.lowercased()) } : []
+        additions += ResumeBuilder.skillLines(skills).map { .init(kind: .skills, entry: $0) }
+        let removals = (decode([String].self, arguments["remove_entries"]) ?? []).compactMap(UUID.init(uuidString:)).filter(known.contains)
+        let sectionOrder = decode([String].self, arguments["section_order"])
+        let entryOrder = decode([String].self, arguments["entry_order"])?.compactMap(UUID.init(uuidString:))
+        let makeMaster = arguments["make_master"] == "true" && !resume.isMaster ? true : nil
+
+        let edit = ClaudeProposal.ResumeEdit(
+            summary: summary, summaryOptions: summaryOptions, entries: entries,
+            additions: additions.isEmpty ? nil : additions, removals: removals.isEmpty ? nil : removals,
+            sectionOrder: sectionOrder?.isEmpty == false ? sectionOrder : nil, entryOrder: entryOrder?.isEmpty == false ? entryOrder : nil,
+            makeMaster: makeMaster
+        )
+        guard summary != nil || summaryOptions != nil || !entries.isEmpty || edit.hasStructure else {
+            return Reply(ok: false, text: "Nothing to suggest: send a summary, entries with entry ids from get_resume, add_records, add_skills, remove_entries, section_order, entry_order, or make_master.")
         }
         let proposal = ClaudeProposal(
             kind: .resumeEdit, targetID: resume.id, targetTitle: resume.displayTitle, category: .resumes,
             requestID: arguments["request_id"].flatMap(UUID.init(uuidString:)), note: arguments["note"] ?? "",
-            payload: ClaudeProposal.ResumeEdit(summary: summary, summaryOptions: summaryOptions, entries: entries)
+            payload: edit
         )
         var reply = propose(proposal, tool: tool, summary: String(localized: "Suggested changes to “\(resume.displayTitle)”"), context: context)
         let skipped = inputs.count - entries.count
         if skipped > 0 { reply.text += " \(skipped) entries were left out because their ids aren't in this resume." }
+        let leftOut = recordInputs.count - (additions.count - ResumeBuilder.skillLines(skills).count)
+        if leftOut > 0 { reply.text += " \(leftOut) record(s) left out of add_records: unconfirmed, not shared, or not found." }
+        if skills.count < skillNames.count { reply.text += " \(skillNames.count - skills.count) skill(s) left out: unconfirmed, not shared, or not found." }
         return reply
     }
 
@@ -200,21 +239,25 @@ enum ClaudeWriteTools {
 
     private static func recordEdit(_ arguments: [String: String], _ context: ModelContext, _ permissions: ClaudePermissions) -> Reply {
         let tool = "suggest_profile_edit"
-        guard let id = arguments["record_id"].flatMap(UUID.init(uuidString:)),
-              let field = arguments["field"].flatMap(ClaudeProposal.RecordEdit.Field.init(rawValue:))
-        else { return Reply(ok: false, text: "Send a record_id and a field: impacts, details, summary, or headline.") }
-
-        let target: (title: String, category: ClaudeCategory, fields: Set<ClaudeProposal.RecordEdit.Field>)?
-        if let record = try? context.fetch(FetchDescriptor<Experience>(predicate: #Predicate { $0.id == id })).first {
-            target = (record.displayTitle, .experience, [.impacts, .details])
-        } else if let record = try? context.fetch(FetchDescriptor<Project>(predicate: #Predicate { $0.id == id })).first {
-            target = (record.displayTitle, .projects, [.impacts, .details])
-        } else if let record = try? context.fetch(FetchDescriptor<PersonalInfo>(predicate: #Predicate { $0.id == id })).first {
-            target = (record.displayTitle, .personal, [.summary, .headline])
-        } else {
-            target = nil
+        typealias Field = ClaudeProposal.RecordEdit.Field
+        guard let field = arguments["field"].flatMap(Field.init(rawValue:)) else {
+            return Reply(ok: false, text: "Send a field: \(Field.allCases.map(\.rawValue).joined(separator: ", ")).")
         }
-        guard let target else { return Reply(ok: false, text: "No experience, project, or personal information with that id.") }
+        let id = arguments["record_id"].flatMap(UUID.init(uuidString:))
+        if arguments["record_id"]?.isBlank == false, id == nil {
+            return Reply(ok: false, text: "record_id isn't an id. Use the id from the list tools, or leave it out for personal information.")
+        }
+        /// The record, by id; without an id, Personal Information.
+        func find<M: ClaudeEditable>(_ type: M.Type) -> (id: UUID, title: String, category: ClaudeCategory, fields: Set<Field>)? {
+            let records = (try? context.fetch(FetchDescriptor<M>())) ?? []
+            let record = id.map { id in records.first { $0.id == id } } ?? (M.self == PersonalInfo.self ? records.first : nil)
+            return record.map { ($0.id, $0.displayTitle, M.claudeCategory, M.editableFields) }
+        }
+        let target = find(PersonalInfo.self) ?? find(Experience.self) ?? find(Project.self) ?? find(Education.self)
+            ?? find(Achievement.self) ?? find(Certification.self) ?? find(Skill.self)
+        guard let target else {
+            return Reply(ok: false, text: id == nil ? "There's no personal information in Civa yet." : "No profile record with that id. Use the ids from the list tools.")
+        }
         guard permissions.canSuggest(target.category) else { return refuse(target.category, tool: tool, context) }
         guard target.fields.contains(field) else {
             return Reply(ok: false, text: "That record's \(field.rawValue) can't be suggested. Allowed: \(target.fields.map(\.rawValue).sorted().joined(separator: ", ")).")
@@ -223,21 +266,21 @@ enum ClaudeWriteTools {
         let text = arguments["text"]
         let versions: [ClaudeProposal.Version]?
         do {
-            versions = try options(arguments, "options") { field == .impacts ? $0.lines?.isEmpty == false : $0.text?.isBlank == false }
+            versions = try options(arguments, "options") { field.isLines ? $0.lines?.isEmpty == false : $0.text?.isBlank == false }
         } catch let error as OptionsError {
             return Reply(ok: false, text: error.message)
         } catch {
             return Reply(ok: false, text: error.localizedDescription)
         }
-        guard versions != nil || (field == .impacts ? lines?.isEmpty == false : text?.isBlank == false) else {
-            return Reply(ok: false, text: field == .impacts ? "Send the new impacts as lines, or options with lines." : "Send the new \(field.rawValue) as text, or options with text.")
+        guard versions != nil || (field.isLines ? lines?.isEmpty == false : text?.isBlank == false) else {
+            return Reply(ok: false, text: field.isLines ? "Send the new \(field.rawValue) as lines, or options with lines." : "Send the new \(field.rawValue) as text, or options with text.")
         }
         let proposal = ClaudeProposal(
-            kind: .recordEdit, targetID: id, targetTitle: target.title, category: target.category,
+            kind: .recordEdit, targetID: target.id, targetTitle: target.title, category: target.category,
             requestID: arguments["request_id"].flatMap(UUID.init(uuidString:)), note: arguments["note"] ?? "",
             payload: ClaudeProposal.RecordEdit(
-                field: field, text: versions != nil || field == .impacts ? nil : text,
-                lines: versions != nil || field != .impacts ? nil : lines, options: versions
+                field: field, text: versions != nil || field.isLines ? nil : text,
+                lines: versions != nil || !field.isLines ? nil : lines, options: versions
             )
         )
         return propose(proposal, tool: tool, summary: String(localized: "Suggested a new \(field.rawValue) for “\(target.title)”"), context: context)
@@ -251,6 +294,36 @@ enum ClaudeWriteTools {
 
         enum CodingKeys: String, CodingKey {
             case recordID = "record_id", bullets
+        }
+    }
+
+    /// Confirmed records with these ids, from categories the user shares, as resume entries in
+    /// the order given. Bullets Claude sent replace the record's own and mark the entry.
+    private static func profileEntries(
+        _ inputs: [RecordInput], _ context: ModelContext, _ permissions: ClaudePermissions
+    ) -> [(kind: ResumeSection.Kind, entry: ResumeEntry)] {
+        func fetch<M: ProfileRecord>(_ type: M.Type, _ category: ClaudeCategory) -> [any ProfileRecord] {
+            guard permissions.canRead(category) else { return [] }
+            return ((try? context.fetch(FetchDescriptor<M>())) ?? []).filter { !$0.needsReview }
+        }
+        let records = fetch(Experience.self, .experience) + fetch(Education.self, .education) + fetch(Project.self, .projects)
+            + fetch(Achievement.self, .recognition) + fetch(Certification.self, .recognition)
+        let byID = Dictionary(records.compactMap { record in ((record as? any DocumentOwner)?.id).map { ($0, record) } }, uniquingKeysWith: { first, _ in first })
+        return inputs.compactMap { input in
+            guard let id = UUID(uuidString: input.recordID), let record = byID[id], var entry = ResumeBuilder.entry(for: record) else { return nil }
+            let kind: ResumeSection.Kind = switch record {
+            case let experience as Experience: experience.kind == .professional ? .experience : .organizational
+            case is Education: .education
+            case is Project: .projects
+            case is Achievement: .achievements
+            default: .certifications
+            }
+            entry.sourceCopy = entry.asSourceCopy
+            if let bullets = input.bullets?.filter({ !$0.isBlank }), !bullets.isEmpty {
+                entry.bullets = bullets
+                entry.claudeTouched = true
+            }
+            return (kind, entry)
         }
     }
 
@@ -298,6 +371,10 @@ enum ClaudeWriteTools {
             document.summary = summary
             document.claudeTouchedSummary = true
         }
+        // Records in the order Claude sent them within each section, then the sections in its order.
+        let order = inputs.compactMap { UUID(uuidString: $0.recordID) }
+        let entryIDs = order.compactMap { id in document.sections.flatMap(\.entries).first { $0.sourceID == id }?.id }
+        ClaudeDecisions.reorder(&document, sections: decode([String].self, arguments["section_order"]), entries: entryIDs)
         let master = (try? context.fetch(FetchDescriptor<Resume>(predicate: #Predicate { $0.isMaster })))?.first
         if let master { document.format = master.document.format }
 
@@ -318,7 +395,7 @@ enum ClaudeWriteTools {
             payload: [String: String]()
         )
         var reply = propose(proposal, tool: tool, summary: String(localized: "Drafted the resume “\(title)”"), context: context)
-        reply.text = "Drafted “\(title)” in Civa with \(found) records. It's waiting in Resumes for the user to keep or discard."
+        reply.text = "Drafted “\(title)” in Civa with \(found) records (resume_id: \(resume.id), suggestion_id: \(proposal.id)). It's waiting in Resumes for the user to keep or discard. To change it further, use suggest_resume_edit with its resume_id."
         if ids.count > found { reply.text += " \(ids.count - found) ids were left out: they're unconfirmed, not shared, or not found." }
         return reply
     }

@@ -34,6 +34,7 @@ struct CertificationForm: View {
     var body: some View {
         Form {
             ReviewBanner(editor: editor)
+            ClaudeRecordProposalsSection(editor: editor)
             Section {
                 TextField("Name", text: editor.binding(\.name), prompt: Text("Required"))
                 FieldError(editor.error(for: \.name))

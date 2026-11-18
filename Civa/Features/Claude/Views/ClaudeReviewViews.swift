@@ -47,22 +47,22 @@ struct ClaudeResumeProposalsSheet: View {
                                 ForEach(edit.entries, id: \.entryID) { change in
                                     entryRows(change, proposal: proposal)
                                 }
+                                structureRows(edit)
                                 let chosen = edit.resolved(picks[proposal.id] ?? [:])
+                                let isEmpty = chosen.summary == nil && chosen.entries.isEmpty && !chosen.hasStructure
                                 HStack {
                                     Spacer()
                                     Button(edit.hasOptions ? "Keep Mine" : "Dismiss") { decide(proposal, .dismissed) }
                                     Button(edit.hasOptions ? "Use Selected" : "Apply") {
                                         editor.update { resume in
                                             resume.recordSnapshot(.beforeClaude, in: context)
-                                            var document = resume.document
-                                            ClaudeDecisions.apply(chosen, to: &document)
-                                            resume.document = document
+                                            try? ClaudeDecisions.apply(chosen, to: resume, in: context)
                                         }
                                         decide(proposal, .applied, choice: choiceLabels(edit, proposal))
                                     }
                                     .civaButton(.claude)
-                                    .disabled(chosen.summary == nil && chosen.entries.isEmpty)
-                                    .help(chosen.summary == nil && chosen.entries.isEmpty ? "Pick a version first" : "")
+                                    .disabled(isEmpty)
+                                    .help(isEmpty ? "Pick a version first" : "")
                                 }
                             } header: {
                                 Text("Suggested \(proposal.createdAt.formatted(.relative(presentation: .named)))")
@@ -85,10 +85,45 @@ struct ClaudeResumeProposalsSheet: View {
         .frame(width: 640, height: open.isEmpty ? 280 : isSmall(open) ? 380 : 560)
     }
 
+    /// Added records, removed entries, a new order, and Master, each as one row.
+    @ViewBuilder
+    private func structureRows(_ edit: ClaudeProposal.ResumeEdit) -> some View {
+        let document = editor.record.document
+        ForEach(Array((edit.additions ?? []).enumerated()), id: \.offset) { _, addition in
+            ChangeRow(
+                label: String(localized: "Add to \(document.sections.first { $0.kind == addition.kind }?.title ?? addition.kind.heading)"),
+                old: "", new: Self.describe(addition.entry.title, addition.entry.subtitle, addition.entry.bullets)
+            )
+        }
+        ForEach(edit.removals ?? [], id: \.self) { id in
+            if let position = document.entryPosition(id) {
+                ChangeRow(label: String(localized: "Remove"), old: document.sections[position.section].entries[position.entry].title, new: "")
+            }
+        }
+        if edit.sectionOrder != nil || edit.entryOrder != nil {
+            let reordered = { () -> ResumeDocument in
+                var copy = document
+                ClaudeDecisions.apply(ClaudeProposal.ResumeEdit(additions: edit.additions, removals: edit.removals, sectionOrder: edit.sectionOrder, entryOrder: edit.entryOrder), to: &copy)
+                return copy
+            }()
+            ChangeRow(label: String(localized: "Order"), old: Self.outline(document), new: Self.outline(reordered))
+        }
+        if edit.makeMaster == true {
+            ChangeRow(label: String(localized: "Master Resume"), old: "", new: String(localized: "Make this resume the Master Resume"))
+        }
+    }
+
+    /// "Projects: EPS Production · Experience: Lab Assistant", for comparing orders.
+    private static func outline(_ document: ResumeDocument) -> String {
+        document.sections.filter { !$0.entries.isEmpty }.map { section in
+            "\(section.title): " + section.entries.map(\.title).joined(separator: ", ")
+        }.joined(separator: "\n")
+    }
+
     /// One suggestion that only changes the summary, in one version.
     private func isSmall(_ open: [ClaudeProposal]) -> Bool {
         guard open.count == 1, let edit = open[0].decode(ClaudeProposal.ResumeEdit.self) else { return false }
-        return edit.entries.isEmpty && edit.summaryVersions.count <= 1
+        return edit.entries.isEmpty && edit.summaryVersions.count <= 1 && !edit.hasStructure
     }
 
     private func pick(_ proposal: ClaudeProposal, _ change: ClaudeProposal.ResumeEdit.Change) -> Binding<Int?> {
@@ -319,17 +354,39 @@ struct ClaudeRecordProposalsSection<Model: ClaudeEditable>: View {
     }
 
     private func title(_ field: ClaudeProposal.RecordEdit.Field) -> String {
-        switch field {
-        case .impacts: String(localized: "Impact")
-        case .details: String(localized: "Description")
-        case .summary: String(localized: "Summary")
-        case .headline: String(localized: "Headline")
-        }
+        field.title
     }
 
     private func lines(_ values: [String], _ field: ClaudeProposal.RecordEdit.Field) -> String {
-        field == .impacts ? values.filter { !$0.isBlank }.map { "• \($0)" }.joined(separator: "\n") : values.joined()
+        field.isLines ? values.filter { !$0.isBlank }.map { "• \($0)" }.joined(separator: "\n") : values.joined()
     }
 }
 
 /// On the Dashboard: requests waiting for Claude and suggestions waiting for the user (FR-072, FR-073).
+
+extension ClaudeProposal.RecordEdit.Field {
+    /// The field's name, as its editor labels it.
+    var title: String {
+        switch self {
+        case .impacts: String(localized: "Impact")
+        case .details: String(localized: "Description")
+        case .summary: String(localized: "Summary")
+        case .headline: String(localized: "Headline")
+        case .role: String(localized: "Role")
+        case .organization: String(localized: "Organization")
+        case .location: String(localized: "Location")
+        case .recognition: String(localized: "Recognition")
+        case .name: String(localized: "Name")
+        case .institution: String(localized: "Institution")
+        case .degree: String(localized: "Degree")
+        case .fieldOfStudy: String(localized: "Field of Study")
+        case .thesis: String(localized: "Thesis")
+        case .honors: String(localized: "Honors")
+        case .coursework: String(localized: "Relevant Coursework")
+        case .title: String(localized: "Title")
+        case .issuer: String(localized: "Issuer")
+        case .placement: String(localized: "Placement")
+        case .category: String(localized: "Category")
+        }
+    }
+}

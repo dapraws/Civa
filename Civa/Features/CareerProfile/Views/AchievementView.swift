@@ -47,6 +47,7 @@ struct AchievementForm: View {
     var body: some View {
         Form {
             ReviewBanner(editor: editor)
+            ClaudeRecordProposalsSection(editor: editor)
             Section {
                 TextField("Title", text: editor.binding(\.title), prompt: Text("Required"))
                 FieldError(editor.error(for: \.title))

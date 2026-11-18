@@ -293,6 +293,7 @@ struct SkillForm: View {
     var body: some View {
         Form {
             ReviewBanner(editor: editor)
+            ClaudeRecordProposalsSection(editor: editor)
             Section {
                 // In the form, not above the chips: a TipView in that fixed-height column broke the page layout.
                 TipView(CivaTip.skills)

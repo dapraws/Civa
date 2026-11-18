@@ -31,6 +31,9 @@ enum ClaudeTools {
         if ClaudeLink.writeTools.contains(where: { $0.name == tool.name }) {
             return ClaudeWriteTools.respond(request, context: context, permissions: permissions)
         }
+        if tool.name == "get_profile_record" {
+            return profileRecord(request.arguments["record_id"], context: context, permissions: permissions)
+        }
         guard let category = tool.category else { return connectionStatus(permissions) }
         guard permissions.canRead(category) else {
             context.insert(ClaudeActivity(
@@ -64,15 +67,20 @@ enum ClaudeTools {
     }
 
     private static func read(_ tool: String, arguments: [String: String], context: ModelContext) -> Result {
-        func confirmed<M: ProfileRecord>(_ type: M.Type) -> (records: [M], waiting: Int) {
+        func confirmed<M: ProfileRecord>(_ type: M.Type) -> (records: [M], waiting: [M]) {
             let all = (try? context.fetch(FetchDescriptor<M>())) ?? []
-            return (all.filter { !$0.needsReview }, all.count(where: \.needsReview))
+            return (all.filter { !$0.needsReview }, all.filter(\.needsReview))
+        }
+        /// Records awaiting review, by title only: their details aren't shared until confirmed.
+        func waitingNote<M: ProfileRecord>(_ waiting: [M], _ noun: String) -> String {
+            waiting.isEmpty ? "" : "\n\nAwaiting the user's review in Civa (\(waiting.count) \(noun); details shared once confirmed): "
+                + waiting.map(\.displayTitle).sorted().joined(separator: "; ")
         }
         func list<M: ProfileRecord>(_ type: M.Type, _ noun: String, sort: (M, M) -> Bool, _ describe: (M) -> String) -> Result {
             let (records, waiting) = confirmed(type)
             let sorted = records.sorted(by: sort)
             var text = sorted.isEmpty ? "No confirmed \(noun) in Civa." : sorted.map(describe).joined(separator: "\n\n")
-            if waiting > 0 { text += "\n\n(\(waiting) more awaiting the user's review in Civa aren't shared.)" }
+            text += waitingNote(waiting, noun)
             return Result(text: text, summary: String(localized: "Read \(sorted.count) \(noun)"), titles: sorted.map(\.displayTitle))
         }
 
@@ -100,12 +108,15 @@ enum ClaudeTools {
             achievements.titles += certifications.titles
             return achievements
         case "list_skills":
-            let skills = confirmed(Skill.self).records
+            let (skills, waiting) = confirmed(Skill.self)
             let groups = Dictionary(grouping: skills) { $0.category.isBlank ? String(localized: "Other") : $0.category }
             let text = groups.keys.sorted().map { category in
                 "\(category): " + groups[category, default: []].map(\.name).sorted().joined(separator: ", ")
             }.joined(separator: "\n")
-            return Result(text: text.isEmpty ? "No confirmed skills in Civa." : text, summary: String(localized: "Read \(skills.count) skills"), titles: skills.map(\.name))
+            return Result(
+                text: (text.isEmpty ? "No confirmed skills in Civa." : text) + waitingNote(waiting, "skills"),
+                summary: String(localized: "Read \(skills.count) skills"), titles: skills.map(\.name)
+            )
         case "list_resumes":
             let resumes = ((try? context.fetch(FetchDescriptor<Resume>())) ?? []).sorted { $0.updatedAt > $1.updatedAt }
             let text = resumes.map { resume in
@@ -137,6 +148,29 @@ enum ClaudeTools {
         }
     }
 
+    /// One confirmed record by id, with every field, when its category is shared.
+    private static func profileRecord(_ id: String?, context: ModelContext, permissions: ClaudePermissions) -> ClaudeLink.Reply {
+        let missing = ClaudeLink.Reply(ok: false, text: "No confirmed profile record with that id. Use the ids from the list tools.")
+        guard let id = id.flatMap(UUID.init(uuidString:)) else { return missing }
+        func find<M: ProfileRecord>(_ type: M.Type) -> M? {
+            ((try? context.fetch(FetchDescriptor<M>())) ?? []).first { ($0 as? any DocumentOwner)?.id == id && !$0.needsReview }
+        }
+        let found: (category: ClaudeCategory, title: String, text: String)? =
+            if let record = find(Experience.self) { (.experience, record.displayTitle, ClaudeText.experience(record)) }
+            else if let record = find(Education.self) { (.education, record.displayTitle, ClaudeText.education(record)) }
+            else if let record = find(Project.self) { (.projects, record.displayTitle, ClaudeText.project(record)) }
+            else if let record = find(Achievement.self) { (.recognition, record.displayTitle, ClaudeText.achievement(record)) }
+            else if let record = find(Certification.self) { (.recognition, record.displayTitle, ClaudeText.certification(record)) }
+            else { nil }
+        guard let found else { return missing }
+        guard permissions.canRead(found.category) else {
+            context.insert(ClaudeActivity(kind: .denied, tool: "get_profile_record", category: found.category, summary: String(localized: "Refused: \(found.category.title) isn't shared")))
+            return ClaudeLink.Reply(ok: false, text: "The user hasn't allowed Claude to read \(found.category.title) in Civa. They can allow it in Civa → Settings → Claude Desktop.")
+        }
+        context.insert(ClaudeActivity(kind: .read, tool: "get_profile_record", category: found.category, summary: String(localized: "Read “\(found.title)”"), detail: found.title))
+        return ClaudeLink.Reply(ok: true, text: found.text)
+    }
+
     private static func recency(_ experience: Experience) -> YearMonth {
         YearMonth.recency(start: experience.start, end: experience.end, isCurrent: experience.isCurrent)
     }
@@ -146,6 +180,7 @@ enum ClaudeTools {
 enum ClaudeText {
     static func personal(_ person: PersonalInfo) -> String {
         lines([
+            "[Personal information · id: \(person.id)]",
             "Name: \(person.fullName)",
             field("Headline", person.headline),
             field("Summary", person.summary),
@@ -240,7 +275,7 @@ enum ClaudeText {
         ]
         if !document.summary.isBlank { parts += ["", document.summary] }
         for section in document.sections where !section.entries.isEmpty {
-            parts += ["", section.title.uppercased()]
+            parts += ["", "[section_id: \(section.id) · \(section.kind.rawValue)] " + section.title.uppercased()]
             for entry in section.entries {
                 if section.kind == .skills {
                     parts.append([entry.title, entry.subtitle].filter { !$0.isBlank }.joined(separator: ": "))
