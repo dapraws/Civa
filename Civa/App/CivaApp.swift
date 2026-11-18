@@ -49,7 +49,11 @@ struct CivaApp: App {
                     .modelContainer(container)
                     .environment(appDelegate.changes)
                     .onAppear {
-                        ClaudeBridge.shared.handler = { ClaudeTools.answer($0, container: container) }
+                        ClaudeBridge.shared.handler = { request in
+                            let reply = ClaudeTools.answer(request, container: container)
+                            ClaudeNotifications.post(after: request, reply)
+                            return reply
+                        }
                         ClaudeBridge.shared.startIfEnabled()
                     }
             case .failure(let error):

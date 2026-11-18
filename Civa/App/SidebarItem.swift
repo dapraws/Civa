@@ -8,7 +8,8 @@
 import SwiftUI
 
 /// A sidebar row (DESIGN.md §7.7): soft fill, bold label, cobalt icon and a 3 pt cobalt bar when
-/// selected. AI Activity's icon is always Claude orange, and its count is a Claude tint.
+/// selected. AI Activity's icon is always Claude orange, and its count is a Claude tint; Review's
+/// count is cobalt.
 struct SidebarItem: View {
     let section: AppSection
     let isSelected: Bool
@@ -39,10 +40,10 @@ struct SidebarItem: View {
                     Text(badge, format: .number)
                         .font(.caption.weight(.semibold))
                         .monospacedDigit()
-                        .foregroundStyle(Color.claudeText)
+                        .foregroundStyle(section == .aiActivity ? Color.claudeText : Color.accent)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 1)
-                        .background(Color.claudeTint, in: .rect(cornerRadius: Radius.tag))
+                        .background(section == .aiActivity ? Color.claudeTint : Color.selectionFill, in: .rect(cornerRadius: Radius.tag))
                         .accessibilityLabel(Text("\(badge) waiting"))
                 }
             }
@@ -79,7 +80,7 @@ private struct SidebarPreview: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
             ForEach(AppSection.allCases) { section in
-                SidebarItem(section, isSelected: section == selection, badge: section == .aiActivity ? 3 : nil) {
+                SidebarItem(section, isSelected: section == selection, badge: section == .aiActivity ? 3 : section == .review ? 5 : nil) {
                     selection = section
                 }
             }

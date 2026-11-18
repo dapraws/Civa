@@ -10,6 +10,7 @@ import Foundation
 /// Main sidebar navigation (FR-003).
 enum AppSection: String, CaseIterable, Identifiable {
     case dashboard
+    case review
     case careerProfile
     case documents
     case resumes
@@ -27,6 +28,7 @@ enum AppSection: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .dashboard: String(localized: "Dashboard")
+        case .review: String(localized: "Review")
         case .careerProfile: String(localized: "Career Profile")
         case .documents: String(localized: "Documents")
         case .resumes: String(localized: "Resumes")
@@ -39,6 +41,7 @@ enum AppSection: String, CaseIterable, Identifiable {
     var systemImage: String {
         switch self {
         case .dashboard: "square.grid.2x2"
+        case .review: "checklist"
         case .careerProfile: "person.text.rectangle"
         case .documents: "doc.on.doc"
         case .resumes: "doc.text"

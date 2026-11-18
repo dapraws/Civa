@@ -31,6 +31,19 @@ struct RootView: View {
     /// Waiting and failed requests: both need the user to start them in Claude.
     @Query(filter: #Predicate<ClaudeRequest> { $0.statusRaw == "pending" || $0.statusRaw == "failed" })
     private var openRequests: [ClaudeRequest]
+    @Query(filter: #Predicate<PersonalInfo> { $0.statusRaw == "needsReview" }) private var reviewPeople: [PersonalInfo]
+    @Query(filter: #Predicate<Experience> { $0.statusRaw == "needsReview" }) private var reviewExperience: [Experience]
+    @Query(filter: #Predicate<Education> { $0.statusRaw == "needsReview" }) private var reviewEducation: [Education]
+    @Query(filter: #Predicate<Project> { $0.statusRaw == "needsReview" }) private var reviewProjects: [Project]
+    @Query(filter: #Predicate<Achievement> { $0.statusRaw == "needsReview" }) private var reviewAchievements: [Achievement]
+    @Query(filter: #Predicate<Certification> { $0.statusRaw == "needsReview" }) private var reviewCertifications: [Certification]
+    @Query(filter: #Predicate<Skill> { $0.statusRaw == "needsReview" }) private var reviewSkills: [Skill]
+
+    /// Claude's suggestions and records awaiting review: the Review badge and the Dock badge.
+    private var reviewCount: Int {
+        claudeProposals.count + reviewPeople.count + reviewExperience.count + reviewEducation.count
+            + reviewProjects.count + reviewAchievements.count + reviewCertifications.count + reviewSkills.count
+    }
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
@@ -55,6 +68,10 @@ struct RootView: View {
             }
         }
         .onChange(of: navigation.section) { showsPeek = false }
+        // The count on Civa's Dock icon, so waiting suggestions are seen with Civa in the background.
+        .onChange(of: reviewCount, initial: true) { _, count in
+            NSApp.dockTile.badgeLabel = count > 0 ? String(count) : nil
+        }
         .overlay(alignment: .top) {
             if let title = notice.banner {
                 ClaudeRequestBanner(title: title, onOpen: notice.open) { notice.banner = nil }
@@ -187,7 +204,7 @@ struct RootView: View {
         SidebarItem(
             section,
             isSelected: selection.wrappedValue == section,
-            badge: section == .aiActivity ? claudeProposals.count + openRequests.count : nil
+            badge: section == .review ? reviewCount : section == .aiActivity ? openRequests.count : nil
         ) {
             isSidebarFocused = true
             selection.wrappedValue = section
@@ -229,6 +246,8 @@ struct RootView: View {
         switch section {
         case .dashboard:
             DashboardView()
+        case .review:
+            ReviewView()
         case .careerProfile:
             CareerProfileView()
         case .documents:

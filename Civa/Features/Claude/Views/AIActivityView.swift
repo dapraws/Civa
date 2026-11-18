@@ -159,14 +159,24 @@ struct ClaudeProposalRow: View {
             navigation.recordToOpen = proposal.targetID
             navigation.section = .resumes
         case .recordEdit:
+            navigation.otherKind = nil
             navigation.profileCategory = switch proposal.category {
             case .personal: .personal
             case .projects: .projects
+            case .education: .education
+            case .recognition, .skills: .other
             default: experienceCategory(proposal.targetID)
             }
-            navigation.recordToOpen = proposal.targetID
+            if proposal.category == .skills { navigation.otherKind = "skills" }
+            if proposal.category == .recognition { navigation.otherKind = isCertification(proposal.targetID) ? "certifications" : "achievements" }
+            navigation.recordToOpen = proposal.category == .personal ? nil : proposal.targetID
             navigation.section = .careerProfile
         }
+    }
+
+    private func isCertification(_ id: UUID?) -> Bool {
+        guard let id else { return false }
+        return (try? context.fetch(FetchDescriptor<Certification>(predicate: #Predicate { $0.id == id })).first) != nil
     }
 
     private func experienceCategory(_ id: UUID?) -> ProfileCategory {
