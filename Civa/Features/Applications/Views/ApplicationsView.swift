@@ -8,11 +8,32 @@
 import SwiftData
 import SwiftUI
 
-/// Job application tracking (FR-060 to FR-062): a list plus detail, filterable by status
-/// (DESIGN.md §8.7).
+/// How the Applications page shows its records (DESIGN.md §8.7), remembered between launches.
+enum ApplicationsMode: String, CaseIterable, Identifiable {
+    case board
+    case list
+
+    static let key = "ApplicationsMode"
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .board: String(localized: "Board")
+        case .list: String(localized: "List")
+        }
+    }
+}
+
+/// Job application tracking (FR-060 to FR-062): a board by status, or a list plus detail filterable
+/// by status (DESIGN.md §8.7).
 struct ApplicationsView: View {
     @Environment(UnsavedChangesGuard.self) private var changes
     @Environment(AppNavigation.self) private var navigation
+    @AppStorage(ApplicationsMode.key) private var mode = ApplicationsMode.board
+    @AppStorage(ApplicationBoard.showsClosedKey) private var showsClosed = false
+    /// The mode picked while the unsaved-changes prompt is up.
+    @State private var pendingMode: ApplicationsMode?
     /// nil shows every status.
     @State private var status: ApplicationStatus?
     /// The filter picked while the unsaved-changes prompt is up.
@@ -20,6 +41,50 @@ struct ApplicationsView: View {
     @State private var addAction: PageAction?
 
     var body: some View {
+        Group {
+            switch mode {
+            case .board: board
+            case .list: list
+            }
+        }
+        .onChange(of: navigation.applicationStatusFilter, initial: true) { _, next in
+            guard let next else { return }
+            // A request for one status (a Dashboard pipeline cell) is the filtered list.
+            mode = .list
+            status = next
+            navigation.applicationStatusFilter = nil
+        }
+    }
+
+    private var modePicker: some View {
+        SegmentedTabs(ApplicationsMode.allCases, selection: changes.selection($mode, pending: $pendingMode), title: \.title)
+            .help("Show applications as a board or a list")
+    }
+
+    private var board: some View {
+        RecordGallery<JobApplication, EmptyView, ApplicationForm, _>(
+            title: String(localized: "Applications"),
+            addTitle: String(localized: "Add Application"),
+            empty: ApplicationList.allEmpty,
+            order: JobApplication.listOrder,
+            cardWidth: 0,
+            makeRecord: { JobApplication(company: "", position: "") },
+            editorHasHeader: true,
+            layout: { applications, open in
+                AnyView(ApplicationBoardView(applications: applications, open: open))
+            },
+            headerActions: {
+                Toggle("Show Closed", isOn: $showsClosed)
+                    .toggleStyle(.checkbox)
+                    .help("Show the Rejected and Withdrawn columns")
+                modePicker
+            },
+            card: { _ in EmptyView() },
+            editor: { editor in ApplicationForm(editor: editor, showsBack: true) }
+        )
+    }
+
+    private var list: some View {
         VStack(alignment: .leading, spacing: 0) {
             PageHeader(String(localized: "Applications")) {
                 CivaMenuPicker(
@@ -36,6 +101,7 @@ struct ApplicationsView: View {
                     if let status { StatusMark(status, emphasized: true) } else { Text("All Statuses") }
                 }
                 .help("Show applications with this status")
+                modePicker
                 PageActionButton(action: addAction)
             }
             .padding(.horizontal, Space.xl)
@@ -49,26 +115,23 @@ struct ApplicationsView: View {
         .onPreferenceChange(PageActionKey.self) { action in
             MainActor.assumeIsolated { addAction = action }
         }
-        .onChange(of: navigation.applicationStatusFilter, initial: true) { _, next in
-            guard let next else { return }
-            status = next
-            navigation.applicationStatusFilter = nil
-        }
     }
 }
 
 struct ApplicationList: View {
     let status: ApplicationStatus?
 
+    static let allEmpty = RecordEmptyState(
+        title: String(localized: "No applications yet"),
+        message: String(localized: "Track the jobs you're interested in and where each one stands."),
+        systemImage: "tray"
+    )
+
     var body: some View {
         RecordListDetail(
             addTitle: String(localized: "Add Application"),
             empty: status == nil
-                ? .init(
-                    title: String(localized: "No applications yet"),
-                    message: String(localized: "Track the jobs you're interested in and where each one stands."),
-                    systemImage: "tray"
-                )
+                ? Self.allEmpty
                 : .init(
                     title: String(localized: "No applications here"),
                     message: String(localized: "None of your applications have this status."),
@@ -97,8 +160,11 @@ struct ApplicationList: View {
 
 struct ApplicationForm: View {
     let editor: RecordEditor<JobApplication>
+    /// Opened from the board, which the form replaces: Back returns to it.
+    var showsBack = false
 
     @Environment(UnsavedChangesGuard.self) private var changes
+    @Environment(\.closeRecordEditor) private var closeEditor
     @Environment(AppNavigation.self) private var navigation
     @Query(sort: \Resume.updatedAt, order: .reverse) private var resumes: [Resume]
 
@@ -112,6 +178,14 @@ struct ApplicationForm: View {
     /// Logo, position, company and status (DESIGN.md §8.7); the form below doesn't repeat them.
     private var header: some View {
         HStack(spacing: Space.m) {
+            if showsBack {
+                Button("Back", systemImage: "chevron.left") { changes.perform(closeEditor) }
+                    .labelStyle(.iconOnly)
+                    .civaButton(.textLink)
+                    .frame(width: Size.minTarget, height: Size.minTarget)
+                    .keyboardShortcut("[", modifiers: .command)
+                    .help("Back to the board (⌘[)")
+            }
             OrganizationLogo(name: editor.record.company, size: 56)
             VStack(alignment: .leading, spacing: 2) {
                 Text(editor.record.displayTitle)

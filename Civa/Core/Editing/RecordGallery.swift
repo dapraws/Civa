@@ -38,6 +38,9 @@ struct RecordGallery<Model: EditableRecord, Card: View, Editor: View, HeaderActi
     /// Replaces "add a blank record", for records that start from something else (a file).
     private let onAdd: (() -> Void)?
     private let card: (Model) -> Card
+    /// Replaces the card grid, such as the Applications board. It gets the records in order and a
+    /// way to open one.
+    private let layout: (([Model], @escaping (Model) -> Void) -> AnyView)?
     private let editorView: (RecordEditor<Model>) -> Editor
     private let headerActions: HeaderActions
     /// The Resume Editor draws its own title row; other editors get Back plus the record's name.
@@ -57,6 +60,7 @@ struct RecordGallery<Model: EditableRecord, Card: View, Editor: View, HeaderActi
         showsAddButton: Bool = true,
         onAdd: (() -> Void)? = nil,
         editorHasHeader: Bool = false,
+        layout: (([Model], @escaping (Model) -> Void) -> AnyView)? = nil,
         @ViewBuilder headerActions: () -> HeaderActions = { EmptyView() },
         @ViewBuilder card: @escaping (Model) -> Card,
         @ViewBuilder editor: @escaping (RecordEditor<Model>) -> Editor
@@ -76,6 +80,7 @@ struct RecordGallery<Model: EditableRecord, Card: View, Editor: View, HeaderActi
         self.showsAddButton = showsAddButton
         self.onAdd = onAdd
         self.card = card
+        self.layout = layout
         self.editorView = editor
     }
 
@@ -170,6 +175,8 @@ struct RecordGallery<Model: EditableRecord, Card: View, Editor: View, HeaderActi
                     // No Add here: the title row's Add is the one way to add.
                     .padding(.horizontal, Space.xl)
                     Spacer()
+                } else if let layout {
+                    layout(records.sorted(by: order), open)
                 } else {
                     ScrollView {
                         LazyVGrid(

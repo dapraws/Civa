@@ -12,14 +12,17 @@ extension View {
     /// DESIGN.md §7.1: a 2 pt ring, 2 pt outside the shape, cobalt in light and `accentText` in
     /// dark. Only for keyboard focus: focus that arrives with a mouse click shows nothing.
     /// Pair with `.focusEffectDisabled()` so the system ring doesn't show as well.
-    func civaFocusRing(_ shape: some InsettableShape, isFocused: Bool) -> some View {
-        modifier(FocusRing(shape: shape, isFocused: isFocused))
+    /// `byKeyboard` tells it the keys moved focus here when it can't see that itself, such as a
+    /// board card picked with the arrow keys.
+    func civaFocusRing(_ shape: some InsettableShape, isFocused: Bool, byKeyboard: Bool = false) -> some View {
+        modifier(FocusRing(shape: shape, isFocused: isFocused, byKeyboard: byKeyboard))
     }
 }
 
 private struct FocusRing<S: InsettableShape>: ViewModifier {
     let shape: S
     let isFocused: Bool
+    let byKeyboard: Bool
 
     @Environment(\.colorScheme) private var colorScheme
     @State private var fromKeyboard = false
@@ -27,7 +30,7 @@ private struct FocusRing<S: InsettableShape>: ViewModifier {
     func body(content: Content) -> some View {
         content
             .overlay {
-                if isFocused && fromKeyboard {
+                if isFocused && (fromKeyboard || byKeyboard) {
                     shape
                         .inset(by: -3)
                         .stroke(colorScheme == .dark ? Color.accentText : Color.accent, lineWidth: 2)
