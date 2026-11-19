@@ -3,6 +3,24 @@
 Every Civa release, newest first. Versions follow [Semantic Versioning](https://semver.org):
 a new feature raises the middle number, a fix-only release raises the last one.
 
+## [1.2.0] - 2026-11-19
+
+### Added
+
+- **A board for your applications.** Applications opens on a board with one column per status:
+  Wishlist, Applied, Assessment, Interview, and Offer, each with its count. Drag a card to
+  another column to change its status; it saves right away. Turn on Show Closed to see
+  Rejected and Withdrawn too.
+- **Board or List.** Switch between the board and the list with details at the top of
+  Applications. Civa remembers the one you used last.
+- **Move a card without the mouse.** Use the arrow keys to move between cards, Return to open
+  one, and ⌥⌘← or ⌥⌘→ to move it to the previous or next status. Right-click a card for
+  Move to, or use the Move to actions in VoiceOver.
+
+### Changed
+
+- Clicking a status on the Dashboard opens Applications as a list filtered to that status.
+
 ## [1.1.0] - 2026-11-19
 
 ### Added
