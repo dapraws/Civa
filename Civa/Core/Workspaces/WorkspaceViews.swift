@@ -303,7 +303,8 @@ struct WorkspaceLabel: View {
 
     private var title: String {
         #if DEBUG
-        if DataMode.current != .real { return "\(registry.current.displayName) · \(DataMode.current.title)" }
+        // Sample and empty data aren't any workspace's, so the workspace name stays off the label.
+        if DataMode.current != .real { return DataMode.current.title }
         #endif
         return registry.current.displayName
     }

@@ -35,7 +35,7 @@ enum SampleProfile {
         let skills = [swift, kotlin, python, typeScript, swiftUI, uiKit, swiftData, combine, coreML, pyTorch] + tools + soft
 
         // MARK: Experience
-        let cvSource = RecordSource(name: "raka-pratama-cv-2025.pdf", date: .now - day * 30)
+        let cvSource = RecordSource(name: "john-doe-cv-2025.pdf", date: .now - day * 30)
         let gojek = Experience(
             kind: .professional, organization: "Gojek", role: "iOS Engineer", location: "Jakarta, Indonesia",
             start: YearMonth(year: 2024, month: 8), isCurrent: true,
@@ -74,7 +74,7 @@ enum SampleProfile {
         )
         telkom.employmentType = .internship
         telkom.workArrangement = .onSite
-        telkom.proofURL = "https://credentials.example.com/telkom-internship/RP-2023"
+        telkom.proofURL = "https://credentials.example.com/telkom-internship/JD-2023"
         telkom.skills = [python]
 
         let research = Experience(
@@ -107,7 +107,7 @@ enum SampleProfile {
         bangkit.organizationType = .program
         bangkit.workArrangement = .remote
         bangkit.recognition = "Graduate with Distinction"
-        bangkit.proofURL = "https://credentials.example.com/bangkit-2023/RP-M117"
+        bangkit.proofURL = "https://credentials.example.com/bangkit-2023/JD-M117"
         let gdg = Experience(
             kind: .organizational, organization: "Google Developer Groups on Campus Telkom University",
             role: "Mobile Development Lead", location: "Bandung, Indonesia",
@@ -143,7 +143,7 @@ enum SampleProfile {
         university.thesis = "On-device Indonesian speech recognition for low-end smartphones"
         university.coursework = ["Data Structures", "Mobile Programming", "Machine Learning", "Human-Computer Interaction"]
         university.honors = "Cum Laude"
-        university.proofURL = "https://credentials.example.com/telkom-university/diploma-RP-2024"
+        university.proofURL = "https://credentials.example.com/telkom-university/diploma-JD-2024"
         let school = Education(
             institution: "SMA Negeri 3 Bandung", degree: "Natural Sciences (IPA)", location: "Bandung, Indonesia",
             start: YearMonth(year: 2017, month: 7), end: YearMonth(year: 2020, month: 6)
@@ -164,7 +164,7 @@ enum SampleProfile {
             ]
         )
         sehatin.skills = [swift, swiftUI, coreML]
-        sehatin.repositoryURL = "https://github.com/raka-pratama-sample/sehatin"
+        sehatin.repositoryURL = "https://github.com/john-doe-sample/sehatin"
         let kirana = Project(
             name: "Kirana", role: "Solo Developer", url: "https://kirana.example.com",
             start: YearMonth(year: 2025, month: 1), details: "A SwiftUI budgeting app for shared household expenses.",
@@ -174,7 +174,7 @@ enum SampleProfile {
             ]
         )
         kirana.skills = [swift, swiftUI, swiftData]
-        kirana.repositoryURL = "https://github.com/raka-pratama-sample/kirana"
+        kirana.repositoryURL = "https://github.com/john-doe-sample/kirana"
 
         let distinction = Achievement(
             title: "Graduate with Distinction", issuer: "Bangkit Academy", date: YearMonth(year: 2023, month: 7),
@@ -182,7 +182,7 @@ enum SampleProfile {
         )
         distinction.experience = bangkit
         distinction.placement = "Top 10%"
-        distinction.proofURL = "https://credentials.example.com/bangkit-2023/distinction-RP-M117"
+        distinction.proofURL = "https://credentials.example.com/bangkit-2023/distinction-JD-M117"
         let capstone = Achievement(title: "Best Capstone Project", issuer: "Bangkit Academy", date: YearMonth(year: 2023, month: 7))
         capstone.project = sehatin
         capstone.placement = "1st Place"
@@ -194,7 +194,7 @@ enum SampleProfile {
 
         let azure = Certification(
             name: "Microsoft Certified: Azure AI Fundamentals", issuer: "Microsoft", issued: YearMonth(year: 2024, month: 3),
-            credentialID: "AI900-RP-2024", credentialURL: "https://credentials.example.com/azure-ai-fundamentals/AI900-RP-2024"
+            credentialID: "AI900-JD-2024", credentialURL: "https://credentials.example.com/azure-ai-fundamentals/AI900-JD-2024"
         )
         let appleCert = Certification(
             name: "App Development with Swift Certified User", issuer: "Apple", issued: YearMonth(year: 2023, month: 5),
@@ -203,12 +203,12 @@ enum SampleProfile {
         let toefl = Certification(name: "TOEFL ITP, Score 590", issuer: "ETS", issued: YearMonth(year: 2024, month: 1))
 
         let person = PersonalInfo(
-            fullName: "Raka Aditya Pratama", headline: "iOS Engineer · SwiftUI & On-Device ML",
-            email: "raka.pratama@example.com", phone: "+62 812 0000 2847", location: "Jakarta, Indonesia",
+            fullName: "John Doe", headline: "iOS Engineer · SwiftUI & On-Device ML",
+            email: "john.doe@example.com", phone: "+62 812 0000 2847", location: "Jakarta, Indonesia",
             links: [
-                ProfileLink(label: "LinkedIn", url: "linkedin.com/in/raka-pratama-sample"),
-                ProfileLink(label: "GitHub", url: "github.com/raka-pratama-sample"),
-                ProfileLink(label: "Portfolio", url: "raka-pratama.example.com"),
+                ProfileLink(label: "LinkedIn", url: "linkedin.com/in/john-doe-sample"),
+                ProfileLink(label: "GitHub", url: "github.com/john-doe-sample"),
+                ProfileLink(label: "Portfolio", url: "john-doe.example.com"),
             ]
         )
         person.summary = "iOS engineer with 2+ years building consumer apps at Indonesian scale. Ships SwiftUI features used by millions, cares about performance and accessibility, and brings on-device machine learning into products."
@@ -352,7 +352,7 @@ enum SampleProfile {
     /// A certificate PDF, a portfolio image, and a reference letter (FR-022).
     private static func documents(certificate: Certification, project: Project, experience: Experience) -> [SupportingDocument] {
         var page = ResumeDocument()
-        page.header = ResumeHeader(fullName: "Certificate of Achievement", headline: "Microsoft Certified: Azure AI Fundamentals · Raka Aditya Pratama")
+        page.header = ResumeHeader(fullName: "Certificate of Achievement", headline: "Microsoft Certified: Azure AI Fundamentals · John Doe")
         let pdf = SupportingDocument(
             name: "Azure AI Fundamentals certificate", fileName: "Azure AI Fundamentals.pdf",
             data: ResumeRenderer.pdf(for: page), kind: .certificate
@@ -372,7 +372,7 @@ enum SampleProfile {
 
         let letter = SupportingDocument(
             name: "Tokopedia recommendation letter", fileName: "Tokopedia recommendation letter.txt",
-            data: Data("Raka was one of the strongest interns on our iOS team. He shipped a component six teams adopted.".utf8),
+            data: Data("John was one of the strongest interns on our iOS team. He shipped a component six teams adopted.".utf8),
             kind: .other
         )
         letter.attach(to: experience)
@@ -393,11 +393,11 @@ enum SampleProfile {
             lines: [first.company, first.jobDescription], kind: .jobPosting
         )
         let cover = pdf(
-            "Cover letter for \(first.company)", title: "Raka Aditya Pratama",
+            "Cover letter for \(first.company)", title: "John Doe",
             lines: [
                 "Dear \(first.company) Hiring Team,",
                 "I'm applying for the \(first.position) role. At Gojek I rebuilt the GoPay payment confirmation flow in SwiftUI and cut cold-start time by 38%.",
-                "Sincerely, Raka",
+                "Sincerely, John",
             ],
             kind: .coverLetter
         )
@@ -407,7 +407,7 @@ enum SampleProfile {
         if let offer = applications.first(where: { $0.status == .offer }) {
             let letter = pdf(
                 "\(offer.company) offer letter", title: "Offer of Employment",
-                lines: ["Dear Raka,", "We're pleased to offer you the position of \(offer.position) at \(offer.company)."],
+                lines: ["Dear John,", "We're pleased to offer you the position of \(offer.position) at \(offer.company)."],
                 kind: .offerLetter
             )
             letter.attach(to: offer)
