@@ -89,4 +89,6 @@ cp "$DMG" "$FEED/"
 "$SPARKLE_BIN/generate_appcast" --embed-release-notes \
     --download-url-prefix "https://github.com/dapraws/Civa/releases/download/v$VERSION/" \
     -o "$OUT/appcast.xml" "$FEED"
-echo "Done: $DMG and $OUT/appcast.xml. Upload both to the GitHub release v$VERSION of dapraws/Civa."
+# The website links to releases/latest/download/Civa.dmg, so every release also carries this unversioned copy.
+cp "$DMG" "$OUT/Civa.dmg"
+echo "Done: $DMG, $OUT/Civa.dmg and $OUT/appcast.xml. Upload all three to the GitHub release v$VERSION of dapraws/Civa."
