@@ -41,3 +41,9 @@ xcodebuild test -project Civa.xcodeproj -scheme Civa -destination 'platform=macO
 ## Privacy
 
 Everything you enter stays on your Mac. Civa connects to the internet only to look up company and school logos (sending just the name you type, and you can turn this off in Settings), and, if you set it up, to talk to Claude Desktop on the same Mac.
+
+## License
+
+Civa's code is licensed under the [GNU General Public License v3.0](LICENSE). The Civa name, the app icon, and the Ovi artwork are not covered by that license: all rights reserved.
+
+Young Serif is licensed under the SIL Open Font License 1.1. Sparkle is licensed under the MIT License.
